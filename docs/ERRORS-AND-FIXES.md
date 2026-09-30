@@ -250,8 +250,8 @@ This file is the chronological engineering ledger for failures, errors, their ro
 - **Problem:** The current workflow did not initially include the Block 5 source branch in push coverage, and the validated Block 4 base workflow did not initially target m06-block4-signer-error-isolation in pull_request coverage for a stacked Block 5 PR.
 - **Correction:** Add the Block 5 branch to push coverage and update the validated Block 4 base workflow so m06-block4-signer-error-isolation is covered as a pull-request target.
 - **Correction commits:** 097e4c6c4f7dbee67e508b57a58f898ffe3dad5f; 0ec5d0b9ebb644eba0a5ca9c8855a2322bf4c4f9
-- **Validation:** Block 4 base workflow Actions run #212 / 36750176041 passed Build, Test, Format, and Clippy. Stacked Block 5 PR-event validation remains pending until the PR is opened.
-- **Status:** PENDING
+- **Validation:** Block 4 base workflow Actions run #212 / 36750176041 passed Build, Test, Format, and Clippy. Draft PR #12 stacked on that base triggered pull-request validation run #236 / 36751740474, which passed Build, Test, Format, and Clippy.
+- **Status:** RESOLVED
 ## ERR-027 — Block 5 audit document contained non-repository citation markers
 
 - **Milestone:** M0.6 Block 5 / audit documentation correction
