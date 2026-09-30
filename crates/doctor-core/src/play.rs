@@ -117,7 +117,7 @@ pub fn evaluate_play_policy(
         findings.push(Finding::pass(
             "PLAY-005",
             "16 KB native payload check",
-            "No packaged native .so libraries were detected, so there is no native ELF payload in this artifact for the 16 KB page-alignment check.",
+            "No packaged native .so libraries were detected, so there is no native payload requiring ELF or ZIP 16 KB alignment verification.",
         ));
     } else {
         let target_sdk = manifest.and_then(|value| value.target_sdk);
@@ -126,74 +126,155 @@ pub fn evaluate_play_policy(
             .iter()
             .filter(|library| library.error.is_some())
             .collect::<Vec<_>>();
-        let incompatible = inventory
+        let incompatible_elf = inventory
             .native_libraries
             .iter()
             .filter(|library| {
                 !crate::load_segments_are_16kb_aligned(&library.load_segment_alignments)
             })
             .collect::<Vec<_>>();
+        let zip_errors = inventory
+            .native_zip_entries
+            .iter()
+            .filter(|entry| entry.error.is_some())
+            .collect::<Vec<_>>();
+        let incompatible_zip = inventory
+            .native_zip_entries
+            .iter()
+            .filter(|entry| entry.alignment_16kb == Some(false))
+            .collect::<Vec<_>>();
 
-        if !parse_errors.is_empty() {
-            let paths = parse_errors
-                .iter()
-                .map(|library| library.path.as_str())
-                .collect::<Vec<_>>()
-                .join(", ");
+        if !parse_errors.is_empty() || !zip_errors.is_empty() {
+            let mut details = Vec::new();
+
+            if !parse_errors.is_empty() {
+                details.push(format!(
+                    "ELF inspection unavailable for: {}",
+                    parse_errors
+                        .iter()
+                        .map(|library| library.path.as_str())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ));
+            }
+
+            if !zip_errors.is_empty() {
+                details.push(format!(
+                    "ZIP packaging verification unavailable for: {}",
+                    zip_errors
+                        .iter()
+                        .map(|entry| {
+                            format!(
+                                "{} [{}]: {}",
+                                entry.path,
+                                entry.abi,
+                                entry.error.as_deref().unwrap_or("unknown ZIP alignment state")
+                            )
+                        })
+                        .collect::<Vec<_>>()
+                        .join("; ")
+                ));
+            }
 
             findings.push(Finding::warning(
                 "PLAY-005",
                 "16 KB page-size compatibility unavailable",
-                format!(
-                    "Native ELF inspection could not be completed for: {paths}."
-                ),
-                "Verify every packaged native library with an ELF-aware tool and Google's 16 KB guidance before release.",
+                details.join(" "),
+                "Verify every packaged native library with ELF-aware tooling and, for uncompressed APK libraries, zipalign. For AABs, verify the bundle ZIP alignment configuration and the APK generated from the bundle.",
             ));
         } else if let Some(target_sdk) = target_sdk.filter(|value| *value >= 35) {
-            if !incompatible.is_empty() {
-                let details = incompatible
-                    .iter()
-                    .map(|library| {
-                        format!(
-                            "{} [{}] alignments={:?}",
-                            library.path, library.abi, library.load_segment_alignments
-                        )
-                    })
-                    .collect::<Vec<_>>()
-                    .join("; ");
+            if !incompatible_elf.is_empty() || !incompatible_zip.is_empty() {
+                let mut details = Vec::new();
+
+                if !incompatible_elf.is_empty() {
+                    details.push(format!(
+                        "ELF alignment below 16 KB: {}",
+                        incompatible_elf
+                            .iter()
+                            .map(|library| {
+                                format!(
+                                    "{} [{}] alignments={:?}",
+                                    library.path, library.abi, library.load_segment_alignments
+                                )
+                            })
+                            .collect::<Vec<_>>()
+                            .join("; ")
+                    ));
+                }
+
+                if !incompatible_zip.is_empty() {
+                    details.push(format!(
+                        "ZIP data offset below 16 KB alignment: {}",
+                        incompatible_zip
+                            .iter()
+                            .map(|entry| {
+                                format!(
+                                    "{} [{}] offset={:?}",
+                                    entry.path, entry.abi, entry.data_offset
+                                )
+                            })
+                            .collect::<Vec<_>>()
+                            .join("; ")
+                    ));
+                }
 
                 findings.push(Finding::blocker(
                     "PLAY-005",
                     "16 KB page-size compatibility",
                     format!(
-                        "The artifact targets API {target_sdk} and contains native ELF load segments below the 16 KB alignment threshold: {details}."
+                        "The artifact targets API {target_sdk} and contains native payload packaging that fails the 16 KB alignment checks: {}.",
+                        details.join(" ")
                     ),
-                    "Rebuild or replace the affected native libraries with 16 KB ELF load-segment alignment before Play submission.",
+                    "Rebuild or replace the affected native libraries and repackage the artifact so both ELF load segments and required ZIP data offsets meet the 16 KB requirements before Play submission.",
                 ));
             } else {
                 findings.push(Finding::pass(
                     "PLAY-005",
                     "16 KB page-size compatibility",
-                    "All inspected native ELF PT_LOAD segments meet the 16 KB alignment threshold required for API 35+ targets.",
+                    "All inspected native ELF PT_LOAD segments meet the 16 KB threshold and all verifiable uncompressed APK native libraries have 16 KB-aligned ZIP data offsets.",
                 ));
             }
-        } else if !incompatible.is_empty() {
-            let details = incompatible
-                .iter()
-                .map(|library| {
-                    format!(
-                        "{} [{}] alignments={:?}",
-                        library.path, library.abi, library.load_segment_alignments
-                    )
-                })
-                .collect::<Vec<_>>()
-                .join("; ");
+        } else if !incompatible_elf.is_empty() || !incompatible_zip.is_empty() {
+            let mut details = Vec::new();
+
+            if !incompatible_elf.is_empty() {
+                details.push(format!(
+                    "ELF alignment below 16 KB: {}",
+                    incompatible_elf
+                        .iter()
+                        .map(|library| {
+                            format!(
+                                "{} [{}] alignments={:?}",
+                                library.path, library.abi, library.load_segment_alignments
+                            )
+                        })
+                        .collect::<Vec<_>>()
+                        .join("; ")
+                ));
+            }
+
+            if !incompatible_zip.is_empty() {
+                details.push(format!(
+                    "ZIP data offset below 16 KB alignment: {}",
+                    incompatible_zip
+                        .iter()
+                        .map(|entry| {
+                            format!(
+                                "{} [{}] offset={:?}",
+                                entry.path, entry.abi, entry.data_offset
+                            )
+                        })
+                        .collect::<Vec<_>>()
+                        .join("; ")
+                ));
+            }
 
             findings.push(Finding::warning(
                 "PLAY-005",
-                "Native ELF alignment below 16 KB",
+                "Native payload alignment below 16 KB",
                 format!(
-                    "The artifact contains native ELF load segments below the 16 KB alignment threshold: {details}."
+                    "The artifact contains native payload alignment below the 16 KB threshold: {}.",
+                    details.join(" ")
                 ),
                 "Review the native libraries against the applicable Android/Google Play 16 KB guidance before publication.",
             ));
@@ -201,7 +282,7 @@ pub fn evaluate_play_policy(
             findings.push(Finding::pass(
                 "PLAY-005",
                 "16 KB page-size compatibility",
-                "All inspected native ELF PT_LOAD segments meet the 16 KB alignment threshold.",
+                "All inspected native ELF PT_LOAD segments meet the 16 KB threshold and all verifiable native ZIP packaging alignment checks pass.",
             ));
         }
     }
@@ -309,6 +390,72 @@ mod tests {
                 .find(|finding| finding.rule_id == "PLAY-005")
                 .map(|finding| finding.severity),
             Some(Severity::Pass)
+        );
+    }
+
+    #[test]
+    fn native_payload_with_misaligned_stored_zip_entry_is_a_blocker_for_api_35_plus() {
+        let inventory = ArtifactInventory {
+            native_abis: vec!["arm64-v8a".to_string()],
+            native_libraries: vec![crate::NativeLibraryInfo {
+                path: "lib/arm64-v8a/libbad.so".to_string(),
+                abi: "arm64-v8a".to_string(),
+                load_segment_alignments: vec![16384],
+                error: None,
+            }],
+            native_zip_entries: vec![crate::NativeZipEntryInfo {
+                path: "lib/arm64-v8a/libbad.so".to_string(),
+                abi: "arm64-v8a".to_string(),
+                compression: crate::NativeZipCompression::Stored,
+                data_offset: Some(4096),
+                alignment_16kb: Some(false),
+                error: None,
+            }],
+            ..Default::default()
+        };
+
+        let findings = evaluate_play_policy(Some(&manifest(36)), &inventory, PlayPlatform::Mobile);
+
+        assert_eq!(
+            findings
+                .iter()
+                .find(|finding| finding.rule_id == "PLAY-005")
+                .map(|finding| finding.severity),
+            Some(Severity::Blocker)
+        );
+    }
+
+    #[test]
+    fn aab_uncompressed_native_zip_alignment_stays_manual() {
+        let inventory = ArtifactInventory {
+            native_abis: vec!["arm64-v8a".to_string()],
+            native_libraries: vec![crate::NativeLibraryInfo {
+                path: "base/lib/arm64-v8a/libnative.so".to_string(),
+                abi: "arm64-v8a".to_string(),
+                load_segment_alignments: vec![16384],
+                error: None,
+            }],
+            native_zip_entries: vec![crate::NativeZipEntryInfo {
+                path: "base/lib/arm64-v8a/libnative.so".to_string(),
+                abi: "arm64-v8a".to_string(),
+                compression: crate::NativeZipCompression::Stored,
+                data_offset: Some(16384),
+                alignment_16kb: None,
+                error: Some(
+                    "AAB entry offset does not establish the final APK ZIP alignment".to_string(),
+                ),
+            }],
+            ..Default::default()
+        };
+
+        let findings = evaluate_play_policy(Some(&manifest(36)), &inventory, PlayPlatform::Mobile);
+
+        assert_eq!(
+            findings
+                .iter()
+                .find(|finding| finding.rule_id == "PLAY-005")
+                .map(|finding| finding.severity),
+            Some(Severity::Warning)
         );
     }
 
