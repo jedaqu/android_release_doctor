@@ -92,21 +92,21 @@ pub fn evaluate_play_policy(
         )),
     }
 
-    findings.push(Finding::warning(
+    findings.push(Finding::manual_review(
         "PLAY-002",
         "Data Safety declaration",
         "Google Play requires the Data Safety form for published apps, including apps that do not collect user data.",
         "Review and submit the Data Safety declaration in Play Console so it accurately matches the app and its third-party SDK behavior.",
     ));
 
-    findings.push(Finding::warning(
+    findings.push(Finding::manual_review(
         "PLAY-003",
         "Privacy policy",
         "A valid privacy policy is a Play Console requirement for apps covered by the applicable privacy/data requirements; the artifact alone cannot prove its availability or correctness.",
         "Verify that the privacy policy is active, applies to this app, and is linked wherever Play requires it.",
     ));
 
-    findings.push(Finding::warning(
+    findings.push(Finding::manual_review(
         "PLAY-004",
         "Play Console content declarations",
         "Play Console requires release metadata and declarations that are not contained in the APK/AAB, such as ads and app-content information.",
@@ -179,7 +179,7 @@ pub fn evaluate_play_policy(
                 ));
             }
 
-            findings.push(Finding::warning(
+            findings.push(Finding::manual_review(
                 "PLAY-005",
                 "16 KB page-size compatibility unavailable",
                 details.join(" "),
@@ -349,6 +349,26 @@ mod tests {
     }
 
     #[test]
+    fn play_console_external_requirements_are_manual_review() {
+        let findings = evaluate_play_policy(
+            Some(&manifest(36)),
+            &ArtifactInventory::default(),
+            PlayPlatform::Mobile,
+        );
+
+        for rule_id in ["PLAY-002", "PLAY-003", "PLAY-004"] {
+            assert_eq!(
+                findings
+                    .iter()
+                    .find(|finding| finding.rule_id == rule_id)
+                    .map(|finding| finding.severity),
+                Some(Severity::ManualReview),
+                "{rule_id} should require manual review"
+            );
+        }
+    }
+
+    #[test]
     fn native_payload_with_api_35_plus_and_bad_alignment_is_a_blocker() {
         let inventory = ArtifactInventory {
             native_abis: vec!["arm64-v8a".to_string()],
@@ -458,7 +478,7 @@ mod tests {
                 .iter()
                 .find(|finding| finding.rule_id == "PLAY-005")
                 .map(|finding| finding.severity),
-            Some(Severity::Warning)
+            Some(Severity::ManualReview)
         );
     }
 
