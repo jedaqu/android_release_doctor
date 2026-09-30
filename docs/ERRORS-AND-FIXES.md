@@ -274,6 +274,18 @@ This file is the chronological engineering ledger for failures, errors, their ro
 - **Required correction:** Preserve the parsed proof-of-rotation evidence across every later signer-level Invalid/Unsupported conversion path.
 - **Status:** PENDING
 
+## ERR-030 — proof-of-rotation evidence helper call-site correction was incomplete
+
+- **Milestone:** M0.6 Block 5 / Actions run #223
+- **Type:** Build failure
+- **Actions run:** #223 / 36750840753
+- **Problem:** The new `error_to_scheme_info_with_rotation()` helper was introduced with six parameters, but five v3 signer-local call sites still supplied only five arguments.
+- **Cause:** The scoped evidence-propagation correction converted the helper name without consistently appending the already-parsed proof-of-rotation evidence argument.
+- **Required correction:** Add `parsed.proof_of_rotation` to every post-parse signer-local error conversion and keep pre-parse paths on the original helper.
+- **Correction commit:** dc6d4eb4d241155bb9413e2de38839240901e60b
+- **Validation:** Awaiting subsequent Actions validation on the corrected head.
+- **Status:** PENDING
+
 ## Current validation state
 
 M0.6 Block 4 implementation and the current CI correction cycle have passed the complete validation gate.
