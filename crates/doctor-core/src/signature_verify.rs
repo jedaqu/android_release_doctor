@@ -837,6 +837,36 @@ mod tests {
     use std::io::Write;
 
     #[test]
+    fn verifies_real_v2_signed_apk_fixture() {
+        let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures/crypto-v2-release.apk");
+
+        let result = verify_apk_signatures(&path)
+            .expect("v2 fixture should be structurally readable")
+            .expect("v2 fixture should contain an APK signing block");
+
+        let v2 = result.v2.expect("v2 scheme should be detected");
+        assert_eq!(v2.state, CryptoVerificationState::Verified);
+        assert_eq!(v2.signer_count, 1);
+        assert!(v2.algorithms.contains(&0x0103));
+        assert!(!result.v31_present);
+    }
+
+    #[test]
+    fn detects_tampered_apk_content_as_invalid_v2_signature() {
+        let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures/crypto-v2-release-tampered.apk");
+
+        let result = verify_apk_signatures(&path)
+            .expect("tampered fixture should be structurally readable")
+            .expect("tampered fixture should still contain an APK signing block");
+
+        let v2 = result.v2.expect("v2 scheme should be detected");
+        assert_eq!(v2.state, CryptoVerificationState::Invalid);
+        assert!(v2.detail.contains("digest mismatch"));
+    }
+
+    #[test]
     fn content_digest_hashes_each_section_and_patches_eocd_offset() {
         let path = std::env::temp_dir().join(format!(
             "android-release-doctor-digest-{}.apk",
