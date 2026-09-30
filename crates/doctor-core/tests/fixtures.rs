@@ -4,7 +4,10 @@ use std::{
     path::PathBuf,
 };
 
-use doctor_core::{audit_path, audit_path_with_project, parse_project, ArtifactKind, Severity};
+use doctor_core::{
+    audit_path, audit_path_with_play, audit_path_with_project, parse_project, ArtifactKind,
+    PlayPlatform, Severity,
+};
 use zip::write::SimpleFileOptions;
 use zip::{CompressionMethod, ZipWriter};
 
@@ -238,5 +241,57 @@ fn invalid_project_path_stays_inside_report() {
             .find(|finding| finding.rule_id == "PROJECT-001")
             .map(|finding| finding.severity),
         Some(Severity::Blocker)
+    );
+}
+
+
+#[test]
+fn play_mobile_profile_flags_existing_fixture_target_api() {
+    let report = audit_path_with_play(
+        fixture("minimal-release.apk"),
+        PlayPlatform::Mobile,
+    )
+    .expect("Play readiness audit should complete");
+
+    assert_eq!(
+        report
+            .findings
+            .iter()
+            .find(|finding| finding.rule_id == "PLAY-001")
+            .map(|finding| finding.severity),
+        Some(Severity::Blocker)
+    );
+
+    assert_eq!(
+        report
+            .findings
+            .iter()
+            .find(|finding| finding.rule_id == "PLAY-002")
+            .map(|finding| finding.severity),
+        Some(Severity::Warning)
+    );
+    assert_eq!(
+        report
+            .findings
+            .iter()
+            .find(|finding| finding.rule_id == "PLAY-003")
+            .map(|finding| finding.severity),
+        Some(Severity::Warning)
+    );
+    assert_eq!(
+        report
+            .findings
+            .iter()
+            .find(|finding| finding.rule_id == "PLAY-004")
+            .map(|finding| finding.severity),
+        Some(Severity::Warning)
+    );
+    assert_eq!(
+        report
+            .findings
+            .iter()
+            .find(|finding| finding.rule_id == "PLAY-005")
+            .map(|finding| finding.severity),
+        Some(Severity::Warning)
     );
 }
