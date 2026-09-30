@@ -36,7 +36,9 @@ When the attribute is present, the signer is ultimately reported as `CryptoVerif
 
 This is conservative because the tool does not claim a cryptographic pass. However, it leaves an important part of the v3 signed-data evidence unverified.
 
-AOSP defines the proof-of-rotation attribute as a signed, singly-linked sequence of previous signing certificates. During v3 verification, when the attribute exists, the verifier is expected to validate the structure and verify that the current signer is the final certificate in the lineage. citeturn0search4
+AOSP defines the proof-of-rotation attribute as a signed, singly-linked sequence of previous signing certificates. During v3 verification, when the attribute exists, the verifier is expected to validate the structure and verify that the current signer is the final certificate in the lineage.
+
+Reference: https://android.googlesource.com/platform/tools/apksig/+/refs/heads/master/src/main/java/com/android/apksig/internal/apk/v3/V3SigningCertificateLineage.java
 
 The current implementation therefore cannot distinguish between:
 
@@ -88,13 +90,17 @@ The following are **not Block 5 findings**:
 
 ### v3.1
 
-The current implementation detects the v3.1 signing-block ID and surfaces its presence through manual review rather than pretending to verify it. AOSP describes v3.1 as a separate signing block used for SDK-targeted key rotation. citeturn0search1
+The current implementation detects the v3.1 signing-block ID and surfaces its presence through manual review rather than pretending to verify it. AOSP describes v3.1 as a separate signing block used for SDK-targeted key rotation.
+
+Reference: https://source.android.com/docs/security/features/apksigning/v3-1
 
 Complete v3.1 verification remains a future scope item.
 
 ### v3.2
 
-The current implementation detects the v3.2 signing-block ID and surfaces its presence through manual review. Android 17 introduces v3.2 as a hybrid classical/PQC signing scheme with specific two-signer requirements and ML-DSA algorithms. citeturn0search3
+The current implementation detects the v3.2 signing-block ID and surfaces its presence through manual review. Android 17 introduces v3.2 as a hybrid classical/PQC signing scheme with specific two-signer requirements and ML-DSA algorithms.
+
+Reference: https://source.android.com/docs/security/features/apksigning/v3-2
 
 Complete v3.2/PQC verification remains a future scope item.
 
