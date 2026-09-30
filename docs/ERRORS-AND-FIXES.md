@@ -249,6 +249,14 @@ This file is the chronological engineering ledger for failures, errors, their ro
 - **Required correction:** Add the Block 5 branch to push coverage and ensure the Block 4 base workflow covers pull_request events targeting m06-block4-signer-error-isolation, without redesigning the CI job graph.
 - **Status:** PENDING
 
+## ERR-027 — Block 5 audit document contained non-repository citation markers
+
+- **Milestone:** M0.6 Block 5 / audit documentation correction
+- **Type:** Documentation defect
+- **Problem:** The initial Block 5 audit document contained ChatGPT/web UI citation markers instead of stable repository-readable source URLs.
+- **Required correction:** Replace those markers with plain AOSP source URLs and keep repository documentation independent of chat UI formatting.
+- **Status:** PENDING
+
 ## Current validation state
 
 M0.6 Block 4 implementation and the current CI correction cycle have passed the complete validation gate.
