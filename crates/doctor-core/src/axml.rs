@@ -108,7 +108,7 @@ enum TypedValue {
     String(String),
     Int(u32),
     Bool(bool),
-    Reference(u32),
+    Reference,
     Other,
 }
 
@@ -252,7 +252,7 @@ fn parse_typed_value(
     data: u32,
 ) -> Result<TypedValue, AxmlError> {
     match data_type {
-        0x01 => Ok(TypedValue::Reference(data)),
+        0x01 => Ok(TypedValue::Reference),
         0x03 => {
             if raw_index != u32::MAX {
                 pool_string(pool, raw_index).map(TypedValue::String)

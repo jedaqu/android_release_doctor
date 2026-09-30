@@ -427,17 +427,15 @@ fn evaluate(
                         ));
                     }
 
-                    if manifest.min_sdk.is_some() && manifest.target_sdk.is_some() {
-                        findings.push(Finding::pass(
+                    match (manifest.min_sdk, manifest.target_sdk) {
+                        (Some(min_sdk), Some(target_sdk)) => findings.push(Finding::pass(
                             "SDK-001",
                             "SDK levels",
                             format!(
-                                "Manifest declares minSdk {} and targetSdk {}.",
-                                manifest.min_sdk.unwrap(),
-                                manifest.target_sdk.unwrap()
+                                "Manifest declares minSdk {min_sdk} and targetSdk {target_sdk}."
                             ),
-                        ));
-                    } else {
+                        )),
+                        _ => {
                         findings.push(Finding::warning(
                             "SDK-001",
                             "SDK levels incomplete",
@@ -468,16 +466,13 @@ fn evaluate(
                         ));
                     }
 
-                    if manifest.version_code.is_some() {
-                        findings.push(Finding::pass(
+                    match manifest.version_code {
+                        Some(version_code) => findings.push(Finding::pass(
                             "VERSION-001",
                             "Version code",
-                            format!(
-                                "Artifact versionCode is {}.",
-                                manifest.version_code.unwrap()
-                            ),
-                        ));
-                    } else {
+                            format!("Artifact versionCode is {version_code}."),
+                        )),
+                        None => {
                         findings.push(Finding::warning(
                             "VERSION-001",
                             "Version code missing",
@@ -486,16 +481,13 @@ fn evaluate(
                         ));
                     }
 
-                    if manifest.version_name.is_some() {
-                        findings.push(Finding::pass(
+                    match manifest.version_name.as_deref() {
+                        Some(version_name) => findings.push(Finding::pass(
                             "VERSION-002",
                             "Version name",
-                            format!(
-                                "Artifact versionName is {}.",
-                                manifest.version_name.as_deref().unwrap()
-                            ),
-                        ));
-                    } else {
+                            format!("Artifact versionName is {version_name}."),
+                        )),
+                        None => {
                         findings.push(Finding::warning(
                             "VERSION-002",
                             "Version name missing",
