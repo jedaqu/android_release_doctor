@@ -1610,6 +1610,54 @@ mod tests {
     }
 
     #[test]
+    fn verifies_real_v2_ecdsa_sha512_p384_apk_fixture() {
+        let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures/m07-crypto-v2-ecdsa-sha512-p384.apk");
+
+        let result = verify_apk_signatures(&path)
+            .expect("v2 ECDSA/SHA-512 fixture should be structurally readable")
+            .expect("v2 ECDSA/SHA-512 fixture should contain an APK signing block");
+
+        let v2 = result.v2.expect("v2 scheme should be detected");
+        assert_eq!(v2.state, CryptoVerificationState::Verified, "{}", v2.detail);
+        assert_eq!(v2.algorithms, vec![0x0202]);
+        assert_eq!(v2.signer_count, 1);
+        assert_eq!(v2.certificate_sha256.len(), 1);
+    }
+
+    #[test]
+    fn verifies_real_v3_ecdsa_sha512_p384_apk_fixture() {
+        let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures/m07-crypto-v3-ecdsa-sha512-p384.apk");
+
+        let result = verify_apk_signatures(&path)
+            .expect("v3 ECDSA/SHA-512 fixture should be structurally readable")
+            .expect("v3 ECDSA/SHA-512 fixture should contain an APK signing block");
+
+        let v3 = result.v3.expect("v3 scheme should be detected");
+        assert_eq!(v3.state, CryptoVerificationState::Verified, "{}", v3.detail);
+        assert_eq!(v3.algorithms, vec![0x0202]);
+        assert_eq!(v3.signer_count, 1);
+        assert_eq!(v3.sdk_ranges, vec![(24, 35)]);
+        assert_eq!(v3.certificate_sha256.len(), 1);
+    }
+
+    #[test]
+    fn detects_tampered_ecdsa_sha512_p384_v3_apk_as_invalid() {
+        let path = tampered_fixture(
+            "m07-crypto-v3-ecdsa-sha512-p384.apk",
+            "v3-ecdsa-sha512-tampered",
+        );
+        let result = verify_apk_signatures(&path)
+            .expect("tampered v3 ECDSA/SHA-512 fixture should remain readable")
+            .expect("tampered v3 ECDSA/SHA-512 fixture should contain a signing block");
+
+        let v3 = result.v3.expect("v3 scheme should be detected");
+        assert_eq!(v3.state, CryptoVerificationState::Invalid);
+        std::fs::remove_file(path).expect("temporary tampered fixture should be removed");
+    }
+
+    #[test]
     fn accepts_additional_v2_certificate_chain_entries() {
         let digest_entry = {
             let mut bytes = Vec::new();
@@ -1699,7 +1747,8 @@ mod tests {
         const SIGNATURE_HEX: &str = "30650230352054fd8fbb9ff1fd661502ce0a1160b09f722682f86ac8677a646c94b57edddc29b85c55e1e59094e04f3736069801023100b8151f6b21f13c101600f7ffb62c7ba2199531657f01b3a03f625ca1fb7f179730f592eea892d241c52a856e8f4ef28c";
         let certificate = decode_hex_bytes(CERTIFICATE_HEX);
         let mut signature = decode_hex_bytes(SIGNATURE_HEX);
-        signature[signature.len() - 1] ^= 0x01;
+        let last = signature.len() - 1;
+        signature[last] ^= 0x01;
         let signed_data = b"M0.7 Block 1 deterministic ECDSA/SHA-512 verification test message";
 
         let result = verify_signature_bytes(0x0202, &certificate, signed_data, &signature);

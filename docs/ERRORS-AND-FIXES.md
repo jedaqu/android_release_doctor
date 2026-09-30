@@ -420,3 +420,16 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction pending validation:** 37139b0eda12765365a153854afd774a7b0bf29b1
 - **Validation:** Build failed before Test/Format/Clippy on Actions run #295 / 36779609901; the corrected commit must pass the full gate before this entry is resolved.
 - **Status:** OPEN
+
+## ERR-040 — M0.7 Block 1 test borrow-checker failure
+
+- **Milestone:** M0.7 Block 1 / implementation validation
+- **Type:** Test build failure
+- **Actions run:** #296 / 36779727793
+- **Problem:** The new tampered-signature regression test indexed `signature[signature.len() - 1]`, creating overlapping mutable and immutable borrows under the Rust borrow checker.
+- **Cause:** The test combined an immutable length query and mutable indexed assignment in the same expression.
+- **Correction:** Store the final index in a local variable before mutating the signature byte, without changing test behavior.
+- **Correction commit pending:** current follow-up implementation commit
+- **Validation:** Actions run #296 passed Build but failed Test compilation at the new regression assertion; the corrected commit must pass the full gate before this entry is resolved.
+- **Status:** OPEN
+
