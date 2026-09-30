@@ -66,8 +66,7 @@ impl<'a> Cursor<'a> {
         if self.remaining() < 2 {
             return Err(AxmlError::Truncated);
         }
-        let value =
-            u16::from_le_bytes([self.bytes[self.position], self.bytes[self.position + 1]]);
+        let value = u16::from_le_bytes([self.bytes[self.position], self.bytes[self.position + 1]]);
         self.position += 2;
         Ok(value)
     }
@@ -281,7 +280,9 @@ fn parse_attributes(
         ));
     }
     if attribute_size < 20 {
-        return Err(AxmlError::Invalid("attribute size is smaller than 20 bytes"));
+        return Err(AxmlError::Invalid(
+            "attribute size is smaller than 20 bytes",
+        ));
     }
 
     cursor.skip(attribute_start - 20)?;
