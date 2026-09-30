@@ -434,9 +434,7 @@ pub fn parse_manifest(data: &[u8]) -> Result<ManifestInfo, AxmlError> {
         offset += chunk_size;
     }
 
-    let string_pool = string_pool.ok_or(AxmlError::Invalid(
-        "manifest has no string pool chunk",
-    ))?;
+    let string_pool = string_pool.ok_or(AxmlError::Invalid("manifest has no string pool chunk"))?;
 
     let mut info = ManifestInfo {
         package_name: None,
