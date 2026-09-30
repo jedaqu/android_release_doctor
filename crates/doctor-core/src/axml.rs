@@ -163,7 +163,9 @@ fn parse_string_pool(
     let _styles_start = header.read_u32()?;
 
     if strings_start < 28 || strings_start > chunk_size {
-        return Err(AxmlError::Invalid("string pool string data offset is invalid"));
+        return Err(AxmlError::Invalid(
+            "string pool string data offset is invalid",
+        ));
     }
 
     let offset_bytes = string_count
@@ -274,7 +276,9 @@ fn parse_attributes(
     attribute_count: usize,
 ) -> Result<Vec<Attribute>, AxmlError> {
     if attribute_start < 20 {
-        return Err(AxmlError::Invalid("attribute start precedes attribute extension"));
+        return Err(AxmlError::Invalid(
+            "attribute start precedes attribute extension",
+        ));
     }
     if attribute_size < 20 {
         return Err(AxmlError::Invalid("attribute size is smaller than 20 bytes"));
@@ -357,7 +361,11 @@ fn chunk_bounds(
     offset: usize,
     total_size: usize,
 ) -> Result<(u16, usize, usize), AxmlError> {
-    if offset.checked_add(8).ok_or(AxmlError::Invalid("chunk offset overflow"))? > total_size {
+    if offset
+        .checked_add(8)
+        .ok_or(AxmlError::Invalid("chunk offset overflow"))?
+        > total_size
+    {
         return Err(AxmlError::Truncated);
     }
 
@@ -397,21 +405,12 @@ pub fn parse_manifest(data: &[u8]) -> Result<ManifestInfo, AxmlError> {
         return Err(AxmlError::Truncated);
     }
 
-    let root_type = u16::from_le_bytes(
-        data[0..2]
-            .try_into()
-            .map_err(|_| AxmlError::Truncated)?,
-    );
-    let root_header_size = u16::from_le_bytes(
-        data[2..4]
-            .try_into()
-            .map_err(|_| AxmlError::Truncated)?,
-    );
-    let total_size = u32::from_le_bytes(
-        data[4..8]
-            .try_into()
-            .map_err(|_| AxmlError::Truncated)?,
-    ) as usize;
+    let root_type =
+        u16::from_le_bytes(data[0..2].try_into().map_err(|_| AxmlError::Truncated)?);
+    let root_header_size =
+        u16::from_le_bytes(data[2..4].try_into().map_err(|_| AxmlError::Truncated)?);
+    let total_size =
+        u32::from_le_bytes(data[4..8].try_into().map_err(|_| AxmlError::Truncated)?) as usize;
 
     if root_type != 0x0003 {
         return Err(AxmlError::Invalid("missing RES_XML_TYPE root chunk"));
