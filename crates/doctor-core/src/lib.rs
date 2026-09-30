@@ -1407,7 +1407,6 @@ fn compare_sdk(
 mod tests {
     use super::*;
 
-
     #[test]
     fn manual_review_is_first_class_and_does_not_count_as_blocker() {
         let report = AuditReport {
