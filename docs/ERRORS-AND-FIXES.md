@@ -230,25 +230,28 @@ This file is the chronological engineering ledger for failures, errors, their ro
 - **Milestone:** M0.6 Block 5 / AUDIT-024
 - **Type:** Verification boundary defect
 - **Problem:** The v3 verifier only detected the proof-of-rotation attribute and treated its presence as Unsupported, without validating the lineage structure, parent-to-child signatures, or final-certificate relationship to the current signer.
-- **Required correction:** Parse and validate the v3 proof-of-rotation lineage, preserve the existing unsupported boundary for algorithms the verifier cannot safely validate, and prevent invalid lineage evidence from producing a cryptographic pass.
-- **Status:** PENDING
-
+- **Correction:** Parse and validate the v3 proof-of-rotation lineage, preserve the existing unsupported boundary for algorithms the verifier cannot safely validate, and prevent invalid lineage evidence from producing a cryptographic pass.
+- **Correction commits:** b5089e6daec53c12d4f8beecce22b158b006188d; 20de0254e62920f8d1e9b6c6690e677ef27cabc7
+- **Validation:** Actions run #233 / 36751272856 passed Build, Test, Format, and Clippy; focused valid/malformed/invalid-signature/final-certificate-mismatch lineage tests passed.
+- **Status:** RESOLVED
 ## ERR-025 — proof-of-rotation evidence was not represented structurally
 
 - **Milestone:** M0.6 Block 5 / AUDIT-025
 - **Type:** Evidence-model defect
 - **Problem:** CryptoSchemeInfo exposed only a generic Unsupported state/detail when proof-of-rotation was present and had no structured lineage-verification evidence.
-- **Required correction:** Add minimal structured proof-of-rotation evidence while preserving signer count, SDK ranges, certificate fingerprints, and existing aggregation semantics.
-- **Status:** PENDING
-
+- **Correction:** Add minimal structured proof-of-rotation evidence while preserving signer count, SDK ranges, certificate fingerprints, and existing aggregation semantics.
+- **Correction commits:** b5089e6daec53c12d4f8beecce22b158b006188d; a8bbe905faae4a8fb2549625aeec184f8ab8e88b
+- **Validation:** Actions run #233 / 36751272856 passed all four gates, including the focused evidence-propagation regression test.
+- **Status:** RESOLVED
 ## ERR-026 — M0.6 Block 5 stacked PR validation is not yet wired for the Block 4 base
 
 - **Milestone:** M0.6 Block 5 / CI follow-up audit
 - **Type:** CI configuration / validation gap
-- **Problem:** The current workflow does not yet include the Block 5 source branch in push coverage, and the validated Block 4 base workflow does not yet target the Block 4 branch in pull_request coverage for a stacked Block 5 PR.
-- **Required correction:** Add the Block 5 branch to push coverage and ensure the Block 4 base workflow covers pull_request events targeting m06-block4-signer-error-isolation, without redesigning the CI job graph.
+- **Problem:** The current workflow did not initially include the Block 5 source branch in push coverage, and the validated Block 4 base workflow did not initially target m06-block4-signer-error-isolation in pull_request coverage for a stacked Block 5 PR.
+- **Correction:** Add the Block 5 branch to push coverage and update the validated Block 4 base workflow so m06-block4-signer-error-isolation is covered as a pull-request target.
+- **Correction commits:** 097e4c6c4f7dbee67e508b57a58f898ffe3dad5f; 0ec5d0b9ebb644eba0a5ca9c8855a2322bf4c4f9
+- **Validation:** Block 4 base workflow Actions run #212 / 36750176041 passed Build, Test, Format, and Clippy. Stacked Block 5 PR-event validation remains pending until the PR is opened.
 - **Status:** PENDING
-
 ## ERR-027 — Block 5 audit document contained non-repository citation markers
 
 - **Milestone:** M0.6 Block 5 / audit documentation correction
@@ -262,30 +265,31 @@ This file is the chronological engineering ledger for failures, errors, their ro
 
 - **Milestone:** M0.6 Block 5 / second audit
 - **Type:** Test-fixture / Git history defect
-- **Problem:** The proof-of-rotation fixture was created in commit `f40076f941813f398b6c07441c96377c69741cbd`, but that commit was not connected to the `m06-block5-verification-completeness` branch. The current branch tree therefore does not contain `tests/fixtures/proof-rotation-valid.bin`, while tests reference that path.
-- **Required correction:** Integrate the fixture into the Block 5 branch history without changing its intended test content.
-- **Status:** PENDING
-
+- **Problem:** The proof-of-rotation fixture was created in an orphaned commit and was not initially connected to the m06-block5-verification-completeness branch. Tests referenced the missing path.
+- **Correction:** Regenerate the deterministic two-level proof-of-rotation fixture and attach it directly to the Block 5 branch tree.
+- **Correction commit:** 38dc4991cb0c1249581f16565aa741bb6b8d7bfd
+- **Validation:** Current branch tree contains tests/fixtures/proof-rotation-valid.bin, and Actions run #233 / 36751272856 passed Build, Test, Format, and Clippy.
+- **Status:** RESOLVED
 ## ERR-029 — Proof-of-rotation evidence is dropped on later signer verification failures
 
 - **Milestone:** M0.6 Block 5 / second audit
 - **Type:** Evidence-model propagation defect
-- **Problem:** After `parse_signed_data_v3()` successfully produces proof-of-rotation evidence, several later signer failure paths call `error_to_scheme_info_with_evidence()` without carrying the parsed proof-of-rotation evidence forward. A signer can therefore retain SDK range/certificate evidence but lose already-verified lineage evidence.
-- **Required correction:** Preserve the parsed proof-of-rotation evidence across every later signer-level Invalid/Unsupported conversion path.
-- **Status:** PENDING
-
+- **Problem:** After parse_signed_data_v3() successfully established proof-of-rotation evidence, later signer-local failures could convert through error_to_scheme_info_with_evidence() without forwarding the parsed proof evidence.
+- **Correction:** Introduce a rotation-aware signer error conversion and pass parsed proof-of-rotation evidence through every post-parse signer-local failure path.
+- **Correction commit:** dc6d4eb4d241155bb9413e2de38839240901e60b
+- **Validation:** Actions run #233 / 36751272856 passed Build, Test, Format, and Clippy; focused signer-error evidence test passed.
+- **Status:** RESOLVED
 ## ERR-030 — proof-of-rotation evidence helper call-site correction was incomplete
 
 - **Milestone:** M0.6 Block 5 / Actions run #223
 - **Type:** Build failure
 - **Actions run:** #223 / 36750840753
-- **Problem:** The new `error_to_scheme_info_with_rotation()` helper was introduced with six parameters, but five v3 signer-local call sites still supplied only five arguments.
+- **Problem:** The new error_to_scheme_info_with_rotation() helper was introduced with six parameters, but five v3 signer-local call sites still supplied only five arguments.
 - **Cause:** The scoped evidence-propagation correction converted the helper name without consistently appending the already-parsed proof-of-rotation evidence argument.
-- **Correction:** Add `parsed.proof_of_rotation` to every post-parse signer-local error conversion and keep pre-parse paths on the original helper.
+- **Correction:** Add parsed.proof_of_rotation to every post-parse signer-local error conversion and keep pre-parse paths on the original helper.
 - **Correction commit:** dc6d4eb4d241155bb9413e2de38839240901e60b
 - **Validation:** Actions run #224 / 36750878135 passed Build and Test after the correction. Format failed independently on rustfmt-only layout differences.
 - **Status:** RESOLVED
-
 ## ERR-031 — rustfmt failure after Block 5 proof-of-rotation implementation
 
 - **Milestone:** M0.6 Block 5 / Actions run #224
@@ -303,19 +307,20 @@ This file is the chronological engineering ledger for failures, errors, their ro
 - **Type:** CI lint failure
 - **Actions run:** #228 / 36751061388
 - **Problem:** Clippy reported a redundant guard in the proof-of-rotation certificate DER validation match.
-- **Correction required:** Replace the guard pattern `Ok((remaining, _)) if remaining.is_empty()` with the equivalent slice pattern `Ok(([], _))`; no logic change.
-- **Status:** PENDING
-
-
+- **Correction:** Replace the guard pattern Ok((remaining, _)) if remaining.is_empty() with the equivalent slice pattern Ok(([], _)); no logic change.
+- **Correction commit:** 5e35593c1bd4319c64404feefe5cc7f5073826f3
+- **Validation:** Actions run #233 / 36751272856 passed Clippy.
+- **Status:** RESOLVED
 ## ERR-033 — rustfmt failure in the new proof-of-rotation evidence regression test
 
 - **Milestone:** M0.6 Block 5 / Actions run #230
 - **Type:** CI formatting failure
 - **Actions run:** #230 / 36751168580
-- **Problem:** `cargo fmt --all -- --check` required one line-wrap change in the newly added `signer_error_evidence_preserves_proof_of_rotation` test.
-- **Correction required:** Apply only the rustfmt-indicated string-literal layout change; no logic or test behavior change.
-- **Status:** PENDING
-
+- **Problem:** cargo fmt --all -- --check required one line-wrap change in the newly added signer_error_evidence_preserves_proof_of_rotation test.
+- **Correction:** Apply only the rustfmt-indicated string-literal layout change; no logic or test behavior change.
+- **Correction commit:** 3318ab3cc3c173e0bdfa9855d9c567b041ebc00b
+- **Validation:** Actions run #233 / 36751272856 passed Format.
+- **Status:** RESOLVED
 ## Current validation state
 
 M0.6 Block 4 implementation and the current CI correction cycle have passed the complete validation gate.
