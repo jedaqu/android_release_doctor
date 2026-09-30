@@ -1753,6 +1753,41 @@ mod tests {
     }
 
     #[test]
+    fn parses_proof_of_rotation_attribute_as_structured_evidence() {
+        let proof = proof_rotation_fixture();
+        let (_, current_certificate) = proof_rotation_certificates(&proof);
+
+        let mut digest_entry = Vec::new();
+        digest_entry.extend_from_slice(&0x0201_u32.to_le_bytes());
+        digest_entry.extend_from_slice(&32_u32.to_le_bytes());
+        digest_entry.extend_from_slice(&[0_u8; 32]);
+
+        let digests = encode_sequence(&digest_entry);
+        let mut certificates = Vec::new();
+        certificates.extend_from_slice(&encode_sequence(&current_certificate));
+
+        let mut attribute = Vec::new();
+        attribute.extend_from_slice(&PROOF_OF_ROTATION_ATTR_ID.to_le_bytes());
+        attribute.extend_from_slice(&proof);
+        let attributes = encode_sequence(&encode_sequence(&attribute));
+
+        let mut signed_data = Vec::new();
+        signed_data.extend_from_slice(&encode_sequence(&digests));
+        signed_data.extend_from_slice(&encode_sequence(&certificates));
+        signed_data.extend_from_slice(&28_u32.to_le_bytes());
+        signed_data.extend_from_slice(&35_u32.to_le_bytes());
+        signed_data.extend_from_slice(&attributes);
+
+        let parsed = parse_signed_data_v3(&signed_data).expect("v3 signed data should parse");
+        let proof_info = parsed
+            .proof_of_rotation
+            .expect("proof-of-rotation evidence should be present");
+
+        assert_eq!(proof_info.state, CryptoVerificationState::Verified);
+        assert_eq!(proof_info.level_count, 2);
+    }
+
+    #[test]
     fn invalid_proof_of_rotation_signature_cannot_verify() {
         let mut proof = proof_rotation_fixture();
         let (_, current_certificate) = proof_rotation_certificates(&proof);
@@ -1801,7 +1836,12 @@ mod tests {
                     algorithms: vec![0x0201],
                     certificate_sha256: vec!["a".repeat(64)],
                     sdk_ranges: vec![(28, 32)],
-                    proof_of_rotation: Vec::new(),
+                    proof_of_rotation: vec![ProofOfRotationInfo {
+                        state: CryptoVerificationState::Verified,
+                        level_count: 2,
+                        detail: "proof-of-rotation lineage verified across 2 certificate level(s)"
+                            .to_string(),
+                    }],
                     detail: "targeted signer A".to_string(),
                 },
                 CryptoSchemeInfo {
@@ -1821,6 +1861,8 @@ mod tests {
         assert_eq!(result.signer_count, 2);
         assert_eq!(result.sdk_ranges, vec![(28, 32), (33, 36)]);
         assert_eq!(result.certificate_sha256.len(), 2);
+        assert_eq!(result.proof_of_rotation.len(), 1);
+        assert_eq!(result.proof_of_rotation[0].level_count, 2);
         assert!(result
             .detail
             .contains("targeted signer B failed verification"));
