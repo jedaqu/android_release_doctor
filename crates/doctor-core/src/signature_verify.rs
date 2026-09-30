@@ -1102,7 +1102,7 @@ fn validate_proof_of_rotation(bytes: &[u8], current_certificate: &[u8]) -> Proof
         }
 
         match X509Certificate::from_der(certificate) {
-            Ok((remaining, _)) if remaining.is_empty() => {}
+            Ok(([], _)) => {}
             Ok(_) => {
                 return ProofOfRotationInfo {
                     state: CryptoVerificationState::Invalid,
