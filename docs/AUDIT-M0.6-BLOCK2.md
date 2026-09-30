@@ -30,7 +30,9 @@ Observed examples:
 - `PLAY-004` Play Console declarations;
 - `PLAY-005` when ELF/ZIP evidence is unavailable;
 - `NATIVE-002` when ELF parsing is unavailable;
-- `NATIVE-003` when ZIP alignment cannot be proven, including the AAB boundary.
+- `NATIVE-003` when ZIP alignment cannot be proven, including the AAB boundary;
+- `SIGNING-002` when the APK signing block cannot be validated;
+- `SIGNING-003` when cryptographic verification cannot be completed or no supported scheme is available.
 
 These are not confirmed failures of the artifact. They are conditions where the artifact cannot prove the required external property.
 
