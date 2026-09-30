@@ -445,9 +445,10 @@ pub fn audit_path_with_project(
 
     match project::parse_project(project_path) {
         Ok(project) => {
-            report
-                .findings
-                .extend(evaluate_project_crosscheck(report.manifest.as_ref(), &project));
+            report.findings.extend(evaluate_project_crosscheck(
+                report.manifest.as_ref(),
+                &project,
+            ));
             report.project = Some(project);
         }
         Err(error) => {
