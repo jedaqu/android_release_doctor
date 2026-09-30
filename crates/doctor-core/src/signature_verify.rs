@@ -1490,6 +1490,7 @@ mod tests {
         assert_eq!(v3.certificate_sha256[0].len(), 64);
         assert_eq!(v3.sdk_ranges.len(), 1);
         assert!(v3.sdk_ranges[0].0 <= v3.sdk_ranges[0].1);
+        assert!(v3.proof_of_rotation.is_empty());
         assert!(!result.v31_present);
     }
 
@@ -1690,6 +1691,104 @@ mod tests {
         assert_eq!(info.sdk_ranges, vec![(28, 32)]);
         assert!(info.detail.contains("signature verification failed"));
     }
+
+
+    fn proof_rotation_fixture() -> Vec<u8> {
+        std::fs::read(
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../../tests/fixtures/proof-rotation-valid.bin"),
+        )
+        .expect("proof-of-rotation fixture should be readable")
+    }
+
+    fn proof_rotation_certificates(bytes: &[u8]) -> (Vec<u8>, Vec<u8>) {
+        let mut reader = LengthReader::new(bytes);
+        assert_eq!(
+            reader
+                .read_u32("fixture version")
+                .expect("fixture should contain a version"),
+            1
+        );
+        let first_node = reader
+            .read_sequence("fixture first node")
+            .expect("fixture should contain first lineage node");
+        let second_node = reader
+            .read_sequence("fixture second node")
+            .expect("fixture should contain second lineage node");
+        reader.finish("fixture").expect("fixture should have no trailing bytes");
+
+        let mut first_reader = LengthReader::new(first_node);
+        let first_signed_data = first_reader
+            .read_sequence("fixture first signed data")
+            .expect("first node should contain signed data");
+        let mut first_signed_reader = LengthReader::new(first_signed_data);
+        let first_certificate = first_signed_reader
+            .read_length_prefixed("fixture first certificate")
+            .expect("first node should contain a certificate")
+            .to_vec();
+
+        let mut second_reader = LengthReader::new(second_node);
+        let second_signed_data = second_reader
+            .read_sequence("fixture second signed data")
+            .expect("second node should contain signed data");
+        let mut second_signed_reader = LengthReader::new(second_signed_data);
+        let second_certificate = second_signed_reader
+            .read_length_prefixed("fixture second certificate")
+            .expect("second node should contain a certificate")
+            .to_vec();
+
+        (first_certificate, second_certificate)
+    }
+
+    #[test]
+    fn verifies_valid_proof_of_rotation_fixture() {
+        let proof = proof_rotation_fixture();
+        let (_, current_certificate) = proof_rotation_certificates(&proof);
+
+        let result = validate_proof_of_rotation(&proof, &current_certificate);
+
+        assert_eq!(result.state, CryptoVerificationState::Verified);
+        assert_eq!(result.level_count, 2);
+        assert!(result.detail.contains("lineage verified"));
+    }
+
+    #[test]
+    fn invalid_proof_of_rotation_signature_cannot_verify() {
+        let mut proof = proof_rotation_fixture();
+        let (_, current_certificate) = proof_rotation_certificates(&proof);
+        *proof.last_mut().expect("fixture must not be empty") ^= 1;
+
+        let result = validate_proof_of_rotation(&proof, &current_certificate);
+
+        assert_eq!(result.state, CryptoVerificationState::Invalid);
+        assert!(result.detail.contains("validation failed"));
+    }
+
+    #[test]
+    fn malformed_proof_of_rotation_cannot_verify() {
+        let proof = proof_rotation_fixture();
+        let (_, current_certificate) = proof_rotation_certificates(&proof);
+
+        let result =
+            validate_proof_of_rotation(&proof[..proof.len() - 1], &current_certificate);
+
+        assert_eq!(result.state, CryptoVerificationState::Invalid);
+        assert!(result.detail.contains("malformed"));
+    }
+
+    #[test]
+    fn proof_of_rotation_final_certificate_must_match_current_signer() {
+        let proof = proof_rotation_fixture();
+        let (first_certificate, _) = proof_rotation_certificates(&proof);
+
+        let result = validate_proof_of_rotation(&proof, &first_certificate);
+
+        assert_eq!(result.state, CryptoVerificationState::Invalid);
+        assert!(result
+            .detail
+            .contains("final proof-of-rotation certificate does not match"));
+    }
+
 
     #[test]
     fn merges_verified_and_failed_v3_signers_without_losing_evidence() {
