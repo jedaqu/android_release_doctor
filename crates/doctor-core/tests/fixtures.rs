@@ -365,6 +365,56 @@ fn compressed_native_library_does_not_require_zip_offset_alignment() {
 }
 
 #[test]
+fn valid_v2_fixture_produces_verified_signing_finding() {
+    let report = audit_path(fixture("crypto-v2-release.apk"))
+        .expect("valid v2 crypto fixture should remain auditable");
+
+    assert_eq!(
+        report
+            .findings
+            .iter()
+            .find(|finding| finding.rule_id == "SIGNING-003")
+            .map(|finding| finding.severity),
+        Some(Severity::Pass)
+    );
+
+    let verification = report
+        .inventory
+        .apk_signature_verification
+        .as_ref()
+        .expect("v2 verification result should be present");
+    assert_eq!(
+        verification.v2.as_ref().map(|scheme| scheme.state),
+        Some(doctor_core::CryptoVerificationState::Verified)
+    );
+}
+
+#[test]
+fn tampered_v2_fixture_produces_signature_blocker() {
+    let report = audit_path(fixture("crypto-v2-release-tampered.apk"))
+        .expect("tampered v2 crypto fixture should remain auditable");
+
+    assert_eq!(
+        report
+            .findings
+            .iter()
+            .find(|finding| finding.rule_id == "SIGNING-003")
+            .map(|finding| finding.severity),
+        Some(Severity::Blocker)
+    );
+
+    let verification = report
+        .inventory
+        .apk_signature_verification
+        .as_ref()
+        .expect("tampered v2 verification result should be present");
+    assert_eq!(
+        verification.v2.as_ref().map(|scheme| scheme.state),
+        Some(doctor_core::CryptoVerificationState::Invalid)
+    );
+}
+
+#[test]
 fn signing_block_absence_is_reported_without_a_blocker() {
     let report =
         audit_path(fixture("minimal-release.apk")).expect("fixture should remain auditable");
