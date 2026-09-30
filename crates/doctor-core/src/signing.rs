@@ -349,7 +349,10 @@ mod tests {
         assert!(info.v3);
         assert!(info.v31);
         assert!(info.v32);
-        assert_eq!(info.block_size, 8 + SIGNING_BLOCK_FOOTER_LEN + 8 + 8 + 8);
+        assert_eq!(
+            info.block_size,
+            8 + SIGNING_BLOCK_FOOTER_LEN + 8 + 8 + 8 + 8
+        );
     }
 
     #[test]
