@@ -1,0 +1,9 @@
+[package]
+name = "doctor-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Core audit model and Android release artifact inspection engine."
+
+[dependencies]
+zip.workspace = true

@@ -1,0 +1,13 @@
+[package]
+name = "doctor-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Command-line interface for Android Release Doctor."
+
+[[bin]]
+name = "android-release-doctor"
+path = "src/main.rs"
+
+[dependencies]
+doctor-core = { path = "../doctor-core" }
