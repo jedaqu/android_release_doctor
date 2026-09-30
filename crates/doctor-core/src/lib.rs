@@ -448,7 +448,7 @@ fn evaluate(
                         findings.push(Finding::blocker(
                             "BUILD-001",
                             "Debuggable release",
-                            "The final manifest sets android:debuggable="true".",
+                            "The final manifest sets android:debuggable=true.",
                             "Build a non-debuggable release artifact before publication.",
                         ));
                     } else if manifest.debuggable == Some(false) {
