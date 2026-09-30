@@ -459,3 +459,24 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Validation:** Actions run #300 / 36781123329 passed Build and Test (65 unit tests + 16 integration tests) and failed only Format on the three reported layout differences.
 - **Status:** OPEN
 
+
+## ERR-043 — M0.7 Block 1 second audit found missing focused regressions
+
+- **Milestone:** M0.7 Block 1 / second audit
+- **Type:** Test coverage defect
+- **Problem:** The implementation had positive v2/v3 ECDSA/SHA-512 P-384 coverage and a direct tampered-signature test, but the acceptance matrix lacked a focused v2 APK tampering regression and an explicit regression proving a non-P-384 `0x0202` case returns `Unsupported`.
+- **Cause:** The first implementation focused on proving the positive path and cryptographic failure path before completing every bounded acceptance cell from the pre-change audit.
+- **Required correction:** Add the two focused regressions without changing production verification behavior.
+- **Second-audit document:** f11226a47b33f7812a8c487cc5c15a94652ab62b
+- **Status:** OPEN
+
+## ERR-044 — M0.7 Block 1 Cargo.lock was stale after adding crypto dependencies
+
+- **Milestone:** M0.7 Block 1 / implementation validation
+- **Type:** Reproducibility / dependency-lock defect
+- **Problem:** After adding `p384` and `sha2` as direct dependencies, the tracked `Cargo.lock` still described the pre-implementation dependency graph.
+- **Cause:** The dependency declarations were committed before regenerating and committing the lockfile.
+- **Correction:** Generate the lockfile with the repository toolchain, commit the generated dependency graph, and remove the temporary CI-only lock-generation workflow.
+- **Correction commit:** 3880246bc00ea45d78d04ea6b30449fa84bde54d
+- **Validation:** Final Rust CI run #305 / 36782365269 passed Build, Test, Format, and Clippy with the tracked lockfile present.
+- **Status:** RESOLVED
