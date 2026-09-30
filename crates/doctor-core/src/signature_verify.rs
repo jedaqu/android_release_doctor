@@ -135,8 +135,29 @@ fn verify_v2_signer(
     let parsed = parse_signed_data_v2(signed_data)?;
 
     verify_certificate_and_public_key(parsed.certificate, public_key)?;
-    verify_signature_bytes(selected.algorithm_id, public_key, signed_data, selected.signature)?;
-    verify_content_digest(file, block, parsed.digest, selected.digest_algorithm)?;
+    verify_signature_bytes(
+        selected.algorithm_id,
+        parsed.certificate,
+        signed_data,
+        selected.signature,
+    )?;
+    let expected_digest = parsed
+        .digests
+        .iter()
+        .find(|(id, _)| *id == selected.algorithm_id)
+        .map(|(_, digest)| *digest)
+        .ok_or_else(|| {
+            SignatureVerificationError(format!(
+                "v2 digest list does not contain signature algorithm 0x{:08x}",
+                selected.algorithm_id
+            ))
+        })?;
+    verify_content_digest(file, block, expected_digest, selected.digest_algorithm)?;
+
+    let algorithms = parsed
+        .digest_algorithms
+        .clone();
+    if algorithms != selected.all_signature_algorithms {
 
     let mut algorithms = parsed
         .digest_algorithms
@@ -217,8 +238,26 @@ fn verify_v3_block(
 
     let selected = parse_and_select_signature(signatures)?;
     verify_certificate_and_public_key(parsed.certificate, public_key)?;
-    verify_signature_bytes(selected.algorithm_id, public_key, signed_data, selected.signature)?;
-    verify_content_digest(file, block, parsed.digest, selected.digest_algorithm)?;
+    verify_signature_bytes(
+        selected.algorithm_id,
+        parsed.certificate,
+        signed_data,
+        selected.signature,
+    )?;
+    let expected_digest = parsed
+        .digests
+        .iter()
+        .find(|(id, _)| *id == selected.algorithm_id)
+        .map(|(_, digest)| *digest)
+        .ok_or_else(|| {
+            SignatureVerificationError(format!(
+                "v3 digest list does not contain signature algorithm 0x{:08x}",
+                selected.algorithm_id
+            ))
+        })?;
+    verify_content_digest(file, block, expected_digest, selected.digest_algorithm)?;
+
+    if parsed.digest_algorithms != selected.all_signature_algorithms {
 
     if parsed.digest_algorithms != selected.all_signature_algorithms {
         return Ok(CryptoSchemeInfo {
@@ -333,7 +372,7 @@ fn parse_and_select_signature<'a>(
 
     let mut supported = entries
         .iter()
-        .filter_map(|(id, sig)| signature_algorithm(*id).map(|digest| (*id, *sig, digest)))
+        .filter_map(|(id, sig)| supported_signature_algorithm(*id).map(|digest| (*id, *sig, digest)))
         .collect::<Vec<_>>();
 
     supported.sort_by_key(|(id, _, _)| std::cmp::Reverse(signature_strength(*id)));
@@ -365,34 +404,38 @@ fn signature_strength(id: u32) -> u32 {
     }
 }
 
-fn signature_algorithm(id: u32) -> Option<DigestAlgorithm> {
+fn signature_algorithm_digest(id: u32) -> Option<DigestAlgorithm> {
     match id {
-        0x0101 | 0x0103 | 0x0201 => Some(DigestAlgorithm::Sha256),
-        0x0102 | 0x0104 => Some(DigestAlgorithm::Sha512),
+        0x0101 | 0x0103 | 0x0201 | 0x0301 => Some(DigestAlgorithm::Sha256),
+        0x0102 | 0x0104 | 0x0202 => Some(DigestAlgorithm::Sha512),
+        _ => None,
+    }
+}
+
+fn supported_signature_algorithm(id: u32) -> Option<DigestAlgorithm> {
+    match id {
+        0x0101 | 0x0102 | 0x0103 | 0x0104 | 0x0201 => signature_algorithm_digest(id),
         _ => None,
     }
 }
 
 fn verify_signature_bytes(
     algorithm_id: u32,
-    public_key: &[u8],
+    certificate_der: &[u8],
     signed_data: &[u8],
     signature_bytes: &[u8],
 ) -> Result<(), SignatureVerificationError> {
-    let cert = X509Certificate::from_der(public_key)
-        .map_err(|error| SignatureVerificationError(format!("public-key DER is not an X.509 certificate: {error}")));
+    let (remaining, cert) = X509Certificate::from_der(certificate_der).map_err(|error| {
+        SignatureVerificationError(format!("signer certificate is not valid DER: {error}"))
+    })?;
 
-    let _ = cert;
-    let (cert_der, _) = if let Ok((remaining, cert)) = X509Certificate::from_der(public_key) {
-        (cert, remaining)
-    } else {
+    if !remaining.is_empty() {
         return Err(SignatureVerificationError(
-            "internal public-key certificate parsing path was reached unexpectedly".to_string(),
+            "signer certificate contains trailing DER data".to_string(),
         ));
-    };
-    let _ = cert_der;
+    }
 
-    let algorithm = match algorithm_id {
+    let algorithm: &dyn signature::VerificationAlgorithm = match algorithm_id {
         0x0101 => &signature::RSA_PSS_SHA256,
         0x0102 => &signature::RSA_PSS_SHA512,
         0x0103 => &signature::RSA_PKCS1_SHA256,
@@ -405,30 +448,92 @@ fn verify_signature_bytes(
         }
     };
 
-    let key_bytes = if matches!(algorithm_id, 0x0201) {
-        public_key.to_vec()
-    } else {
-        public_key.to_vec()
+    let key_bytes = match cert.public_key().parsed().map_err(|error| {
+        SignatureVerificationError(format!("failed to parse signer public key: {error}"))
+    })? {
+        PublicKey::RSA(rsa) => encode_rsa_public_key(rsa.modulus, rsa.exponent)?,
+        PublicKey::EC(_) => cert.public_key().subject_public_key.data.to_vec(),
+        _ => {
+            return Err(SignatureVerificationError(
+                "signer certificate uses an unsupported public-key type".to_string(),
+            ))
+        }
     };
 
-    let verifier = UnparsedPublicKey::new(algorithm, key_bytes.as_slice());
-    verifier
-        .verify(signed_data, signature_bytes)
-        .map_err(|_| {
-            SignatureVerificationError(format!(
-                "cryptographic signature verification failed for algorithm 0x{algorithm_id:08x}"
-            ))
-        })
+    let verifier = UnparsedPublicKey::new(algorithm, &key_bytes);
+    verifier.verify(signed_data, signature_bytes).map_err(|_| {
+        SignatureVerificationError(format!(
+            "cryptographic signature verification failed for algorithm 0x{algorithm_id:08x}"
+        ))
+    })
+}
+
+fn encode_rsa_public_key(
+    modulus: &[u8],
+    exponent: &[u8],
+) -> Result<Vec<u8>, SignatureVerificationError> {
+    let modulus = der_integer(modulus);
+    let exponent = der_integer(exponent);
+
+    let body_len = modulus.len() + exponent.len();
+    let mut result = Vec::with_capacity(1 + der_length_size(body_len) + body_len);
+    result.push(0x30);
+    append_der_length(&mut result, body_len);
+    result.extend_from_slice(&modulus);
+    result.extend_from_slice(&exponent);
+    Ok(result)
+}
+
+fn der_integer(value: &[u8]) -> Vec<u8> {
+    let mut value = if value.is_empty() {
+        vec![0]
+    } else {
+        let first_nonzero = value
+            .iter()
+            .position(|byte| *byte != 0)
+            .unwrap_or(value.len() - 1);
+        value[first_nonzero..].to_vec()
+    };
+
+    if value[0] & 0x80 != 0 {
+        value.insert(0, 0);
+    }
+
+    let mut result = Vec::with_capacity(1 + der_length_size(value.len()) + value.len());
+    result.push(0x02);
+    append_der_length(&mut result, value.len());
+    result.extend_from_slice(&value);
+    result
+}
+
+fn der_length_size(length: usize) -> usize {
+    if length < 128 {
+        1
+    } else if length < 256 {
+        2
+    } else {
+        3
+    }
+}
+
+fn append_der_length(output: &mut Vec<u8>, length: usize) {
+    if length < 128 {
+        output.push(length as u8);
+    } else if length < 256 {
+        output.extend_from_slice(&[0x81, length as u8]);
+    } else {
+        output.extend_from_slice(&[0x82, (length >> 8) as u8, length as u8]);
+    }
 }
 
 struct ParsedSignedData<'a> {
-    digest: &'a [u8],
+    digests: Vec<(u32, &'a [u8])>,
     digest_algorithms: Vec<u32>,
     certificate: &'a [u8],
 }
 
 struct ParsedV3SignedData<'a> {
-    digest: &'a [u8],
+    digests: Vec<(u32, &'a [u8])>,
     digest_algorithms: Vec<u32>,
     certificate: &'a [u8],
     min_sdk: u32,
@@ -449,7 +554,7 @@ fn parse_signed_data_v2(bytes: &[u8]) -> Result<ParsedSignedData<'_>, SignatureV
     certificates_reader.finish("v2 certificate sequence")?;
 
     Ok(ParsedSignedData {
-        digest: selected_digest.1,
+        digests: selected_digest.0,
         digest_algorithms,
         certificate,
     })
@@ -485,7 +590,7 @@ fn parse_signed_data_v3(
     attributes_reader.finish("v3 additional attributes")?;
 
     Ok(ParsedV3SignedData {
-        digest: selected_digest.1,
+        digests: selected_digest.0,
         digest_algorithms,
         certificate,
         min_sdk,
@@ -496,10 +601,10 @@ fn parse_signed_data_v3(
 
 fn parse_digest_sequence(
     bytes: &[u8],
-) -> Result<(Vec<u32>, (u32, &[u8])), SignatureVerificationError> {
+) -> Result<(Vec<u32>, (Vec<(u32, &[u8])>,)), SignatureVerificationError> {
     let mut reader = LengthReader::new(bytes);
     let mut algorithms = Vec::new();
-    let mut selected = None;
+    let mut digests = Vec::new();
 
     while !reader.is_empty() {
         let sequence = reader.read_sequence("digest entry")?;
@@ -508,21 +613,17 @@ fn parse_digest_sequence(
         let digest = entry.read_length_prefixed("digest")?;
         entry.finish("digest entry")?;
         algorithms.push(id);
-
-        if selected.is_none() && signature_algorithm(id).is_some() {
-            selected = Some((id, digest));
-        }
+        digests.push((id, digest));
     }
     reader.finish("digest sequence")?;
 
-    let selected = selected.ok_or_else(|| {
-        SignatureVerificationError(
-            "APK signer contains no digest entry matching a supported signature algorithm"
-                .to_string(),
-        )
-    })?;
+    if digests.is_empty() {
+        return Err(SignatureVerificationError(
+            "APK signer contains no digest entries".to_string(),
+        ));
+    }
 
-    Ok((algorithms, selected))
+    Ok((algorithms, (digests,)))
 }
 
 fn verify_certificate_and_public_key(
@@ -712,6 +813,7 @@ impl<'a> LengthReader<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Write;
 
     #[test]
     fn content_digest_hashes_each_section_and_patches_eocd_offset() {
