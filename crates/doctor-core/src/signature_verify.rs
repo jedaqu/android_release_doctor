@@ -1450,7 +1450,9 @@ mod tests {
         assert_eq!(result.signer_count, 2);
         assert_eq!(result.sdk_ranges, vec![(28, 32), (33, 36)]);
         assert_eq!(result.certificate_sha256.len(), 2);
-        assert!(result.detail.contains("targeted signer B failed verification"));
+        assert!(result
+            .detail
+            .contains("targeted signer B failed verification"));
     }
 
     #[test]
