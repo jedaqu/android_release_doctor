@@ -149,6 +149,48 @@ This file is the chronological engineering ledger for failures, errors, their ro
 
 ---
 
+## ERR-016 — signer-local verification aborted multi-signer evidence
+
+- **Milestone:** M0.6 Block 4 / AUDIT-014
+- **Type:** Implementation defect
+- **Problem:** v2/v3 signer verification propagated signer-local errors with `?`, so one failing signer could abort the whole multi-signer verification pass.
+- **Correction:** Contain signer-level failures, retain each failure as an Invalid/Unsupported signer result, continue with remaining signers, and merge the evidence using existing state semantics.
+- **Correction commit:** 135e3df81507ad48d6b03608f282da7154c028af
+- **Status:** CORRECTED — VALIDATION PENDING
+
+## ERR-017 — v3 signer failure lost known SDK-range evidence
+
+- **Milestone:** M0.6 Block 4 / AUDIT-015
+- **Type:** Evidence-model defect
+- **Problem:** A signer failure after outer minSDK/maxSDK parsing was converted at the top level, losing the already-known signer range and signer count.
+- **Correction:** Preserve signer count, SDK range, algorithms, and certificate fingerprint whenever those values were successfully parsed before the failure.
+- **Correction commit:** 135e3df81507ad48d6b03608f282da7154c028af
+- **Status:** CORRECTED — VALIDATION PENDING
+
+## ERR-018 — M0.6 Block 4 branch missing from CI trigger coverage
+
+- **Milestone:** M0.6 Block 4 / AUDIT-016
+- **Type:** CI configuration
+- **Problem:** The new Block 4 branch was not yet covered by the workflow's push/PR trigger lists.
+- **Correction:** Add the Block 4 branch to both existing trigger lists without redesigning the workflow.
+- **Status:** IMPLEMENTED — SECOND-AUDIT FOUND EDIT DEFECT; SEE ERR-020
+
+## ERR-019 — Repository status stale after Block 3 checkpoint
+
+- **Milestone:** M0.6 Block 4 / AUDIT-017
+- **Type:** Documentation
+- **Problem:** README still described M0.6 Block 3 as in progress after its checkpoint.
+- **Correction:** Update the top-level status to M0.6 Block 4 in progress.
+- **Correction commit:** 0b43ac43a74b1bee8df6c9d86dd68036bac9a1ec
+- **Status:** RESOLVED
+
+## ERR-020 — Block 4 CI trigger edit duplicated push entry and omitted PR entry
+
+- **Milestone:** M0.6 Block 4 / second audit
+- **Type:** CI configuration correction defect
+- **Problem:** The scoped workflow edit inserted `m06-block4-signer-error-isolation` twice under push.branches and did not add it to pull_request.branches.
+- **Required correction:** Keep the Block 4 branch exactly once in push.branches and exactly once in pull_request.branches; preserve all existing entries.
+- **Status:** PENDING CORRECTION
 ## Current validation state
 
 ERR-015 was corrected in commit 9126fd8d20fc49d410f640c345da15f3529a9f49.
