@@ -6,10 +6,12 @@ on:
       - main
       - m0-foundation
       - m05-package-alignment
+      - m05-crypto-signatures
   pull_request:
     branches:
       - main
       - m04-elf-signing
+      - m05-package-alignment
 
 env:
   CARGO_TERM_COLOR: always
