@@ -983,10 +983,7 @@ fn parse_signed_data_v3(
     })
 }
 
-fn validate_proof_of_rotation(
-    bytes: &[u8],
-    current_certificate: &[u8],
-) -> ProofOfRotationInfo {
+fn validate_proof_of_rotation(bytes: &[u8], current_certificate: &[u8]) -> ProofOfRotationInfo {
     let mut reader = LengthReader::new(bytes);
     let version = match reader.read_u32("v3 proof-of-rotation version") {
         Ok(value) => value,
@@ -1055,17 +1052,16 @@ fn validate_proof_of_rotation(
                     };
                 }
             };
-        let signature =
-            match node_reader.read_length_prefixed("v3 proof-of-rotation signature") {
-                Ok(value) => value,
-                Err(error) => {
-                    return ProofOfRotationInfo {
-                        state: CryptoVerificationState::Invalid,
-                        level_count,
-                        detail: format!("proof-of-rotation is malformed: {error}"),
-                    };
-                }
-            };
+        let signature = match node_reader.read_length_prefixed("v3 proof-of-rotation signature") {
+            Ok(value) => value,
+            Err(error) => {
+                return ProofOfRotationInfo {
+                    state: CryptoVerificationState::Invalid,
+                    level_count,
+                    detail: format!("proof-of-rotation is malformed: {error}"),
+                };
+            }
+        };
         if let Err(error) = node_reader.finish("v3 proof-of-rotation node") {
             return ProofOfRotationInfo {
                 state: CryptoVerificationState::Invalid,
@@ -1111,8 +1107,7 @@ fn validate_proof_of_rotation(
                 return ProofOfRotationInfo {
                     state: CryptoVerificationState::Invalid,
                     level_count,
-                    detail: "proof-of-rotation certificate contains trailing DER data"
-                        .to_string(),
+                    detail: "proof-of-rotation certificate contains trailing DER data".to_string(),
                 };
             }
             Err(error) => {
@@ -1124,7 +1119,10 @@ fn validate_proof_of_rotation(
             }
         }
 
-        if certificates.iter().any(|item| item.as_slice() == certificate) {
+        if certificates
+            .iter()
+            .any(|item| item.as_slice() == certificate)
+        {
             return ProofOfRotationInfo {
                 state: CryptoVerificationState::Invalid,
                 level_count,
@@ -1199,9 +1197,8 @@ fn validate_proof_of_rotation(
         return ProofOfRotationInfo {
             state: CryptoVerificationState::Invalid,
             level_count,
-            detail:
-                "final proof-of-rotation level must not specify a next-level signing algorithm"
-                    .to_string(),
+            detail: "final proof-of-rotation level must not specify a next-level signing algorithm"
+                .to_string(),
         };
     }
     if last_certificate.as_deref() != Some(current_certificate) {
@@ -1726,7 +1723,6 @@ mod tests {
         assert!(info.detail.contains("signature verification failed"));
     }
 
-
     fn proof_rotation_fixture() -> Vec<u8> {
         std::fs::read(
             std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -1749,7 +1745,9 @@ mod tests {
         let second_node = reader
             .read_sequence("fixture second node")
             .expect("fixture should contain second lineage node");
-        reader.finish("fixture").expect("fixture should have no trailing bytes");
+        reader
+            .finish("fixture")
+            .expect("fixture should have no trailing bytes");
 
         let mut first_reader = LengthReader::new(first_node);
         let first_signed_data = first_reader
@@ -1838,8 +1836,7 @@ mod tests {
         let proof = proof_rotation_fixture();
         let (_, current_certificate) = proof_rotation_certificates(&proof);
 
-        let result =
-            validate_proof_of_rotation(&proof[..proof.len() - 1], &current_certificate);
+        let result = validate_proof_of_rotation(&proof[..proof.len() - 1], &current_certificate);
 
         assert_eq!(result.state, CryptoVerificationState::Invalid);
         assert!(result.detail.contains("malformed"));
@@ -1857,7 +1854,6 @@ mod tests {
             .detail
             .contains("final proof-of-rotation certificate does not match"));
     }
-
 
     #[test]
     fn merges_verified_and_failed_v3_signers_without_losing_evidence() {
