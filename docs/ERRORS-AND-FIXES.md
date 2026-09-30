@@ -255,8 +255,9 @@ This file is the chronological engineering ledger for failures, errors, their ro
 - **Type:** Documentation defect
 - **Problem:** The initial Block 5 audit document contained ChatGPT/web UI citation markers instead of stable repository-readable source URLs.
 - **Required correction:** Replace those markers with plain AOSP source URLs and keep repository documentation independent of chat UI formatting.
-- **Status:** PENDING
-
+- **Correction commit:** f3886a25e8d8321832d04d575f302c15c4880384
+- **Validation:** Re-read of `docs/AUDIT-M0.6-BLOCK5.md` confirmed the citation markers are absent and the AOSP references are represented as plain URLs.
+- **Status:** RESOLVED
 ## Current validation state
 
 M0.6 Block 4 implementation and the current CI correction cycle have passed the complete validation gate.
