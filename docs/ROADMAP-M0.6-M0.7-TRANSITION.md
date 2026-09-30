@@ -14,7 +14,7 @@ No se inicia una etapa posterior mientras la anterior tenga hallazgos de cierre 
 
 ## Etapa 1 — Cierre formal de M0.6
 
-**Estado: EN CURSO**
+**Estado: FINALIZADA**
 
 Objetivo: dejar M0.6 formalmente cerrado como línea de desarrollo, sin mezclar todavía nuevas capacidades de M0.7.
 
@@ -29,11 +29,13 @@ Verificaciones de cierre:
 - PRs de la línea M0.6 permanecen sin merge conforme a la disciplina establecida;
 - ausencia de hallazgos de producción pendientes.
 
-Cierre requerido:
-- documento de cierre formal;
-- segunda comprobación;
-- validación CI correspondiente;
-- checkpoint de cierre de M0.6.
+Evidencia de cierre:
+
+- `docs/CLOSURE-M0.6.md`;
+- `docs/SECOND-AUDIT-M0.6-CLOSURE.md`;
+- Actions run #260 / 36754421382: Build PASS, Test PASS, Format PASS, Clippy PASS.
+
+Criterio cumplido: no se identificó ninguna corrección pendiente en el contenido de cierre. El checkpoint de esta etapa se registra en la actualización de estado que acompaña a esta evidencia.
 
 ## Etapa 2 — Auditoría de transición M0.6 → M0.7
 
