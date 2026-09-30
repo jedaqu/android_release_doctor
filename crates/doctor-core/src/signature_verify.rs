@@ -21,6 +21,7 @@ use crate::signing::{read_apk_signing_block, ApkSigningBlock, SigningBlockError}
 const V2_BLOCK_ID: u32 = 0x7109_871a;
 const V3_BLOCK_ID: u32 = 0xf053_68c0;
 const V31_BLOCK_ID: u32 = 0x1b93_ad61;
+const V32_BLOCK_ID: u32 = 0x70e1_c89f;
 const PROOF_OF_ROTATION_ATTR_ID: u32 = 0x3ba0_6f8c;
 const CHUNK_SIZE: usize = 1024 * 1024;
 
@@ -45,6 +46,7 @@ pub struct ApkSignatureVerification {
     pub v2: Option<CryptoSchemeInfo>,
     pub v3: Option<CryptoSchemeInfo>,
     pub v31_present: bool,
+    pub v32_present: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -79,6 +81,7 @@ pub fn verify_apk_signatures(
     };
 
     let v31_present = block.pairs.iter().any(|(id, _)| *id == V31_BLOCK_ID);
+    let v32_present = block.pairs.iter().any(|(id, _)| *id == V32_BLOCK_ID);
     let v2_block = block
         .pairs
         .iter()
@@ -92,6 +95,7 @@ pub fn verify_apk_signatures(
 
     let mut result = ApkSignatureVerification {
         v31_present,
+        v32_present,
         ..Default::default()
     };
 
@@ -475,7 +479,7 @@ fn verify_signature_bytes(
 
     let algorithm: &dyn signature::VerificationAlgorithm = match algorithm_id {
         0x0101 => {
-            let PublicKey::RSA(rsa) = parsed_public_key else {
+            let PublicKey::RSA(rsa) = &parsed_public_key else {
                 return Err(SignatureVerificationError(
                     "RSA signature algorithm is paired with a non-RSA signer public key".to_string(),
                 ));
@@ -573,7 +577,7 @@ fn verify_signature_bytes(
         }
     };
 
-    let key_bytes = match parsed_public_key {
+    let key_bytes = match &parsed_public_key {
         PublicKey::RSA(rsa) => encode_rsa_public_key(rsa.modulus, rsa.exponent),
         PublicKey::EC(_) => cert.public_key().subject_public_key.data.to_vec(),
         _ => {
