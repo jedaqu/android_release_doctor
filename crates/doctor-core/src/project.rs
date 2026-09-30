@@ -48,10 +48,18 @@ impl fmt::Display for ProjectError {
             Self::Io(error) => write!(f, "I/O error: {error}"),
             Self::InvalidPath(message) => write!(f, "invalid project path: {message}"),
             Self::BuildFileNotFound(path) => {
-                write!(f, "could not find an Android application build.gradle file under {}", path.display())
+                write!(
+                    f,
+                    "could not find an Android application build.gradle file under {}",
+                    path.display()
+                )
             }
             Self::AmbiguousBuildFiles(paths) => {
-                write!(f, "multiple Android application build files were found: {}", format_paths(paths))
+                write!(
+                    f,
+                    "multiple Android application build files were found: {}",
+                    format_paths(paths)
+                )
             }
             Self::Parse(message) => write!(f, "Gradle parse error: {message}"),
         }
@@ -240,9 +248,7 @@ fn strip_comments(source: &str) -> String {
             out.push(' ');
             out.push(' ');
             index += 2;
-            while index + 1 < chars.len()
-                && !(chars[index] == '*' && chars[index + 1] == '/')
-            {
+            while index + 1 < chars.len() && !(chars[index] == '*' && chars[index + 1] == '/') {
                 out.push(if chars[index] == '\n' { '\n' } else { ' ' });
                 index += 1;
             }
@@ -285,7 +291,8 @@ fn find_word(source: &str, word: &str, start: usize) -> Option<usize> {
                 && source.as_bytes()[position - 1] != b'_';
         let after = position + word.len();
         let after_ok = after >= source.len()
-            || !source.as_bytes()[after].is_ascii_alphanumeric() && source.as_bytes()[after] != b'_';
+            || !source.as_bytes()[after].is_ascii_alphanumeric()
+                && source.as_bytes()[after] != b'_';
 
         if before_ok && after_ok {
             return Some(position);
@@ -518,7 +525,10 @@ android {
             extract_string_value(&default_config, "applicationId").as_deref(),
             Some("com.example.fixture")
         );
-        assert_eq!(extract_integer_value(&default_config, "targetSdk"), Some(35));
+        assert_eq!(
+            extract_integer_value(&default_config, "targetSdk"),
+            Some(35)
+        );
         assert_eq!(
             extract_string_value(&default_config, "versionName").as_deref(),
             Some("1.2.3")
@@ -536,11 +546,17 @@ android {
             Some("com.example.fixture")
         );
         assert_eq!(extract_integer_value(&android, "compileSdk"), Some(36));
-        assert_eq!(extract_integer_value(&default_config, "versionCode"), Some(7));
+        assert_eq!(
+            extract_integer_value(&default_config, "versionCode"),
+            Some(7)
+        );
         assert_eq!(
             extract_bool_value(
-                &find_named_block(&find_named_block(&android, "buildTypes").unwrap(), "release")
-                    .unwrap(),
+                &find_named_block(
+                    &find_named_block(&android, "buildTypes").unwrap(),
+                    "release"
+                )
+                .unwrap(),
                 "isDebuggable"
             ),
             Some(false)
