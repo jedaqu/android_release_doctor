@@ -7,6 +7,7 @@ const EOCD_SIGNATURE: [u8; 4] = [0x50, 0x4b, 0x05, 0x06];
 const APK_SIG_BLOCK_MAGIC: [u8; 16] = *b"APK Sig Block 42";
 const V2_BLOCK_ID: u32 = 0x7109_871a;
 const V3_BLOCK_ID: u32 = 0xf053_68c0;
+const V31_BLOCK_ID: u32 = 0x1b93_ad61;
 const EOCD_LEN: u64 = 22;
 const MAX_EOCD_COMMENT: u64 = 65_535;
 const SIGNING_BLOCK_FOOTER_LEN: u64 = 24;
@@ -15,7 +16,18 @@ const SIGNING_BLOCK_FOOTER_LEN: u64 = 24;
 pub struct ApkSigningInfo {
     pub v2: bool,
     pub v3: bool,
+    pub v31: bool,
     pub block_size: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ApkSigningBlock {
+    pub block_start: u64,
+    pub central_directory_offset: u64,
+    pub central_directory_size: u64,
+    pub eocd_offset: u64,
+    pub eocd: Vec<u8>,
+    pub pairs: Vec<(u32, Vec<u8>)>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -29,9 +41,9 @@ impl fmt::Display for SigningBlockError {
 
 impl std::error::Error for SigningBlockError {}
 
-pub fn inspect_apk_signing_block<R: Read + Seek>(
+pub fn read_apk_signing_block<R: Read + Seek>(
     reader: &mut R,
-) -> Result<Option<ApkSigningInfo>, SigningBlockError> {
+) -> Result<Option<ApkSigningBlock>, SigningBlockError> {
     let file_len = reader.seek(SeekFrom::End(0)).map_err(io_error)?;
 
     if file_len < EOCD_LEN {
@@ -47,25 +59,52 @@ pub fn inspect_apk_signing_block<R: Read + Seek>(
     let mut tail = vec![0_u8; scan_len as usize];
     reader.read_exact(&mut tail).map_err(io_error)?;
 
-    let eocd_offset = find_eocd(&tail).ok_or_else(|| {
+    let eocd_relative = find_eocd(&tail).ok_or_else(|| {
         SigningBlockError("ZIP end-of-central-directory record was not found".to_string())
     })?;
+    let eocd_offset = scan_start + eocd_relative as u64;
 
-    let central_directory_offset =
-        u32::from_le_bytes(tail[eocd_offset + 16..eocd_offset + 20].try_into().unwrap());
-
-    if central_directory_offset == u32::MAX {
+    let eocd_end = eocd_relative + EOCD_LEN as usize
+        + u16::from_le_bytes(
+            tail[eocd_relative + 20..eocd_relative + 22]
+                .try_into()
+                .expect("EOCD comment length is two bytes"),
+        ) as usize;
+    if eocd_end != tail.len() {
         return Err(SigningBlockError(
-            "ZIP64 central-directory offsets are not supported for APK signing-block inspection"
+            "ZIP End of Central Directory is not the final record in the APK".to_string(),
+        ));
+    }
+
+    let central_directory_size =
+        u32::from_le_bytes(tail[eocd_relative + 12..eocd_relative + 16].try_into().unwrap());
+    let central_directory_offset =
+        u32::from_le_bytes(tail[eocd_relative + 16..eocd_relative + 20].try_into().unwrap());
+
+    if central_directory_offset == u32::MAX || central_directory_size == u32::MAX {
+        return Err(SigningBlockError(
+            "ZIP64 central-directory fields are not supported for APK signing verification"
                 .to_string(),
         ));
     }
 
     let central_directory_offset = central_directory_offset as u64;
+    let central_directory_size = central_directory_size as u64;
 
-    if central_directory_offset < SIGNING_BLOCK_FOOTER_LEN || central_directory_offset > file_len {
+    if central_directory_offset
+        .checked_add(central_directory_size)
+        .ok_or_else(|| SigningBlockError("ZIP central-directory bounds overflowed".to_string()))?
+        != eocd_offset
+    {
         return Err(SigningBlockError(
-            "APK central-directory offset is outside the file".to_string(),
+            "ZIP Central Directory is not immediately followed by the End of Central Directory"
+                .to_string(),
+        ));
+    }
+
+    if central_directory_offset < SIGNING_BLOCK_FOOTER_LEN {
+        return Err(SigningBlockError(
+            "APK central-directory offset is before the signing-block footer".to_string(),
         ));
     }
 
@@ -118,10 +157,7 @@ pub fn inspect_apk_signing_block<R: Read + Seek>(
     let pairs_start = block_start + 8;
     let pairs_end = central_directory_offset - SIGNING_BLOCK_FOOTER_LEN;
     let mut cursor = pairs_start;
-    let mut info = ApkSigningInfo {
-        block_size: total_block_size,
-        ..Default::default()
-    };
+    let mut pairs = Vec::new();
 
     while cursor < pairs_end {
         if pairs_end - cursor < 8 {
@@ -145,11 +181,12 @@ pub fn inspect_apk_signing_block<R: Read + Seek>(
         reader.read_exact(&mut id_bytes).map_err(io_error)?;
         let id = u32::from_le_bytes(id_bytes);
 
-        match id {
-            V2_BLOCK_ID => info.v2 = true,
-            V3_BLOCK_ID => info.v3 = true,
-            _ => {}
-        }
+        let value_len = usize::try_from(pair_size - 4).map_err(|_| {
+            SigningBlockError("APK signing-block pair value is too large".to_string())
+        })?;
+        let mut value = vec![0_u8; value_len];
+        reader.read_exact(&mut value).map_err(io_error)?;
+        pairs.push((id, value));
 
         cursor += 8 + pair_size;
     }
@@ -158,6 +195,46 @@ pub fn inspect_apk_signing_block<R: Read + Seek>(
         return Err(SigningBlockError(
             "APK signing block ID-value pairs do not consume the full block".to_string(),
         ));
+    }
+
+    let eocd_len = file_len
+        .checked_sub(eocd_offset)
+        .ok_or_else(|| SigningBlockError("EOCD offset is outside the APK".to_string()))?;
+    let eocd_len = usize::try_from(eocd_len)
+        .map_err(|_| SigningBlockError("EOCD record is too large".to_string()))?;
+    reader.seek(SeekFrom::Start(eocd_offset)).map_err(io_error)?;
+    let mut eocd = vec![0_u8; eocd_len];
+    reader.read_exact(&mut eocd).map_err(io_error)?;
+
+    Ok(Some(ApkSigningBlock {
+        block_start,
+        central_directory_offset,
+        central_directory_size,
+        eocd_offset,
+        eocd,
+        pairs,
+    }))
+}
+
+pub fn inspect_apk_signing_block<R: Read + Seek>(
+    reader: &mut R,
+) -> Result<Option<ApkSigningInfo>, SigningBlockError> {
+    let Some(block) = read_apk_signing_block(reader)? else {
+        return Ok(None);
+    };
+
+    let mut info = ApkSigningInfo {
+        block_size: block.central_directory_offset - block.block_start,
+        ..Default::default()
+    };
+
+    for (id, _) in &block.pairs {
+        match *id {
+            V2_BLOCK_ID => info.v2 = true,
+            V3_BLOCK_ID => info.v3 = true,
+            V31_BLOCK_ID => info.v31 = true,
+            _ => {}
+        }
     }
 
     Ok(Some(info))
@@ -250,6 +327,7 @@ mod tests {
 
         assert!(info.v2);
         assert!(info.v3);
+        assert!(!info.v31);
         assert_eq!(info.block_size, 8 + SIGNING_BLOCK_FOOTER_LEN + 8 + 8 + 8);
     }
 
