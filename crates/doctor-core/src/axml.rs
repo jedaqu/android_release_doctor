@@ -159,7 +159,7 @@ fn parse_string_pool(
     let _style_count = header.read_u32()?;
     let flags = header.read_u32()?;
     let strings_start = header.read_u32()? as usize;
-    let _styles_start = header.read_u32()?;
+    let styles_start = header.read_u32()?;
 
     if strings_start < 28 || strings_start > chunk_size {
         return Err(AxmlError::Invalid(
