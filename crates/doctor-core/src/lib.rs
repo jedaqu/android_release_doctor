@@ -8,11 +8,15 @@ use std::{
 use zip::ZipArchive;
 
 pub mod axml;
+pub mod elf;
 pub mod play;
 pub mod project;
+pub mod signing;
 pub use axml::{ComponentInfo, ManifestInfo};
+pub use elf::{inspect_shared_object, load_segments_are_16kb_aligned, ElfInspection};
 pub use play::{evaluate_play_policy, PlayPlatform, PLAY_POLICY_VERSION};
 pub use project::{parse_project, GradleSyntax, ProjectInfo};
+pub use signing::{inspect_apk_signing_block, ApkSigningInfo};
 
 pub const ENGINE_VERSION: &str = "0.1.0";
 
@@ -99,13 +103,24 @@ impl ArtifactKind {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NativeLibraryInfo {
+    pub path: String,
+    pub abi: String,
+    pub load_segment_alignments: Vec<u64>,
+    pub error: Option<String>,
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ArtifactInventory {
     pub entries: Vec<String>,
     pub manifest_path: Option<String>,
     pub dex_files: Vec<String>,
     pub native_abis: Vec<String>,
+    pub native_libraries: Vec<NativeLibraryInfo>,
     pub signature_files: Vec<String>,
+    pub apk_signing: Option<ApkSigningInfo>,
+    pub apk_signing_error: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -401,7 +416,15 @@ pub fn audit_path(path: impl AsRef<Path>) -> Result<AuditReport, AuditError> {
     let file = File::open(path)?;
     let mut archive =
         ZipArchive::new(file).map_err(|error| AuditError::InvalidArchive(error.to_string()))?;
-    let inventory = inspect_archive(&mut archive, kind)?;
+    let mut inventory = inspect_archive(&mut archive, kind)?;
+
+    if kind == ArtifactKind::Apk {
+        let mut signing_file = File::open(path)?;
+        match signing::inspect_apk_signing_block(&mut signing_file) {
+            Ok(info) => inventory.apk_signing = info,
+            Err(error) => inventory.apk_signing_error = Some(error.to_string()),
+        }
+    }
 
     let (manifest, manifest_error) = match inventory.manifest_path.as_deref() {
         Some(path) => {
@@ -514,7 +537,7 @@ fn inspect_archive<R: Read + io::Seek>(
     let mut inventory = ArtifactInventory::default();
 
     for index in 0..archive.len() {
-        let entry = archive
+        let mut entry = archive
             .by_index(index)
             .map_err(|error| AuditError::InvalidArchive(error.to_string()))?;
         let name = entry.name().replace('\\', "/");
@@ -530,13 +553,29 @@ fn inspect_archive<R: Read + io::Seek>(
             inventory.dex_files.push(name.clone());
         }
 
-        let parts: Vec<&str> = name.split('/').collect();
-        for window in parts.windows(2) {
-            if window[0] == "lib" && name.ends_with(".so") {
-                let abi = window[1];
-                if !abi.is_empty() && !inventory.native_abis.iter().any(|item| item == abi) {
+        if name.ends_with(".so") {
+            if let Some(abi) = native_abi_from_path(&name) {
+                if !inventory.native_abis.iter().any(|item| item == abi) {
                     inventory.native_abis.push(abi.to_string());
                 }
+            }
+
+            let mut bytes = Vec::new();
+            entry.read_to_end(&mut bytes)?;
+
+            match elf::inspect_shared_object(&bytes) {
+                Ok(inspection) => inventory.native_libraries.push(NativeLibraryInfo {
+                    path: name.clone(),
+                    abi: native_abi_from_path(&name).unwrap_or("unknown").to_string(),
+                    load_segment_alignments: inspection.load_segment_alignments,
+                    error: None,
+                }),
+                Err(error) => inventory.native_libraries.push(NativeLibraryInfo {
+                    path: name.clone(),
+                    abi: native_abi_from_path(&name).unwrap_or("unknown").to_string(),
+                    load_segment_alignments: Vec::new(),
+                    error: Some(error.to_string()),
+                }),
             }
         }
 
@@ -552,11 +591,19 @@ fn inspect_archive<R: Read + io::Seek>(
     }
 
     inventory.native_abis.sort();
+    inventory.native_libraries.sort_by(|left, right| left.path.cmp(&right.path));
     inventory.signature_files.sort();
     inventory.dex_files.sort();
     inventory.entries.sort();
 
     Ok(inventory)
+}
+
+fn native_abi_from_path(name: &str) -> Option<&str> {
+    name.split('/')
+        .collect::<Vec<_>>()
+        .windows(2)
+        .find_map(|window| (window[0] == "lib").then_some(window[1]))
 }
 
 fn evaluate(
@@ -771,6 +818,63 @@ fn evaluate(
         ));
     }
 
+    if inventory.native_libraries.iter().any(|library| library.error.is_some()) {
+        let paths = inventory
+            .native_libraries
+            .iter()
+            .filter(|library| library.error.is_some())
+            .map(|library| library.path.as_str())
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        findings.push(Finding::warning(
+            "NATIVE-002",
+            "16 KB ELF inspection incomplete",
+            format!("Could not parse the native ELF program headers for: {paths}."),
+            "Inspect those shared objects with an ELF-aware tool and verify 16 KB page-size compatibility before release.",
+        ));
+    } else if inventory.native_libraries.is_empty() {
+        findings.push(Finding::pass(
+            "NATIVE-002",
+            "16 KB ELF inspection",
+            "No native .so libraries are present, so ELF page alignment is not applicable.",
+        ));
+    } else {
+        let incompatible = inventory
+            .native_libraries
+            .iter()
+            .filter(|library| {
+                !load_segments_are_16kb_aligned(&library.load_segment_alignments)
+            })
+            .collect::<Vec<_>>();
+
+        if incompatible.is_empty() {
+            findings.push(Finding::pass(
+                "NATIVE-002",
+                "16 KB ELF alignment",
+                "All inspected native ELF PT_LOAD segments meet the 16 KB alignment threshold.",
+            ));
+        } else {
+            let details = incompatible
+                .iter()
+                .map(|library| {
+                    format!(
+                        "{} [{}] alignments={:?}",
+                        library.path, library.abi, library.load_segment_alignments
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join("; ");
+
+            findings.push(Finding::warning(
+                "NATIVE-002",
+                "16 KB ELF alignment",
+                format!("One or more native libraries contain PT_LOAD alignment below 16 KB: {details}."),
+                "Rebuild or replace the affected native libraries with 16 KB ELF load-segment alignment.",
+            ));
+        }
+    }
+
     if inventory.signature_files.is_empty() {
         findings.push(Finding::warning(
             "SIGNING-001",
@@ -787,6 +891,43 @@ fn evaluate(
                 inventory.signature_files.len()
             ),
         ));
+    }
+
+    match kind {
+        ArtifactKind::Aab => findings.push(Finding::pass(
+            "SIGNING-002",
+            "APK signing block",
+            "APK signing-block inspection is not applicable to an AAB.",
+        )),
+        ArtifactKind::Apk => match (&inventory.apk_signing, &inventory.apk_signing_error) {
+            (_, Some(error)) => findings.push(Finding::blocker(
+                "SIGNING-002",
+                "APK signing block unreadable",
+                format!("The APK signing-block structure could not be validated: {error}"),
+                "Produce a valid APK with a structurally readable signing block, then rerun the audit.",
+            )),
+            (Some(info), None) if info.v2 || info.v3 => findings.push(Finding::pass(
+                "SIGNING-002",
+                "APK signing block",
+                format!(
+                    "Detected APK signing-block scheme(s): {}{}.",
+                    if info.v2 { "v2" } else { "" },
+                    if info.v2 && info.v3 { ", v3" } else if info.v3 { "v3" } else { "none" }
+                ),
+            )),
+            (Some(_), None) => findings.push(Finding::warning(
+                "SIGNING-002",
+                "APK signing block",
+                "An APK signing block is present, but no supported v2/v3 signing scheme block was detected.",
+                "Verify the APK signing scheme with apksigner and publish only the intended signed release artifact.",
+            )),
+            (None, None) => findings.push(Finding::warning(
+                "SIGNING-002",
+                "APK signing block missing",
+                "No APK signing block was detected. The artifact may be v1-only signed or unsigned.",
+                "Verify the APK signing schemes with apksigner before publication.",
+            )),
+        },
     }
 
     findings
