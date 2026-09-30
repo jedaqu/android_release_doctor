@@ -801,11 +801,20 @@ fn evaluate(
         ));
     }
 
-    if inventory.native_abis.is_empty() {
+    if inventory.native_libraries.is_empty() {
         findings.push(Finding::pass(
             "NATIVE-001",
             "Native libraries",
             "No native .so libraries are present; ABI coverage is not applicable to this artifact.",
+        ));
+    } else if inventory.native_abis.is_empty() {
+        findings.push(Finding::pass(
+            "NATIVE-001",
+            "Native libraries",
+            format!(
+                "Detected {} native .so library file(s), but no standard lib/<abi>/ path was available for ABI classification.",
+                inventory.native_libraries.len()
+            ),
         ));
     } else {
         findings.push(Finding::pass(
