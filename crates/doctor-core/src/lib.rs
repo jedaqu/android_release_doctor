@@ -763,7 +763,6 @@ fn evaluate(
     findings
 }
 
-
 fn evaluate_project_crosscheck(
     manifest: Option<&ManifestInfo>,
     project: &ProjectInfo,
