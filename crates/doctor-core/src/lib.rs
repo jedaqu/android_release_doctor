@@ -879,15 +879,11 @@ fn evaluate_project_crosscheck(
     }
 
     match (project.release_debuggable, manifest.debuggable.unwrap_or(false)) {
-        (Some(project_value), artifact_value) if project_value == artifact_value => findings.push(
-            Finding::pass(
-                "CROSSCHECK-006",
-                "Release debuggable match",
-                format!(
-                    "Project release configuration and the artifact both evaluate android:debuggable to {artifact_value}."
-                ),
-            ),
-        ),
+        (Some(true), true) | (Some(false), false) => findings.push(Finding::pass(
+            "CROSSCHECK-006",
+            "Release debuggable match",
+            "Project release configuration and the artifact agree on the effective android:debuggable value.",
+        )),
         (Some(true), false) => findings.push(Finding::blocker(
             "CROSSCHECK-006",
             "Release debuggable mismatch",
