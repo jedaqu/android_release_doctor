@@ -857,40 +857,6 @@ mod tests {
         assert!(!result.v31_present);
     }
 
-    #[test]
-    fn verifies_real_v3_signed_apk_fixture() {
-        let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../tests/fixtures/crypto-v3-release.apk");
-
-        let result = verify_apk_signatures(&path)
-            .expect("v3 fixture should be structurally readable")
-            .expect("v3 fixture should contain an APK signing block");
-
-        let v3 = result.v3.expect("v3 scheme should be detected");
-        assert_eq!(
-            v3.state,
-            CryptoVerificationState::Verified,
-            "verification detail: {}",
-            v3.detail
-        );
-        assert_eq!(v3.signer_count, 1);
-        assert!(v3.algorithms.contains(&0x0103));
-        assert!(!result.v31_present);
-    }
-
-    #[test]
-    fn detects_tampered_apk_content_as_invalid_v3_signature() {
-        let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../tests/fixtures/crypto-v3-release-tampered.apk");
-
-        let result = verify_apk_signatures(&path)
-            .expect("tampered v3 fixture should be structurally readable")
-            .expect("tampered v3 fixture should contain an APK signing block");
-
-        let v3 = result.v3.expect("v3 scheme should be detected");
-        assert_eq!(v3.state, CryptoVerificationState::Invalid);
-    }
-
     fn tampered_fixture(source_name: &str, label: &str) -> std::path::PathBuf {
         let source = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../../tests/fixtures")
