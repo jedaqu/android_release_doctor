@@ -199,6 +199,13 @@ This file is the chronological engineering ledger for failures, errors, their ro
 - **Problem:** `cargo fmt --all -- --check` required a multi-line layout for the final `assert!(result.detail.contains(...))` in the new regression test.
 - **Correction required:** Apply only the rustfmt-indicated line wrap; no test logic or production behavior changes.
 - **Status:** PENDING CORRECTION
+## ERR-022 — PR trigger audit targeted the source branch instead of the stacked base branch
+
+- **Milestone:** M0.6 Block 4 / CI follow-up
+- **Type:** Audit/CI-scope defect
+- **Problem:** The Block 4 CI audit treated pull_request.branches as if it filtered the PR source branch. For the stacked workflow, that filter selects the PR target/base branch. A Block 4 PR stacked on Block 3 therefore requires m06-block3-verification-hardening in the PR trigger list.
+- **Required correction:** Keep m06-block4-signer-error-isolation in push.branches, and use m06-block3-verification-hardening as the Block 4 pull-request target branch. Preserve the previously validated Block 1 and Block 2 PR targets.
+- **Status:** PENDING CORRECTION
 ## Current validation state
 
 ERR-015 was corrected in commit 9126fd8d20fc49d410f640c345da15f3529a9f49.
