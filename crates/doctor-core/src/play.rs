@@ -209,11 +209,7 @@ mod tests {
             ..Default::default()
         };
 
-        let findings = evaluate_play_policy(
-            Some(&manifest(35)),
-            &inventory,
-            PlayPlatform::Mobile,
-        );
+        let findings = evaluate_play_policy(Some(&manifest(35)), &inventory, PlayPlatform::Mobile);
 
         assert_eq!(
             findings
