@@ -84,6 +84,23 @@ Required change:
 
 The evidence model should remain minimal: only facts that are actually verified by the artifact should be retained.
 
+### AUDIT-027 — Block 5 proof-of-rotation fixture is not reachable from the working branch
+
+The fixture commit `f40076f941813f398b6c07441c96377c69741cbd` was created, but the `m06-block5-verification-completeness` branch does not include that commit. The current branch tree contains no `tests/fixtures/proof-rotation-valid.bin`, while the new tests reference it.
+
+This must be corrected before Actions. The fixture must become part of the actual Block 5 branch history; an orphaned object is not sufficient for reproducible CI.
+
+### AUDIT-028 — structured proof-of-rotation evidence is not preserved on every later signer-failure path
+
+The v3 parser can successfully establish proof-of-rotation evidence before later verification stages such as signature selection, certificate/public-key binding, signature verification, content-digest verification, or algorithm-list consistency.
+
+Several of those later signer-local error paths call `error_to_scheme_info_with_evidence()` without forwarding the parsed proof-of-rotation result. This means a signer can retain SDK-range and certificate-fingerprint evidence while losing already-established lineage evidence.
+
+Required correction:
+- preserve parsed proof-of-rotation evidence in every later signer-level Invalid/Unsupported conversion;
+- keep the existing signer isolation semantics from Block 4;
+- do not broaden the evidence model beyond the minimal lineage facts already defined.
+
 ## Existing boundaries explicitly confirmed
 
 The following are **not Block 5 findings**:
@@ -145,5 +162,7 @@ Only these findings are in scope:
 7. Existing SDK-range, signer-count, certificate-fingerprint, and signer-isolation evidence is preserved.
 8. Focused tests cover valid lineage, malformed lineage, invalid lineage signature, and final-certificate mismatch.
 9. The Block 5 source branch is covered by push CI and the stacked PR target is covered by the Block 4 base workflow.
-10. The incremental error ledger is updated only for newly discovered defects/corrections during the Block 5 cycle; historical ERR-001 through ERR-023 remain unchanged.
-11. No merge is performed as part of this block.
+10. The regression fixture is reachable from the Block 5 branch history and reproducible by CI.
+11. Proof-of-rotation evidence survives later signer-local verification failures.
+12. The incremental error ledger is updated only for newly discovered defects/corrections during the Block 5 cycle; historical ERR-001 through ERR-023 remain unchanged.
+13. No merge is performed as part of this block.
