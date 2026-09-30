@@ -388,7 +388,7 @@ This audit therefore does **not** assign all remaining items automatically to M0
 
 ## Stage status
 
-**Etapa 2 — Auditoría de transición M0.6 → M0.7: EN CURSO**
+**Etapa 2 — Auditoría de transición M0.6 → M0.7: FINALIZADA**
 
 No production-code correction is required by this audit at this point.
 
