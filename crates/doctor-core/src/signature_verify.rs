@@ -9,7 +9,12 @@ use ring::{
     signature::{self, UnparsedPublicKey},
 };
 use subtle::ConstantTimeEq;
-use x509_parser::{certificate::X509Certificate, prelude::FromDer, public_key::PublicKey};
+use x509_parser::{
+    certificate::X509Certificate,
+    oid_registry::{OID_EC_P256, OID_NIST_EC_P384},
+    prelude::FromDer,
+    public_key::PublicKey,
+};
 
 use crate::signing::{read_apk_signing_block, ApkSigningBlock, SigningBlockError};
 
@@ -464,22 +469,111 @@ fn verify_signature_bytes(
         ));
     }
 
+    let parsed_public_key = cert.public_key().parsed().map_err(|error| {
+        SignatureVerificationError(format!("failed to parse signer public key: {error}"))
+    })?;
+
     let algorithm: &dyn signature::VerificationAlgorithm = match algorithm_id {
-        0x0101 => &signature::RSA_PSS_2048_8192_SHA256,
-        0x0102 => &signature::RSA_PSS_2048_8192_SHA512,
-        0x0103 => &signature::RSA_PKCS1_2048_8192_SHA256,
-        0x0104 => &signature::RSA_PKCS1_2048_8192_SHA512,
-        0x0201 => &signature::ECDSA_P256_SHA256_ASN1,
+        0x0101 => {
+            let PublicKey::RSA(rsa) = parsed_public_key else {
+                return Err(SignatureVerificationError(
+                    "RSA signature algorithm is paired with a non-RSA signer public key".to_string(),
+                ));
+            };
+            if !ring_rsa_key_size_supported(rsa.key_size()) {
+                return Err(SignatureVerificationError(format!(
+                    "UNSUPPORTED: RSA signer key size {} bits is outside the current ring verifier range of 2048-8192 bits",
+                    rsa.key_size()
+                )));
+            }
+            &signature::RSA_PSS_2048_8192_SHA256
+        }
+        0x0102 => {
+            let PublicKey::RSA(rsa) = parsed_public_key else {
+                return Err(SignatureVerificationError(
+                    "RSA signature algorithm is paired with a non-RSA signer public key".to_string(),
+                ));
+            };
+            if !ring_rsa_key_size_supported(rsa.key_size()) {
+                return Err(SignatureVerificationError(format!(
+                    "UNSUPPORTED: RSA signer key size {} bits is outside the current ring verifier range of 2048-8192 bits",
+                    rsa.key_size()
+                )));
+            }
+            &signature::RSA_PSS_2048_8192_SHA512
+        }
+        0x0103 => {
+            let PublicKey::RSA(rsa) = parsed_public_key else {
+                return Err(SignatureVerificationError(
+                    "RSA signature algorithm is paired with a non-RSA signer public key".to_string(),
+                ));
+            };
+            if !ring_rsa_key_size_supported(rsa.key_size()) {
+                return Err(SignatureVerificationError(format!(
+                    "UNSUPPORTED: RSA signer key size {} bits is outside the current ring verifier range of 2048-8192 bits",
+                    rsa.key_size()
+                )));
+            }
+            &signature::RSA_PKCS1_2048_8192_SHA256
+        }
+        0x0104 => {
+            let PublicKey::RSA(rsa) = parsed_public_key else {
+                return Err(SignatureVerificationError(
+                    "RSA signature algorithm is paired with a non-RSA signer public key".to_string(),
+                ));
+            };
+            if !ring_rsa_key_size_supported(rsa.key_size()) {
+                return Err(SignatureVerificationError(format!(
+                    "UNSUPPORTED: RSA signer key size {} bits is outside the current ring verifier range of 2048-8192 bits",
+                    rsa.key_size()
+                )));
+            }
+            &signature::RSA_PKCS1_2048_8192_SHA512
+        }
+        0x0201 => {
+            if !matches!(parsed_public_key, PublicKey::EC(_)) {
+                return Err(SignatureVerificationError(
+                    "ECDSA signature algorithm is paired with a non-EC signer public key"
+                        .to_string(),
+                ));
+            }
+            let curve_oid = cert
+                .public_key()
+                .algorithm
+                .parameters
+                .as_ref()
+                .and_then(|value| value.as_oid().ok());
+
+            match curve_oid {
+                Some(oid) if oid == OID_EC_P256 => &signature::ECDSA_P256_SHA256_ASN1,
+                Some(oid) if oid == OID_NIST_EC_P384 => &signature::ECDSA_P384_SHA256_ASN1,
+                Some(_) => {
+                    return Err(SignatureVerificationError(
+                        "UNSUPPORTED: ECDSA SHA-256 signer curve is not supported by the current ring verifier"
+                            .to_string(),
+                    ))
+                }
+                None => {
+                    return Err(SignatureVerificationError(
+                        "signer EC public key does not identify a supported named curve".to_string(),
+                    ))
+                }
+            }
+        }
+        0x0202 => {
+            return Err(SignatureVerificationError(
+                "UNSUPPORTED: ECDSA SHA-512 verification is not supported by the current ring verifier"
+                    .to_string(),
+            ));
+        }
         _ => {
             return Err(SignatureVerificationError(format!(
-                "signature algorithm 0x{algorithm_id:08x} is not supported by the current verifier"
+                "UNSUPPORTED: signature algorithm 0x{algorithm_id:08x} is not supported by the current verifier"
             )))
         }
     };
 
-    let key_bytes = match cert.public_key().parsed().map_err(|error| {
-        SignatureVerificationError(format!("failed to parse signer public key: {error}"))
-    })? {
+    let key_bytes = match parsed_public_key {
         PublicKey::RSA(rsa) => encode_rsa_public_key(rsa.modulus, rsa.exponent),
         PublicKey::EC(_) => cert.public_key().subject_public_key.data.to_vec(),
         _ => {
@@ -495,6 +589,10 @@ fn verify_signature_bytes(
             "cryptographic signature verification failed for algorithm 0x{algorithm_id:08x}"
         ))
     })
+}
+
+fn ring_rsa_key_size_supported(bits: usize) -> bool {
+    (2048..=8192).contains(&bits)
 }
 
 fn encode_rsa_public_key(modulus: &[u8], exponent: &[u8]) -> Vec<u8> {
@@ -968,6 +1066,14 @@ mod tests {
             payload.extend_from_slice(&encode_sequence(&entry));
         }
         payload
+    }
+
+    #[test]
+    fn ring_rsa_key_size_boundary_is_explicit() {
+        assert!(!ring_rsa_key_size_supported(1024));
+        assert!(ring_rsa_key_size_supported(2048));
+        assert!(ring_rsa_key_size_supported(8192));
+        assert!(!ring_rsa_key_size_supported(16384));
     }
 
     #[test]
