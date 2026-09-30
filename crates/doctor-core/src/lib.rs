@@ -1048,13 +1048,11 @@ fn evaluate(
     }
 
     if inventory.signature_files.is_empty() {
-        let has_modern_apk_signing = matches!(
-            kind,
-            ArtifactKind::Apk
-        ) && inventory
-            .apk_signing
-            .as_ref()
-            .is_some_and(|info| info.v2 || info.v3 || info.v31 || info.v32);
+        let has_modern_apk_signing = matches!(kind, ArtifactKind::Apk)
+            && inventory
+                .apk_signing
+                .as_ref()
+                .is_some_and(|info| info.v2 || info.v3 || info.v31 || info.v32);
 
         if has_modern_apk_signing {
             findings.push(Finding::pass(
