@@ -130,8 +130,7 @@ pub fn evaluate_play_policy(
             .native_libraries
             .iter()
             .filter(|library| {
-                crate::load_segments_are_16kb_aligned(&library.load_segment_alignments)
-                    .not()
+                !crate::load_segments_are_16kb_aligned(&library.load_segment_alignments)
             })
             .collect::<Vec<_>>();
 
@@ -150,7 +149,8 @@ pub fn evaluate_play_policy(
                 ),
                 "Verify every packaged native library with an ELF-aware tool and Google's 16 KB guidance before release.",
             ));
-        } else if target_sdk.is_some_and(|value| value >= 35) && !incompatible.is_empty() {
+        } else if let Some(target_sdk) = target_sdk.filter(|value| *value >= 35) {
+            if !incompatible.is_empty() {
             let details = incompatible
                 .iter()
                 .map(|library| {
@@ -162,15 +162,21 @@ pub fn evaluate_play_policy(
                 .collect::<Vec<_>>()
                 .join("; ");
 
-            findings.push(Finding::blocker(
-                "PLAY-005",
-                "16 KB page-size compatibility",
-                format!(
-                    "The artifact targets API {} and contains native ELF load segments below the 16 KB alignment threshold: {details}.",
-                    target_sdk.unwrap()
-                ),
-                "Rebuild or replace the affected native libraries with 16 KB ELF load-segment alignment before Play submission.",
-            ));
+                findings.push(Finding::blocker(
+                    "PLAY-005",
+                    "16 KB page-size compatibility",
+                    format!(
+                        "The artifact targets API {target_sdk} and contains native ELF load segments below the 16 KB alignment threshold: {details}."
+                    ),
+                    "Rebuild or replace the affected native libraries with 16 KB ELF load-segment alignment before Play submission.",
+                ));
+            } else {
+                findings.push(Finding::pass(
+                    "PLAY-005",
+                    "16 KB page-size compatibility",
+                    "All inspected native ELF PT_LOAD segments meet the 16 KB alignment threshold required for API 35+ targets.",
+                ));
+            }
         } else if !incompatible.is_empty() {
             let details = incompatible
                 .iter()
@@ -263,13 +269,67 @@ mod tests {
     }
 
     #[test]
-    fn native_payload_with_api_35_plus_requires_manual_16kb_review() {
+    fn native_payload_with_api_35_plus_and_bad_alignment_is_a_blocker() {
         let inventory = ArtifactInventory {
             native_abis: vec!["arm64-v8a".to_string()],
+            native_libraries: vec![crate::NativeLibraryInfo {
+                path: "lib/arm64-v8a/libbad.so".to_string(),
+                abi: "arm64-v8a".to_string(),
+                load_segment_alignments: vec![4096, 16384],
+                error: None,
+            }],
             ..Default::default()
         };
 
         let findings = evaluate_play_policy(Some(&manifest(35)), &inventory, PlayPlatform::Mobile);
+
+        assert_eq!(
+            findings
+                .iter()
+                .find(|finding| finding.rule_id == "PLAY-005")
+                .map(|finding| finding.severity),
+            Some(Severity::Blocker)
+        );
+    }
+
+    #[test]
+    fn native_payload_with_api_35_plus_and_good_alignment_passes() {
+        let inventory = ArtifactInventory {
+            native_abis: vec!["arm64-v8a".to_string()],
+            native_libraries: vec![crate::NativeLibraryInfo {
+                path: "lib/arm64-v8a/libgood.so".to_string(),
+                abi: "arm64-v8a".to_string(),
+                load_segment_alignments: vec![16384, 32768],
+                error: None,
+            }],
+            ..Default::default()
+        };
+
+        let findings = evaluate_play_policy(Some(&manifest(36)), &inventory, PlayPlatform::Mobile);
+
+        assert_eq!(
+            findings
+                .iter()
+                .find(|finding| finding.rule_id == "PLAY-005")
+                .map(|finding| finding.severity),
+            Some(Severity::Pass)
+        );
+    }
+
+    #[test]
+    fn native_payload_with_unreadable_elf_stays_manual() {
+        let inventory = ArtifactInventory {
+            native_abis: vec!["arm64-v8a".to_string()],
+            native_libraries: vec![crate::NativeLibraryInfo {
+                path: "lib/arm64-v8a/libunknown.so".to_string(),
+                abi: "arm64-v8a".to_string(),
+                load_segment_alignments: Vec::new(),
+                error: Some("missing ELF magic".to_string()),
+            }],
+            ..Default::default()
+        };
+
+        let findings = evaluate_play_policy(Some(&manifest(36)), &inventory, PlayPlatform::Mobile);
 
         assert_eq!(
             findings
