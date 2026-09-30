@@ -80,7 +80,7 @@ Evidencia de cierre:
 
 ## Etapa 3 — Definición de M0.7
 
-**Estado: PENDIENTE**
+**Estado: EN CURSO**
 
 Objetivo: convertir los resultados de la auditoría de transición en un alcance M0.7 pequeño, verificable y trazable.
 
@@ -99,7 +99,15 @@ Cierre requerido:
 - alcance M0.7 documentado;
 - orden de bloques definido;
 - criterios de aceptación definidos;
+- capacidades explícitamente fuera de alcance;
+- estrategia de fixtures y regresiones definida;
+- estrategia de CI para ramas apiladas definida;
+- segunda auditoría de la definición aprobada;
+- CI de la definición validado;
 - baseline/checkpoint de inicio registrado.
+
+Evidencia en curso:
+- `docs/M0.7-DEFINITION.md` — alcance y método definidos; pendiente de segunda auditoría y checkpoint.
 
 ## Regla de finalización
 
