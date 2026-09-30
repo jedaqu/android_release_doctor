@@ -307,19 +307,19 @@ This file is the chronological engineering ledger for failures, errors, their ro
 - **Type:** CI lint failure
 - **Actions run:** #228 / 36751061388
 - **Problem:** Clippy reported a redundant guard in the proof-of-rotation certificate DER validation match.
-- **Correction:** Replace the guard pattern Ok((remaining, _)) if remaining.is_empty() with the equivalent slice pattern Ok(([], _)); no logic change.
+- **Correction:** Replace the guard pattern `Ok((remaining, _)) if remaining.is_empty()` with the equivalent slice pattern `Ok(([], _))`; no logic change.
 - **Correction commit:** 5e35593c1bd4319c64404feefe5cc7f5073826f3
-- **Validation:** Actions run #233 / 36751272856 passed Clippy.
+- **Validation:** Actions run #234 / 36751391708 passed Build, Test, Format, and Clippy after the subsequent formatting correction.
 - **Status:** RESOLVED
 ## ERR-033 — rustfmt failure in the new proof-of-rotation evidence regression test
 
 - **Milestone:** M0.6 Block 5 / Actions run #230
 - **Type:** CI formatting failure
 - **Actions run:** #230 / 36751168580
-- **Problem:** cargo fmt --all -- --check required one line-wrap change in the newly added signer_error_evidence_preserves_proof_of_rotation test.
+- **Problem:** `cargo fmt --all -- --check` required one line-wrap change in the newly added `signer_error_evidence_preserves_proof_of_rotation` test.
 - **Correction:** Apply only the rustfmt-indicated string-literal layout change; no logic or test behavior change.
 - **Correction commit:** 3318ab3cc3c173e0bdfa9855d9c567b041ebc00b
-- **Validation:** Actions run #233 / 36751272856 passed Format.
+- **Validation:** Actions run #234 / 36751391708 passed Format.
 - **Status:** RESOLVED
 ## Current validation state
 
