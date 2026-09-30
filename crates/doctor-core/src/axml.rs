@@ -406,8 +406,7 @@ pub fn parse_manifest(data: &[u8]) -> Result<ManifestInfo, AxmlError> {
         return Err(AxmlError::Truncated);
     }
 
-    let root_type =
-        u16::from_le_bytes(data[0..2].try_into().map_err(|_| AxmlError::Truncated)?);
+    let root_type = u16::from_le_bytes(data[0..2].try_into().map_err(|_| AxmlError::Truncated)?);
     let root_header_size =
         u16::from_le_bytes(data[2..4].try_into().map_err(|_| AxmlError::Truncated)?);
     let total_size =
@@ -435,8 +434,9 @@ pub fn parse_manifest(data: &[u8]) -> Result<ManifestInfo, AxmlError> {
         offset += chunk_size;
     }
 
-    let string_pool =
-        string_pool.ok_or(AxmlError::Invalid("manifest has no string pool chunk"))?;
+    let string_pool = string_pool.ok_or(AxmlError::Invalid(
+        "manifest has no string pool chunk",
+    ))?;
 
     let mut info = ManifestInfo {
         package_name: None,
@@ -589,7 +589,9 @@ pub fn parse_manifest(data: &[u8]) -> Result<ManifestInfo, AxmlError> {
     }
 
     if !stack.is_empty() {
-        return Err(AxmlError::Invalid("manifest contains unterminated elements"));
+        return Err(AxmlError::Invalid(
+            "manifest contains unterminated elements",
+        ));
     }
 
     info.components.reverse();
