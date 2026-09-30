@@ -1,6 +1,12 @@
-use std::path::PathBuf;
+use std::{
+    fs::{self, File},
+    io::Write,
+    path::PathBuf,
+};
 
 use doctor_core::{audit_path, ArtifactKind, Severity};
+use zip::write::SimpleFileOptions;
+use zip::{CompressionMethod, ZipWriter};
 
 fn fixture(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -77,4 +83,44 @@ fn audits_minimal_aab_fixture() {
         .findings
         .iter()
         .all(|finding| finding.severity != Severity::Blocker));
+}
+
+
+#[test]
+fn reports_manifest_parse_error_in_the_audit_report() {
+    let path = std::env::temp_dir().join(format!(
+        "android-release-doctor-malformed-{}.apk",
+        std::process::id()
+    ));
+
+    {
+        let file = File::create(&path).expect("temporary APK should be created");
+        let mut archive = ZipWriter::new(file);
+        let options = SimpleFileOptions::default().compression_method(CompressionMethod::Stored);
+        archive
+            .start_file("AndroidManifest.xml", options)
+            .expect("manifest entry should be created");
+        archive
+            .write_all(&[0x03, 0x00, 0x08])
+            .expect("manifest bytes should be written");
+        archive.finish().expect("temporary APK should be finalized");
+    }
+
+    let report = audit_path(&path).expect("invalid manifest should stay inside the audit report");
+
+    assert!(report.manifest.is_none());
+    assert_eq!(
+        report.manifest_error.as_deref(),
+        Some("truncated Android binary XML")
+    );
+    assert_eq!(
+        report
+            .findings
+            .iter()
+            .find(|finding| finding.rule_id == "MANIFEST-002")
+            .map(|finding| finding.severity),
+        Some(Severity::Blocker)
+    );
+
+    fs::remove_file(path).expect("temporary APK should be removed");
 }
