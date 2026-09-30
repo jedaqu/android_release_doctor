@@ -64,7 +64,8 @@ pub fn read_apk_signing_block<R: Read + Seek>(
     })?;
     let eocd_offset = scan_start + eocd_relative as u64;
 
-    let eocd_end = eocd_relative + EOCD_LEN as usize
+    let eocd_end = eocd_relative
+        + EOCD_LEN as usize
         + u16::from_le_bytes(
             tail[eocd_relative + 20..eocd_relative + 22]
                 .try_into()
@@ -76,10 +77,16 @@ pub fn read_apk_signing_block<R: Read + Seek>(
         ));
     }
 
-    let central_directory_size =
-        u32::from_le_bytes(tail[eocd_relative + 12..eocd_relative + 16].try_into().unwrap());
-    let central_directory_offset =
-        u32::from_le_bytes(tail[eocd_relative + 16..eocd_relative + 20].try_into().unwrap());
+    let central_directory_size = u32::from_le_bytes(
+        tail[eocd_relative + 12..eocd_relative + 16]
+            .try_into()
+            .unwrap(),
+    );
+    let central_directory_offset = u32::from_le_bytes(
+        tail[eocd_relative + 16..eocd_relative + 20]
+            .try_into()
+            .unwrap(),
+    );
 
     if central_directory_offset == u32::MAX || central_directory_size == u32::MAX {
         return Err(SigningBlockError(
@@ -202,7 +209,9 @@ pub fn read_apk_signing_block<R: Read + Seek>(
         .ok_or_else(|| SigningBlockError("EOCD offset is outside the APK".to_string()))?;
     let eocd_len = usize::try_from(eocd_len)
         .map_err(|_| SigningBlockError("EOCD record is too large".to_string()))?;
-    reader.seek(SeekFrom::Start(eocd_offset)).map_err(io_error)?;
+    reader
+        .seek(SeekFrom::Start(eocd_offset))
+        .map_err(io_error)?;
     let mut eocd = vec![0_u8; eocd_len];
     reader.read_exact(&mut eocd).map_err(io_error)?;
 
