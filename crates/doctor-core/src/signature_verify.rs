@@ -1404,6 +1404,56 @@ mod tests {
     }
 
     #[test]
+    fn signer_error_evidence_preserves_v3_range() {
+        let info = error_to_scheme_info_with_evidence(
+            SignatureVerificationError("signature verification failed".to_string()),
+            1,
+            vec![0x0201],
+            vec!["a".repeat(64)],
+            vec![(28, 32)],
+        );
+
+        assert_eq!(info.state, CryptoVerificationState::Invalid);
+        assert_eq!(info.signer_count, 1);
+        assert_eq!(info.algorithms, vec![0x0201]);
+        assert_eq!(info.certificate_sha256.len(), 1);
+        assert_eq!(info.sdk_ranges, vec![(28, 32)]);
+        assert!(info.detail.contains("signature verification failed"));
+    }
+
+    #[test]
+    fn merges_verified_and_failed_v3_signers_without_losing_evidence() {
+        let result = merge_scheme_results(
+            "v3",
+            vec![
+                CryptoSchemeInfo {
+                    state: CryptoVerificationState::Verified,
+                    signer_count: 1,
+                    algorithms: vec![0x0201],
+                    certificate_sha256: vec!["a".repeat(64)],
+                    sdk_ranges: vec![(28, 32)],
+                    detail: "targeted signer A".to_string(),
+                },
+                CryptoSchemeInfo {
+                    state: CryptoVerificationState::Invalid,
+                    signer_count: 1,
+                    algorithms: vec![0x0201],
+                    certificate_sha256: vec!["b".repeat(64)],
+                    sdk_ranges: vec![(33, 36)],
+                    detail: "targeted signer B failed verification".to_string(),
+                },
+            ],
+        )
+        .expect("mixed v3 signer results should merge");
+
+        assert_eq!(result.state, CryptoVerificationState::Invalid);
+        assert_eq!(result.signer_count, 2);
+        assert_eq!(result.sdk_ranges, vec![(28, 32), (33, 36)]);
+        assert_eq!(result.certificate_sha256.len(), 2);
+        assert!(result.detail.contains("targeted signer B failed verification"));
+    }
+
+    #[test]
     fn merges_multiple_v3_targeted_signers_and_retains_sdk_ranges() {
         let result = merge_scheme_results(
             "v3",
