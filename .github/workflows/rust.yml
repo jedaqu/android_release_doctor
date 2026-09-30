@@ -12,6 +12,7 @@ on:
       - m06-block3-verification-hardening
       - m06-block4-signer-error-isolation
       - m06-block5-verification-completeness
+      - m07-block1-crypto-coverage
   pull_request:
     branches:
       - main

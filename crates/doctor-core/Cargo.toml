@@ -9,4 +9,6 @@ description = "Core audit model and Android release artifact inspection engine."
 ring.workspace = true
 subtle.workspace = true
 x509-parser.workspace = true
+sha2.workspace = true
+p384.workspace = true
 zip.workspace = true

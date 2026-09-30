@@ -4,10 +4,16 @@ use std::{
     io::{self, Read, Seek, SeekFrom},
 };
 
+use p384::ecdsa::{
+    hazmat::PrehashVerifier,
+    Signature as P384Signature,
+    VerifyingKey as P384VerifyingKey,
+};
 use ring::{
     digest,
     signature::{self, UnparsedPublicKey},
 };
+use sha2::{Digest, Sha512};
 use subtle::ConstantTimeEq;
 use x509_parser::{
     certificate::X509Certificate,
@@ -682,7 +688,7 @@ fn signature_algorithm_digest(id: u32) -> Option<DigestAlgorithm> {
 
 fn supported_signature_algorithm(id: u32) -> Option<DigestAlgorithm> {
     match id {
-        0x0101 | 0x0102 | 0x0103 | 0x0104 | 0x0201 => signature_algorithm_digest(id),
+        0x0101 | 0x0102 | 0x0103 | 0x0104 | 0x0201 | 0x0202 => signature_algorithm_digest(id),
         _ => None,
     }
 }
@@ -706,6 +712,54 @@ fn verify_signature_bytes(
     let parsed_public_key = cert.public_key().parsed().map_err(|error| {
         SignatureVerificationError(format!("failed to parse signer public key: {error}"))
     })?;
+
+    if algorithm_id == 0x0202 {
+        let PublicKey::EC(_) = &parsed_public_key else {
+            return Err(SignatureVerificationError(
+                "ECDSA signature algorithm is paired with a non-EC signer public key".to_string(),
+            ));
+        };
+
+        let curve_oid = cert
+            .public_key()
+            .algorithm
+            .parameters
+            .as_ref()
+            .and_then(|value| value.as_oid().ok());
+
+        if !matches!(curve_oid, Some(oid) if oid == OID_NIST_EC_P384) {
+            return Err(SignatureVerificationError(
+                "UNSUPPORTED: ECDSA SHA-512 signer curve is not P-384".to_string(),
+            ));
+        }
+
+        let verifying_key = P384VerifyingKey::from_sec1_bytes(
+            cert.public_key().subject_public_key.data,
+        )
+        .map_err(|error| {
+            SignatureVerificationError(format!(
+                "signer P-384 public key is not a valid SEC1 point: {error}"
+            ))
+        })?;
+        let signature = P384Signature::from_der(signature_bytes).map_err(|error| {
+            SignatureVerificationError(format!(
+                "ECDSA SHA-512 signature is not valid DER: {error}"
+            ))
+        })?;
+        let prehash = Sha512::digest(signed_data);
+        PrehashVerifier::<P384Signature>::verify_prehash(
+            &verifying_key,
+            prehash.as_ref(),
+            &signature,
+        )
+        .map_err(|_| {
+            SignatureVerificationError(
+                "cryptographic signature verification failed for algorithm 0x00000202"
+                    .to_string(),
+            )
+        })?;
+        return Ok(());
+    }
 
     let algorithm: &dyn signature::VerificationAlgorithm = match algorithm_id {
         0x0101 => {
@@ -793,12 +847,6 @@ fn verify_signature_bytes(
                     ))
                 }
             }
-        }
-        0x0202 => {
-            return Err(SignatureVerificationError(
-                "UNSUPPORTED: ECDSA SHA-512 verification is not supported by the current ring verifier"
-                    .to_string(),
-            ));
         }
         _ => {
             return Err(SignatureVerificationError(format!(
@@ -1608,6 +1656,57 @@ mod tests {
 
         let parsed = parse_signed_data_v3(&signed_data).expect("certificate chain should parse");
         assert_eq!(parsed.certificate, b"signer");
+    }
+
+    fn decode_hex_bytes(input: &str) -> Vec<u8> {
+        assert_eq!(input.len() % 2, 0, "hex input must contain complete bytes");
+        (0..input.len())
+            .step_by(2)
+            .map(|index| u8::from_str_radix(&input[index..index + 2], 16).expect("valid hex"))
+            .collect()
+    }
+
+    #[test]
+    fn selects_ecdsa_sha512_algorithm() {
+        let signatures = encode_signature_entries(&[(0x0202, b"ecdsa-sha512")]);
+        let selected =
+            parse_and_select_signature(&signatures).expect("ECDSA SHA-512 should be selectable");
+        assert_eq!(selected.algorithm_id, 0x0202);
+        assert_eq!(selected.digest_algorithm, DigestAlgorithm::Sha512);
+    }
+
+    #[test]
+    fn verifies_real_ecdsa_sha512_p384_signature() {
+        const CERTIFICATE_HEX: &str = "3082018b30820110a003020102020101300a06082a8648ce3d0403023030312e302c06035504030c25416e64726f69642052656c6561736520446f63746f72204d302e3720503338342054657374301e170d3230303130313030303030305a170d3330303130313030303030305a3030312e302c06035504030c25416e64726f69642052656c6561736520446f63746f72204d302e37205033383420546573743076301006072a8648ce3d020106052b8104002203620004a14aad95673d51513a385309151ee57b66f8ef6d80a03ae54b268767b28cb37f72f272aa5fb5d11d7395157d985b5f33229d4134d1a63d2a1afa184a2d09e52b2d71527e66fb1427c13e6b1cb1978d474a7b7b735d792cdaa0996332db968ab4300a06082a8648ce3d04030203690030660231008fdd8b061b24a5c28de24cd4103801ee8a5e7d68e9af6b679c9d2dd5a3b22731340114ec2aed1db84ddb6e479f39ae480231008d962e5ab24b64535aaa9be84463730099c3c8d47dd2c1ced09de30e0529359e6de123bf80030b43d9023f0e35066507";
+        const SIGNATURE_HEX: &str = "30650230352054fd8fbb9ff1fd661502ce0a1160b09f722682f86ac8677a646c94b57edddc29b85c55e1e59094e04f3736069801023100b8151f6b21f13c101600f7ffb62c7ba2199531657f01b3a03f625ca1fb7f179730f592eea892d241c52a856e8f4ef28c";
+        let certificate = decode_hex_bytes(CERTIFICATE_HEX);
+        let signature = decode_hex_bytes(SIGNATURE_HEX);
+        let signed_data = b"M0.7 Block 1 deterministic ECDSA/SHA-512 verification test message";
+
+        let (_, parsed_certificate) = X509Certificate::from_der(&certificate)
+            .expect("deterministic P-384 test certificate should parse");
+        let public_key = parsed_certificate.tbs_certificate.subject_pki.raw.to_vec();
+        verify_certificate_and_public_key(&certificate, &public_key)
+            .expect("certificate and signer public key must match");
+
+        verify_signature_bytes(0x0202, &certificate, signed_data, &signature)
+            .expect("ECDSA/SHA-512 P-384 signature should verify");
+    }
+
+    #[test]
+    fn rejects_tampered_ecdsa_sha512_p384_signature() {
+        const CERTIFICATE_HEX: &str = "3082018b30820110a003020102020101300a06082a8648ce3d0403023030312e302c06035504030c25416e64726f69642052656c6561736520446f63746f72204d302e3720503338342054657374301e170d3230303130313030303030305a170d3330303130313030303030305a3030312e302c06035504030c25416e64726f69642052656c6561736520446f63746f72204d302e37205033383420546573743076301006072a8648ce3d020106052b8104002203620004a14aad95673d51513a385309151ee57b66f8ef6d80a03ae54b268767b28cb37f72f272aa5fb5d11d7395157d985b5f33229d4134d1a63d2a1afa184a2d09e52b2d71527e66fb1427c13e6b1cb1978d474a7b7b735d792cdaa0996332db968ab4300a06082a8648ce3d04030203690030660231008fdd8b061b24a5c28de24cd4103801ee8a5e7d68e9af6b679c9d2dd5a3b22731340114ec2aed1db84ddb6e479f39ae480231008d962e5ab24b64535aaa9be84463730099c3c8d47dd2c1ced09de30e0529359e6de123bf80030b43d9023f0e35066507";
+        const SIGNATURE_HEX: &str = "30650230352054fd8fbb9ff1fd661502ce0a1160b09f722682f86ac8677a646c94b57edddc29b85c55e1e59094e04f3736069801023100b8151f6b21f13c101600f7ffb62c7ba2199531657f01b3a03f625ca1fb7f179730f592eea892d241c52a856e8f4ef28c";
+        let certificate = decode_hex_bytes(CERTIFICATE_HEX);
+        let mut signature = decode_hex_bytes(SIGNATURE_HEX);
+        signature[signature.len() - 1] ^= 0x01;
+        let signed_data = b"M0.7 Block 1 deterministic ECDSA/SHA-512 verification test message";
+
+        let result = verify_signature_bytes(0x0202, &certificate, signed_data, &signature);
+        let error = result.expect_err("tampered ECDSA/SHA-512 signature must fail");
+        assert!(error
+            .to_string()
+            .contains("cryptographic signature verification failed for algorithm 0x00000202"));
     }
 
     #[test]
