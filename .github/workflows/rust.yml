@@ -9,6 +9,7 @@ on:
       - m05-crypto-signatures
       - m05-crypto-signatures
       - m06-block1-state-hardening
+      - m06-block2-signing-evidence
   pull_request:
     branches:
       - main
