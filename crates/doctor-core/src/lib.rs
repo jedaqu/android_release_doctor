@@ -980,7 +980,10 @@ fn evaluate(
                         "{} [{}]: {}",
                         entry.path,
                         entry.abi,
-                        entry.error.as_deref().unwrap_or("alignment could not be verified")
+                        entry
+                            .error
+                            .as_deref()
+                            .unwrap_or("alignment could not be verified")
                     )
                 })
                 .collect::<Vec<_>>()
