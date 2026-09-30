@@ -192,7 +192,7 @@ fn parses_kotlin_dsl_fixture() {
 #[test]
 fn target_sdk_mismatch_is_a_blocker() {
     let path = std::env::temp_dir().join(format!(
-        "android-release-doctor-project-mismatch-{}",
+        "android-release-doctor-project-mismatch-{}-build.gradle",
         std::process::id()
     ));
     let source = fs::read_to_string(project_fixture("project-release", "build.gradle"))
