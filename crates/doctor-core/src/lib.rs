@@ -1498,6 +1498,44 @@ mod tests {
     }
 
     #[test]
+    fn unavailable_apk_signing_block_requires_manual_review() {
+        let inventory = ArtifactInventory {
+            apk_signing_error: Some("truncated APK signing block".to_string()),
+            ..Default::default()
+        };
+
+        let findings = evaluate(ArtifactKind::Apk, &inventory, None, None);
+
+        assert_eq!(
+            findings
+                .iter()
+                .find(|finding| finding.rule_id == "SIGNING-002")
+                .map(|finding| finding.severity),
+            Some(Severity::ManualReview)
+        );
+    }
+
+    #[test]
+    fn unavailable_apk_crypto_verification_requires_manual_review() {
+        let inventory = ArtifactInventory {
+            apk_signature_verification_error: Some(
+                "cryptographic verification capability unavailable".to_string(),
+            ),
+            ..Default::default()
+        };
+
+        let findings = evaluate(ArtifactKind::Apk, &inventory, None, None);
+
+        assert_eq!(
+            findings
+                .iter()
+                .find(|finding| finding.rule_id == "SIGNING-003")
+                .map(|finding| finding.severity),
+            Some(Severity::ManualReview)
+        );
+    }
+
+    #[test]
     fn missing_manifest_is_a_blocker() {
         let inventory = ArtifactInventory {
             entries: vec!["classes.dex".to_string()],
