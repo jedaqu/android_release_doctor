@@ -1051,7 +1051,7 @@ fn evaluate(
                 format!("The APK signing-block structure could not be validated: {error}"),
                 "Verify the APK with apksigner and rerun the audit before publication.",
             )),
-            (Some(info), None) if info.v2 || info.v3 || info.v31 => {
+            (Some(info), None) if info.v2 || info.v3 || info.v31 || info.v32 => {
                 let mut schemes = Vec::new();
                 if info.v2 {
                     schemes.push("v2");
@@ -1061,6 +1061,9 @@ fn evaluate(
                 }
                 if info.v31 {
                     schemes.push("v3.1");
+                }
+                if info.v32 {
+                    schemes.push("v3.2");
                 }
                 findings.push(Finding::pass(
                     "SIGNING-002",
@@ -1133,6 +1136,7 @@ fn evaluate(
                     .iter()
                     .any(|scheme| scheme.state == CryptoVerificationState::Unsupported)
                     || verification.v31_present
+                    || verification.v32_present
                 {
                     let details = schemes
                         .iter()
@@ -1140,11 +1144,17 @@ fn evaluate(
                         .map(|scheme| scheme.detail.as_str())
                         .collect::<Vec<_>>()
                         .join("; ");
-                    let suffix = if verification.v31_present {
-                        " A v3.1 signing block is also present and is not cryptographically verified in this block."
-                    } else {
-                        ""
-                    };
+                    let mut suffix = String::new();
+                    if verification.v31_present {
+                        suffix.push_str(
+                            " A v3.1 signing block is also present and is not cryptographically verified in this block.",
+                        );
+                    }
+                    if verification.v32_present {
+                        suffix.push_str(
+                            " A v3.2 hybrid signing block is present and is not cryptographically verified in this block.",
+                        );
+                    }
                     findings.push(Finding::warning(
                         "SIGNING-003",
                         "APK cryptographic verification requires manual review",
