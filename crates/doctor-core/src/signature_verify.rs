@@ -129,6 +129,7 @@ fn error_to_scheme_info(error: SignatureVerificationError) -> CryptoSchemeInfo {
         signer_count: 0,
         algorithms: Vec::new(),
         certificate_sha256: Vec::new(),
+        sdk_ranges: Vec::new(),
         detail: detail
             .strip_prefix("UNSUPPORTED: ")
             .unwrap_or(&detail)
