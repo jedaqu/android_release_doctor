@@ -281,12 +281,18 @@ mod tests {
     use super::*;
     use std::io::Cursor;
 
-    fn synthetic_apk(with_v2: bool, with_v3: bool, malformed_size: bool) -> Vec<u8> {
+    fn synthetic_apk(
+        with_v2: bool,
+        with_v3: bool,
+        with_v31: bool,
+        malformed_size: bool,
+    ) -> Vec<u8> {
         let mut pairs = Vec::new();
 
         for id in [
             with_v2.then_some(V2_BLOCK_ID),
             with_v3.then_some(V3_BLOCK_ID),
+            with_v31.then_some(V31_BLOCK_ID),
         ]
         .into_iter()
         .flatten()
@@ -327,7 +333,7 @@ mod tests {
 
     #[test]
     fn detects_v2_and_v3_signing_blocks() {
-        let bytes = synthetic_apk(true, true, false);
+        let bytes = synthetic_apk(true, true, true, false);
         let mut cursor = Cursor::new(bytes);
 
         let info = inspect_apk_signing_block(&mut cursor)
@@ -336,7 +342,7 @@ mod tests {
 
         assert!(info.v2);
         assert!(info.v3);
-        assert!(!info.v31);
+        assert!(info.v31);
         assert_eq!(info.block_size, 8 + SIGNING_BLOCK_FOOTER_LEN + 8 + 8 + 8);
     }
 
@@ -362,7 +368,7 @@ mod tests {
 
     #[test]
     fn rejects_mismatched_signing_block_sizes() {
-        let bytes = synthetic_apk(true, false, true);
+        let bytes = synthetic_apk(true, false, false, true);
         let mut cursor = Cursor::new(bytes);
 
         let error = inspect_apk_signing_block(&mut cursor)
