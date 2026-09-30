@@ -1047,6 +1047,8 @@ mod tests {
         assert!(v3.algorithms.contains(&0x0201));
         assert_eq!(v3.certificate_sha256.len(), 1);
         assert_eq!(v3.certificate_sha256[0].len(), 64);
+        assert_eq!(v3.sdk_ranges.len(), 1);
+        assert!(v3.sdk_ranges[0].0 <= v3.sdk_ranges[0].1);
         assert!(!result.v31_present);
     }
 
