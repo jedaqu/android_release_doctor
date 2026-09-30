@@ -39,6 +39,14 @@ pub struct CryptoSchemeInfo {
     pub algorithms: Vec<u32>,
     pub certificate_sha256: Vec<String>,
     pub sdk_ranges: Vec<(u32, u32)>,
+    pub proof_of_rotation: Vec<ProofOfRotationInfo>,
+    pub detail: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProofOfRotationInfo {
+    pub state: CryptoVerificationState,
+    pub level_count: usize,
     pub detail: String,
 }
 
@@ -140,6 +148,7 @@ fn error_to_scheme_info_with_evidence(
         algorithms,
         certificate_sha256,
         sdk_ranges,
+        proof_of_rotation: Vec::new(),
         detail: detail
             .strip_prefix("UNSUPPORTED: ")
             .unwrap_or(&detail)
@@ -224,6 +233,7 @@ fn verify_v2_signer(
         algorithms,
         certificate_sha256: vec![certificate_sha256(parsed.certificate)?],
         sdk_ranges: Vec::new(),
+        proof_of_rotation: Vec::new(),
         detail:
             "v2 signer signature, certificate/public-key binding, and APK content digest verified"
                 .to_string(),
@@ -363,6 +373,7 @@ fn verify_v3_block(
                 algorithms,
                 certificate_sha256,
                 sdk_ranges,
+                proof_of_rotation: parsed.proof_of_rotation.clone().into_iter().collect(),
                 detail: format!(
                     "v3 signer minSDK/maxSDK ({min_sdk}, {max_sdk}) do not match signed-data values ({}, {})",
                     parsed.min_sdk, parsed.max_sdk
@@ -454,6 +465,7 @@ fn verify_v3_block(
                 algorithms,
                 certificate_sha256,
                 sdk_ranges,
+                proof_of_rotation: parsed.proof_of_rotation.clone().into_iter().collect(),
                 detail:
                     "v3 digest and signature algorithm ID lists are not identical and ordered equally"
                         .to_string(),
@@ -461,15 +473,15 @@ fn verify_v3_block(
             continue;
         }
 
-        let state = if parsed.has_proof_of_rotation {
-            CryptoVerificationState::Unsupported
-        } else {
-            CryptoVerificationState::Verified
-        };
-        let detail = if parsed.has_proof_of_rotation {
+        let state = parsed
+            .proof_of_rotation
+            .as_ref()
+            .map(|proof| proof.state)
+            .unwrap_or(CryptoVerificationState::Verified);
+        let detail = if let Some(proof) = &parsed.proof_of_rotation {
             format!(
-                "v3 cryptographic signature, certificate/public-key binding, SDK range, and APK content digest verified; proof-of-rotation validation remains pending for SDK range {}..={}",
-                parsed.min_sdk, parsed.max_sdk
+                "v3 signer signature, certificate/public-key binding, SDK range, and APK content digest verified for SDK range {}..={}; {}",
+                parsed.min_sdk, parsed.max_sdk, proof.detail
             )
         } else {
             format!(
@@ -484,6 +496,7 @@ fn verify_v3_block(
             algorithms,
             certificate_sha256,
             sdk_ranges,
+            proof_of_rotation: parsed.proof_of_rotation.clone().into_iter().collect(),
             detail,
         });
     }
@@ -502,6 +515,7 @@ fn merge_scheme_results(
             algorithms: Vec::new(),
             certificate_sha256: Vec::new(),
             sdk_ranges: Vec::new(),
+            proof_of_rotation: Vec::new(),
             detail: format!("{scheme} signing block contains no signers"),
         });
     }
@@ -511,6 +525,7 @@ fn merge_scheme_results(
     let mut unsupported = false;
     let mut invalid = false;
     let mut details = Vec::new();
+    let mut proof_of_rotation = Vec::new();
 
     for result in &results {
         algorithms.extend_from_slice(&result.algorithms);
@@ -520,6 +535,7 @@ fn merge_scheme_results(
             CryptoVerificationState::Unsupported => unsupported = true,
             CryptoVerificationState::Invalid => invalid = true,
         }
+        proof_of_rotation.extend(result.proof_of_rotation.iter().cloned());
         details.push(result.detail.clone());
     }
 
@@ -540,6 +556,7 @@ fn merge_scheme_results(
             .iter()
             .flat_map(|result| result.sdk_ranges.iter().copied())
             .collect(),
+        proof_of_rotation,
         detail: details.join("; "),
     })
 }
@@ -847,7 +864,7 @@ struct ParsedV3SignedData<'a> {
     certificate: &'a [u8],
     min_sdk: u32,
     max_sdk: u32,
-    has_proof_of_rotation: bool,
+    proof_of_rotation: Option<ProofOfRotationInfo>,
 }
 
 fn parse_signed_data_v2(bytes: &[u8]) -> Result<ParsedSignedData<'_>, SignatureVerificationError> {
@@ -897,14 +914,27 @@ fn parse_signed_data_v3(
     certificates_reader.finish("v3 certificate sequence")?;
 
     let mut attributes_reader = LengthReader::new(attributes);
-    let mut has_proof_of_rotation = false;
+    let mut proof_of_rotation = None;
     while !attributes_reader.is_empty() {
         let attribute = attributes_reader.read_sequence("v3 attribute")?;
         let mut attribute_reader = LengthReader::new(attribute);
         let id = attribute_reader.read_u32("v3 attribute ID")?;
+        let value = &attribute_reader.bytes[attribute_reader.cursor..];
+        attribute_reader.cursor = attribute_reader.bytes.len();
+
         if id == PROOF_OF_ROTATION_ATTR_ID {
-            has_proof_of_rotation = true;
+            if proof_of_rotation.is_some() {
+                proof_of_rotation = Some(ProofOfRotationInfo {
+                    state: CryptoVerificationState::Invalid,
+                    level_count: 0,
+                    detail: "v3 signed data contains multiple proof-of-rotation attributes"
+                        .to_string(),
+                });
+            } else {
+                proof_of_rotation = Some(validate_proof_of_rotation(value, certificate));
+            }
         }
+
         attribute_reader.finish("v3 attribute")?;
     }
     attributes_reader.finish("v3 additional attributes")?;
@@ -915,8 +945,248 @@ fn parse_signed_data_v3(
         certificate,
         min_sdk,
         max_sdk,
-        has_proof_of_rotation,
+        proof_of_rotation,
     })
+}
+
+fn validate_proof_of_rotation(
+    bytes: &[u8],
+    current_certificate: &[u8],
+) -> ProofOfRotationInfo {
+    let mut reader = LengthReader::new(bytes);
+    let version = match reader.read_u32("v3 proof-of-rotation version") {
+        Ok(value) => value,
+        Err(error) => {
+            return ProofOfRotationInfo {
+                state: CryptoVerificationState::Invalid,
+                level_count: 0,
+                detail: format!("proof-of-rotation is malformed: {error}"),
+            };
+        }
+    };
+    if version != 1 {
+        return ProofOfRotationInfo {
+            state: CryptoVerificationState::Invalid,
+            level_count: 0,
+            detail: format!("unsupported proof-of-rotation version {version}"),
+        };
+    }
+
+    let mut certificates = Vec::<Vec<u8>>::new();
+    let mut last_certificate: Option<Vec<u8>> = None;
+    let mut last_signature_algorithm = 0_u32;
+    let mut level_count = 0_usize;
+
+    while !reader.is_empty() {
+        level_count += 1;
+        let node = match reader.read_sequence("v3 proof-of-rotation node") {
+            Ok(value) => value,
+            Err(error) => {
+                return ProofOfRotationInfo {
+                    state: CryptoVerificationState::Invalid,
+                    level_count,
+                    detail: format!("proof-of-rotation is malformed: {error}"),
+                };
+            }
+        };
+        let mut node_reader = LengthReader::new(node);
+        let signed_data = match node_reader.read_sequence("v3 proof-of-rotation signed data") {
+            Ok(value) => value,
+            Err(error) => {
+                return ProofOfRotationInfo {
+                    state: CryptoVerificationState::Invalid,
+                    level_count,
+                    detail: format!("proof-of-rotation is malformed: {error}"),
+                };
+            }
+        };
+        let _flags = match node_reader.read_u32("v3 proof-of-rotation flags") {
+            Ok(value) => value,
+            Err(error) => {
+                return ProofOfRotationInfo {
+                    state: CryptoVerificationState::Invalid,
+                    level_count,
+                    detail: format!("proof-of-rotation is malformed: {error}"),
+                };
+            }
+        };
+        let signature_algorithm =
+            match node_reader.read_u32("v3 proof-of-rotation signature algorithm") {
+                Ok(value) => value,
+                Err(error) => {
+                    return ProofOfRotationInfo {
+                        state: CryptoVerificationState::Invalid,
+                        level_count,
+                        detail: format!("proof-of-rotation is malformed: {error}"),
+                    };
+                }
+            };
+        let signature =
+            match node_reader.read_length_prefixed("v3 proof-of-rotation signature") {
+                Ok(value) => value,
+                Err(error) => {
+                    return ProofOfRotationInfo {
+                        state: CryptoVerificationState::Invalid,
+                        level_count,
+                        detail: format!("proof-of-rotation is malformed: {error}"),
+                    };
+                }
+            };
+        if let Err(error) = node_reader.finish("v3 proof-of-rotation node") {
+            return ProofOfRotationInfo {
+                state: CryptoVerificationState::Invalid,
+                level_count,
+                detail: format!("proof-of-rotation is malformed: {error}"),
+            };
+        }
+
+        let mut signed_reader = LengthReader::new(signed_data);
+        let certificate =
+            match signed_reader.read_length_prefixed("v3 proof-of-rotation certificate") {
+                Ok(value) => value,
+                Err(error) => {
+                    return ProofOfRotationInfo {
+                        state: CryptoVerificationState::Invalid,
+                        level_count,
+                        detail: format!("proof-of-rotation is malformed: {error}"),
+                    };
+                }
+            };
+        let parent_signature_algorithm =
+            match signed_reader.read_u32("v3 proof-of-rotation parent signature algorithm") {
+                Ok(value) => value,
+                Err(error) => {
+                    return ProofOfRotationInfo {
+                        state: CryptoVerificationState::Invalid,
+                        level_count,
+                        detail: format!("proof-of-rotation is malformed: {error}"),
+                    };
+                }
+            };
+        if let Err(error) = signed_reader.finish("v3 proof-of-rotation signed data") {
+            return ProofOfRotationInfo {
+                state: CryptoVerificationState::Invalid,
+                level_count,
+                detail: format!("proof-of-rotation is malformed: {error}"),
+            };
+        }
+
+        match X509Certificate::from_der(certificate) {
+            Ok((remaining, _)) if remaining.is_empty() => {}
+            Ok(_) => {
+                return ProofOfRotationInfo {
+                    state: CryptoVerificationState::Invalid,
+                    level_count,
+                    detail: "proof-of-rotation certificate contains trailing DER data"
+                        .to_string(),
+                };
+            }
+            Err(error) => {
+                return ProofOfRotationInfo {
+                    state: CryptoVerificationState::Invalid,
+                    level_count,
+                    detail: format!("proof-of-rotation certificate is not valid DER: {error}"),
+                };
+            }
+        }
+
+        if certificates.iter().any(|item| item.as_slice() == certificate) {
+            return ProofOfRotationInfo {
+                state: CryptoVerificationState::Invalid,
+                level_count,
+                detail: format!("duplicate proof-of-rotation certificate at level {level_count}"),
+            };
+        }
+        certificates.push(certificate.to_vec());
+
+        if level_count == 1 {
+            if parent_signature_algorithm != 0 || !signature.is_empty() {
+                return ProofOfRotationInfo {
+                    state: CryptoVerificationState::Invalid,
+                    level_count,
+                    detail: "first proof-of-rotation level must not contain a parent signature"
+                        .to_string(),
+                };
+            }
+        } else {
+            if parent_signature_algorithm != last_signature_algorithm {
+                return ProofOfRotationInfo {
+                    state: CryptoVerificationState::Invalid,
+                    level_count,
+                    detail: format!(
+                        "proof-of-rotation parent signature algorithm 0x{parent_signature_algorithm:08x} does not match previous level algorithm 0x{last_signature_algorithm:08x}"
+                    ),
+                };
+            }
+
+            if let Err(error) = verify_signature_bytes(
+                last_signature_algorithm,
+                last_certificate
+                    .as_deref()
+                    .expect("previous proof-of-rotation certificate exists"),
+                signed_data,
+                signature,
+            ) {
+                let state = if error.0.starts_with("UNSUPPORTED: ") {
+                    CryptoVerificationState::Unsupported
+                } else {
+                    CryptoVerificationState::Invalid
+                };
+                return ProofOfRotationInfo {
+                    state,
+                    level_count,
+                    detail: format!("proof-of-rotation validation failed: {}", error.0),
+                };
+            }
+        }
+
+        if !reader.is_empty() && supported_signature_algorithm(signature_algorithm).is_none() {
+            return ProofOfRotationInfo {
+                state: CryptoVerificationState::Unsupported,
+                level_count,
+                detail: format!(
+                    "proof-of-rotation uses unsupported lineage signing algorithm 0x{signature_algorithm:08x}"
+                ),
+            };
+        }
+
+        last_signature_algorithm = signature_algorithm;
+        last_certificate = Some(certificate.to_vec());
+    }
+
+    if level_count == 0 {
+        return ProofOfRotationInfo {
+            state: CryptoVerificationState::Invalid,
+            level_count: 0,
+            detail: "proof-of-rotation contains no lineage levels".to_string(),
+        };
+    }
+    if last_signature_algorithm != 0 {
+        return ProofOfRotationInfo {
+            state: CryptoVerificationState::Invalid,
+            level_count,
+            detail:
+                "final proof-of-rotation level must not specify a next-level signing algorithm"
+                    .to_string(),
+        };
+    }
+    if last_certificate.as_deref() != Some(current_certificate) {
+        return ProofOfRotationInfo {
+            state: CryptoVerificationState::Invalid,
+            level_count,
+            detail:
+                "final proof-of-rotation certificate does not match the current v3 signer certificate"
+                    .to_string(),
+        };
+    }
+
+    ProofOfRotationInfo {
+        state: CryptoVerificationState::Verified,
+        level_count,
+        detail: format!(
+            "proof-of-rotation lineage verified across {level_count} certificate level(s)"
+        ),
+    }
 }
 
 fn parse_digest_sequence(
@@ -1432,6 +1702,7 @@ mod tests {
                     algorithms: vec![0x0201],
                     certificate_sha256: vec!["a".repeat(64)],
                     sdk_ranges: vec![(28, 32)],
+                    proof_of_rotation: Vec::new(),
                     detail: "targeted signer A".to_string(),
                 },
                 CryptoSchemeInfo {
@@ -1440,6 +1711,7 @@ mod tests {
                     algorithms: vec![0x0201],
                     certificate_sha256: vec!["b".repeat(64)],
                     sdk_ranges: vec![(33, 36)],
+                    proof_of_rotation: Vec::new(),
                     detail: "targeted signer B failed verification".to_string(),
                 },
             ],
@@ -1466,6 +1738,7 @@ mod tests {
                     algorithms: vec![0x0201],
                     certificate_sha256: vec!["a".repeat(64)],
                     sdk_ranges: vec![(28, 32)],
+                    proof_of_rotation: Vec::new(),
                     detail: "targeted signer A".to_string(),
                 },
                 CryptoSchemeInfo {
@@ -1474,6 +1747,7 @@ mod tests {
                     algorithms: vec![0x0201],
                     certificate_sha256: vec!["b".repeat(64)],
                     sdk_ranges: vec![(33, 36)],
+                    proof_of_rotation: Vec::new(),
                     detail: "targeted signer B".to_string(),
                 },
             ],
