@@ -292,7 +292,18 @@ This file is the chronological engineering ledger for failures, errors, their ro
 - **Type:** CI formatting failure
 - **Actions run:** #224 / 36750878135
 - **Problem:** `cargo fmt --all -- --check` reported deterministic layout differences in the new proof-of-rotation implementation and tests.
-- **Correction required:** Apply only the rustfmt-indicated formatting changes; do not alter production logic or test behavior.
+- **Correction:** Apply only the rustfmt-indicated formatting changes; no production logic or test behavior changed.
+- **Correction commit:** 9d0527a34924bc22b1de469281c7b706b0e727b7
+- **Validation:** Actions run #228 / 36751061388 passed Format. Build and Test also passed on the same commit; Clippy failed independently on a separate lint.
+- **Status:** RESOLVED
+
+## ERR-032 — Clippy redundant-guard after Block 5 proof-of-rotation implementation
+
+- **Milestone:** M0.6 Block 5 / Actions run #228
+- **Type:** CI lint failure
+- **Actions run:** #228 / 36751061388
+- **Problem:** Clippy reported a redundant guard in the proof-of-rotation certificate DER validation match.
+- **Correction required:** Replace the guard pattern `Ok((remaining, _)) if remaining.is_empty()` with the equivalent slice pattern `Ok(([], _))`; no logic change.
 - **Status:** PENDING
 
 
