@@ -241,3 +241,26 @@ A Block 4 checkpoint may now be created. No merge is performed as part of this c
 ## Maintenance rule
 
 Every future Actions failure or audit-discovered defect must append a new ERR-NNN entry rather than editing an older entry. Resolutions should reference the correction commit and the validating Actions run whenever available.
+## ERR-024 — v3 proof-of-rotation was detected but not verified
+
+- **Milestone:** M0.6 Block 5 / AUDIT-024
+- **Type:** Verification boundary defect
+- **Problem:** The v3 verifier only detected the proof-of-rotation attribute and treated its presence as Unsupported, without validating the lineage structure, parent-to-child signatures, or final-certificate relationship to the current signer.
+- **Required correction:** Parse and validate the v3 proof-of-rotation lineage, preserve the existing unsupported boundary for algorithms the verifier cannot safely validate, and prevent invalid lineage evidence from producing a cryptographic pass.
+- **Status:** PENDING
+
+## ERR-025 — proof-of-rotation evidence was not represented structurally
+
+- **Milestone:** M0.6 Block 5 / AUDIT-025
+- **Type:** Evidence-model defect
+- **Problem:** CryptoSchemeInfo exposed only a generic Unsupported state/detail when proof-of-rotation was present and had no structured lineage-verification evidence.
+- **Required correction:** Add minimal structured proof-of-rotation evidence while preserving signer count, SDK ranges, certificate fingerprints, and existing aggregation semantics.
+- **Status:** PENDING
+
+## ERR-026 — M0.6 Block 5 stacked PR validation is not yet wired for the Block 4 base
+
+- **Milestone:** M0.6 Block 5 / CI follow-up audit
+- **Type:** CI configuration / validation gap
+- **Problem:** The current workflow does not yet include the Block 5 source branch in push coverage, and the validated Block 4 base workflow does not yet target the Block 4 branch in pull_request coverage for a stacked Block 5 PR.
+- **Required correction:** Add the Block 5 branch to push coverage and ensure the Block 4 base workflow covers pull_request events targeting m06-block4-signer-error-isolation, without redesigning the CI job graph.
+- **Status:** PENDING
