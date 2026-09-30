@@ -9,7 +9,9 @@ on:
       - m05-crypto-signatures
       - m06-block1-state-hardening
       - m06-block2-signing-evidence
+      - m06-block4-signer-error-isolation
       - m06-block3-verification-hardening
+      - m06-block4-signer-error-isolation
   pull_request:
     branches:
       - main
