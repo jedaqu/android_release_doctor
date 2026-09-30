@@ -31,6 +31,7 @@ pub enum Severity {
     Pass,
     Warning,
     Blocker,
+    ManualReview,
 }
 
 impl Severity {
@@ -39,6 +40,7 @@ impl Severity {
             Self::Pass => "PASS",
             Self::Warning => "WARNING",
             Self::Blocker => "BLOCKER",
+            Self::ManualReview => "MANUAL-REVIEW",
         }
     }
 }
@@ -87,6 +89,21 @@ impl Finding {
         Self {
             rule_id,
             severity: Severity::Blocker,
+            title: title.into(),
+            summary: summary.into(),
+            remediation: remediation.into(),
+        }
+    }
+
+    fn manual_review(
+        rule_id: &'static str,
+        title: impl Into<String>,
+        summary: impl Into<String>,
+        remediation: impl Into<String>,
+    ) -> Self {
+        Self {
+            rule_id,
+            severity: Severity::ManualReview,
             title: title.into(),
             summary: summary.into(),
             remediation: remediation.into(),
@@ -163,11 +180,20 @@ impl AuditReport {
                 Severity::Pass => (p + 1, w, b),
                 Severity::Warning => (p, w + 1, b),
                 Severity::Blocker => (p, w, b + 1),
+                Severity::ManualReview => (p, w, b),
             })
+    }
+
+    pub fn manual_review_count(&self) -> usize {
+        self.findings
+            .iter()
+            .filter(|finding| finding.severity == Severity::ManualReview)
+            .count()
     }
 
     pub fn render_text(&self) -> String {
         let (passes, warnings, blockers) = self.counts();
+        let manual_reviews = self.manual_review_count();
         let mut out = String::new();
 
         out.push_str(
@@ -382,9 +408,10 @@ Summary
         out.push_str(&format!(
             "  BLOCKERS {}
   WARNINGS {}
+  MANUAL REVIEW {}
   PASSED {}
 ",
-            blockers, warnings, passes
+            blockers, warnings, manual_reviews, passes
         ));
 
         out
@@ -1155,7 +1182,7 @@ fn evaluate(
                             " A v3.2 hybrid signing block is present and is not cryptographically verified in this block.",
                         );
                     }
-                    findings.push(Finding::warning(
+                    findings.push(Finding::manual_review(
                         "SIGNING-003",
                         "APK cryptographic verification requires manual review",
                         format!(
@@ -1379,6 +1406,32 @@ fn compare_sdk(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+
+    #[test]
+    fn manual_review_is_first_class_and_does_not_count_as_blocker() {
+        let report = AuditReport {
+            artifact_path: PathBuf::from("app.apk"),
+            artifact_kind: ArtifactKind::Apk,
+            size_bytes: 0,
+            inventory: ArtifactInventory::default(),
+            manifest: None,
+            manifest_error: None,
+            project: None,
+            project_error: None,
+            findings: vec![Finding::manual_review(
+                "TEST-MANUAL",
+                "Manual verification",
+                "Evidence is incomplete.",
+                "Verify externally.",
+            )],
+        };
+
+        assert_eq!(report.counts(), (0, 0, 0));
+        assert_eq!(report.manual_review_count(), 1);
+        assert!(report.render_text().contains("MANUAL-REVIEW"));
+        assert!(report.render_text().contains("MANUAL REVIEW 1"));
+    }
 
     #[test]
     fn missing_manifest_is_a_blocker() {
