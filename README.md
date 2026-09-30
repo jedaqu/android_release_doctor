@@ -138,7 +138,7 @@ The verifier now checks:
 - v3 proof-of-rotation presence as an explicit manual-review boundary rather than a guessed pass;
 - v3.1 presence as an explicit manual-review boundary.
 
-The verifier records a SHA-256 fingerprint of each verified signer's first certificate as additional signer evidence. It does **not** treat the certificate as trusted through a public CA; Android's app-signing model does not require a central certificate authority. citehttps://source.android.com/docs/security/features/apksigning|AOSP app signing 
+The verifier records a SHA-256 fingerprint of each verified signer's first certificate as additional signer evidence. It does **not** treat the certificate as trusted through a public CA; Android's app-signing model does not require a central certificate authority.
 
 A cryptographic failure is distinct from an unsupported verification capability. Unsupported or incomplete verification is surfaced as a warning/manual-review result; it is never converted into a cryptographic pass.
 
@@ -148,7 +148,7 @@ Cryptographic verification is collected automatically when auditing an APK:
 
 ```text
 android-release-doctor --play app-release.apk
-android-release-doctor --play app-release.apk
+android-release-doctor --play --play-platform mobile app-release.apk
 ```
 
 AABs are not cryptographically verified in this module because APK v2/v3 signatures live in the generated APK signing block rather than in the AAB artifact itself.
