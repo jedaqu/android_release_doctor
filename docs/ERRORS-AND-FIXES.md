@@ -224,23 +224,7 @@ This file is the chronological engineering ledger for failures, errors, their ro
 - **Correction commit:** c2fb2ae978a3eb924b954cb4266fdbccebeffa14
 - **Validation:** Block 3 base branch Actions run #205 / 36747047095 passed Build, Test, Format, and Clippy. Draft PR #11 subsequently received pull-request validation in runs #202 / 36746979474 and #204 / 36747038783, both successful.
 - **Status:** RESOLVED
-## Current validation state
 
-M0.6 Block 4 implementation and the current CI correction cycle have passed the complete validation gate.
-
-Actions run #198 / 36746555546:
-- Build: PASS
-- Test: PASS
-- Format: PASS
-- Clippy: PASS
-
-Final branch workflow configuration places m06-block4-signer-error-isolation in push coverage and m06-block3-verification-hardening in the pull-request target coverage for the stacked path.
-
-A Block 4 checkpoint may now be created. No merge is performed as part of this checkpoint.
-
-## Maintenance rule
-
-Every future Actions failure or audit-discovered defect must append a new ERR-NNN entry rather than editing an older entry. Resolutions should reference the correction commit and the validating Actions run whenever available.
 ## ERR-024 — v3 proof-of-rotation was detected but not verified
 
 - **Milestone:** M0.6 Block 5 / AUDIT-024
@@ -264,3 +248,21 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Problem:** The current workflow does not yet include the Block 5 source branch in push coverage, and the validated Block 4 base workflow does not yet target the Block 4 branch in pull_request coverage for a stacked Block 5 PR.
 - **Required correction:** Add the Block 5 branch to push coverage and ensure the Block 4 base workflow covers pull_request events targeting m06-block4-signer-error-isolation, without redesigning the CI job graph.
 - **Status:** PENDING
+
+## Current validation state
+
+M0.6 Block 4 implementation and the current CI correction cycle have passed the complete validation gate.
+
+Actions run #198 / 36746555546:
+- Build: PASS
+- Test: PASS
+- Format: PASS
+- Clippy: PASS
+
+Final branch workflow configuration places m06-block4-signer-error-isolation in push coverage and m06-block3-verification-hardening in the pull-request target coverage for the stacked path.
+
+A Block 4 checkpoint may now be created. No merge is performed as part of this checkpoint.
+
+## Maintenance rule
+
+Every future Actions failure or audit-discovered defect must append a new ERR-NNN entry rather than editing an older entry. Resolutions should reference the correction commit and the validating Actions run whenever available.
