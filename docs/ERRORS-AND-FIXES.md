@@ -281,10 +281,20 @@ This file is the chronological engineering ledger for failures, errors, their ro
 - **Actions run:** #223 / 36750840753
 - **Problem:** The new `error_to_scheme_info_with_rotation()` helper was introduced with six parameters, but five v3 signer-local call sites still supplied only five arguments.
 - **Cause:** The scoped evidence-propagation correction converted the helper name without consistently appending the already-parsed proof-of-rotation evidence argument.
-- **Required correction:** Add `parsed.proof_of_rotation` to every post-parse signer-local error conversion and keep pre-parse paths on the original helper.
+- **Correction:** Add `parsed.proof_of_rotation` to every post-parse signer-local error conversion and keep pre-parse paths on the original helper.
 - **Correction commit:** dc6d4eb4d241155bb9413e2de38839240901e60b
-- **Validation:** Awaiting subsequent Actions validation on the corrected head.
+- **Validation:** Actions run #224 / 36750878135 passed Build and Test after the correction. Format failed independently on rustfmt-only layout differences.
+- **Status:** RESOLVED
+
+## ERR-031 — rustfmt failure after Block 5 proof-of-rotation implementation
+
+- **Milestone:** M0.6 Block 5 / Actions run #224
+- **Type:** CI formatting failure
+- **Actions run:** #224 / 36750878135
+- **Problem:** `cargo fmt --all -- --check` reported deterministic layout differences in the new proof-of-rotation implementation and tests.
+- **Correction required:** Apply only the rustfmt-indicated formatting changes; do not alter production logic or test behavior.
 - **Status:** PENDING
+
 
 ## Current validation state
 
