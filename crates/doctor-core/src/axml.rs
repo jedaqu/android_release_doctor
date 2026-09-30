@@ -183,11 +183,7 @@ fn parse_string_pool(
     let data_end = match styles_start {
         0 => chunk_start + chunk_size,
         value if value >= strings_start && value <= chunk_size => chunk_start + value,
-        _ => {
-            return Err(AxmlError::Invalid(
-                "string pool styles offset is invalid",
-            ))
-        }
+        _ => return Err(AxmlError::Invalid("string pool styles offset is invalid")),
     };
     let utf8 = flags & 0x100 != 0;
     let mut strings = Vec::with_capacity(string_count);
@@ -329,9 +325,7 @@ fn parse_attributes(
         let data = cursor.read_u32()?;
 
         if value_size != 8 {
-            return Err(AxmlError::Invalid(
-                "typed value size is not 8 bytes",
-            ));
+            return Err(AxmlError::Invalid("typed value size is not 8 bytes"));
         }
 
         cursor.skip(attribute_size - 20)?;
