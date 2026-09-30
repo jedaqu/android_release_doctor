@@ -497,3 +497,12 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Result:** The bounded ECDSA/SHA-512 P-384 increment satisfies the pre-change acceptance matrix, including v2/v3 positive fixtures, v2/v3 tamper rejection, explicit Unsupported semantics for non-P-384 curves, current dependency locking, and complete CI validation.
 - **Second-audit commit:** 26f9f956d0bf32080881bbbbbcc6d8b0687c1284
 - **Status:** PASS — ready for checkpoint
+
+## ERR-047 — README status stale after M0.7 Block 1 implementation
+
+- **Milestone:** M0.7 Block 1 / checkpoint preparation
+- **Type:** Documentation synchronization defect
+- **Problem:** README still identified M0.6 Block 5 as the current repository status after the M0.7 Block 1 implementation and second audit had passed.
+- **Correction:** Update the status and add the bounded M0.7 Block 1 capability section without rewriting historical M0.5/M0.6 scope.
+- **Validation:** Final checkpoint validation will exercise the corrected README state through Build, Test, Format, and Clippy.
+- **Status:** OPEN
