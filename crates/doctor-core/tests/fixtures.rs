@@ -23,6 +23,7 @@ fn audits_minimal_apk_fixture() {
         Some("AndroidManifest.xml")
     );
 
+    assert!(report.manifest_error.is_none());
     let manifest = report.manifest.expect("manifest should parse");
     assert_eq!(
         manifest.package_name.as_deref(),
@@ -63,6 +64,7 @@ fn audits_minimal_aab_fixture() {
         Some("base/manifest/AndroidManifest.xml")
     );
 
+    assert!(report.manifest_error.is_none());
     let manifest = report.manifest.expect("manifest should parse");
     assert_eq!(
         manifest.package_name.as_deref(),
