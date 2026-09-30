@@ -39,7 +39,7 @@ Criterio cumplido: no se identificó ninguna corrección pendiente en el conteni
 
 ## Etapa 2 — Auditoría de transición M0.6 → M0.7
 
-**Estado: PENDIENTE**
+**Estado: EN CURSO**
 
 Objetivo: determinar, mediante evidencia y no por anticipación, qué trabajo tiene sentido abrir como M0.7.
 
