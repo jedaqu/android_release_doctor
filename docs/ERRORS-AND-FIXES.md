@@ -307,6 +307,15 @@ This file is the chronological engineering ledger for failures, errors, their ro
 - **Status:** PENDING
 
 
+## ERR-033 — rustfmt failure in the new proof-of-rotation evidence regression test
+
+- **Milestone:** M0.6 Block 5 / Actions run #230
+- **Type:** CI formatting failure
+- **Actions run:** #230 / 36751168580
+- **Problem:** `cargo fmt --all -- --check` required one line-wrap change in the newly added `signer_error_evidence_preserves_proof_of_rotation` test.
+- **Correction required:** Apply only the rustfmt-indicated string-literal layout change; no logic or test behavior change.
+- **Status:** PENDING
+
 ## Current validation state
 
 M0.6 Block 4 implementation and the current CI correction cycle have passed the complete validation gate.
