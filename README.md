@@ -124,7 +124,7 @@ No external packaging command is executed by the core engine. Google documents `
 
 ## M0.5 Block 2 scope — APK cryptographic signature verification
 
-M0.5 Block 2 adds cryptographic evidence for APK Signature Scheme v2 and v3 on top of the structural signing-block inspection from M0.4.
+M0.5 Block 2 adds cryptographic evidence for APK Signature Scheme v2 and v3 on top of the structural signing-block inspection from M0.4. Current Android documentation also defines v3.1 and, as of Android 17, v3.2; those newer blocks remain explicit manual-review boundaries in this milestone.
 
 The verifier now checks:
 
@@ -136,7 +136,8 @@ The verifier now checks:
 - v3 minimum/maximum SDK consistency;
 - the required equality and ordering of digest/signature algorithm ID lists;
 - v3 proof-of-rotation presence as an explicit manual-review boundary rather than a guessed pass;
-- v3.1 presence as an explicit manual-review boundary.
+- v3.1 presence as an explicit manual-review boundary;
+- v3.2 presence as an explicit manual-review boundary.
 
 The verifier records a SHA-256 fingerprint of each verified signer's first certificate as additional signer evidence. It does **not** treat the certificate as trusted through a public CA; Android's app-signing model does not require a central certificate authority.
 
@@ -153,7 +154,7 @@ android-release-doctor --play --play-platform mobile app-release.apk
 
 AABs are not cryptographically verified in this module because APK v2/v3 signatures live in the generated APK signing block rather than in the AAB artifact itself.
 
-The implementation follows Google's documented v2/v3 verification flow, including signer signature verification, digest verification and certificate/public-key binding. citehttps://source.android.com/docs/security/features/apksigning/v2|AOSP APK Signature Scheme v2 citehttps://source.android.com/docs/security/features/apksigning/v3|AOSP APK Signature Scheme v3 
+The implementation follows Google's documented v2/v3 verification flow, including signer signature verification, digest verification and certificate/public-key binding.
 
 ### M0.4 usage
 
