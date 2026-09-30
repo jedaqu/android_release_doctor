@@ -38,6 +38,7 @@ pub struct CryptoSchemeInfo {
     pub signer_count: usize,
     pub algorithms: Vec<u32>,
     pub certificate_sha256: Vec<String>,
+    pub sdk_ranges: Vec<(u32, u32)>,
     pub detail: String,
 }
 
@@ -202,6 +203,7 @@ fn verify_v2_signer(
         signer_count: 1,
         algorithms,
         certificate_sha256: vec![certificate_sha256(parsed.certificate)?],
+        sdk_ranges: Vec::new(),
         detail:
             "v2 signer signature, certificate/public-key binding, and APK content digest verified"
                 .to_string(),
@@ -224,97 +226,97 @@ fn verify_v3_block(
     }
     signers_reader.finish("v3 signer sequence")?;
 
-    if signer_values.len() != 1 {
-        return Ok(CryptoSchemeInfo {
-            state: CryptoVerificationState::Invalid,
-            signer_count: signer_values.len(),
-            algorithms: Vec::new(),
-            certificate_sha256: Vec::new(),
-            detail: "v3 requires exactly one signer".to_string(),
-        });
-    }
+    let mut results = Vec::with_capacity(signer_values.len());
 
-    let signer = signer_values[0];
-    let mut signer_reader = LengthReader::new(signer);
-    let signed_data = signer_reader.read_sequence("v3 signed data")?;
-    let min_sdk = signer_reader.read_u32("v3 outer minSDK")?;
-    let max_sdk = signer_reader.read_u32("v3 outer maxSDK")?;
-    let signatures = signer_reader.read_sequence("v3 signatures")?;
-    let public_key = signer_reader.read_length_prefixed("v3 public key")?;
-    signer_reader.finish("v3 signer")?;
+    for signer in signer_values {
+        let mut signer_reader = LengthReader::new(signer);
+        let signed_data = signer_reader.read_sequence("v3 signed data")?;
+        let min_sdk = signer_reader.read_u32("v3 outer minSDK")?;
+        let max_sdk = signer_reader.read_u32("v3 outer maxSDK")?;
+        let signatures = signer_reader.read_sequence("v3 signatures")?;
+        let public_key = signer_reader.read_length_prefixed("v3 public key")?;
+        signer_reader.finish("v3 signer")?;
 
-    let parsed = parse_signed_data_v3(signed_data)?;
+        let parsed = parse_signed_data_v3(signed_data)?;
 
-    if parsed.min_sdk != min_sdk || parsed.max_sdk != max_sdk {
-        return Ok(CryptoSchemeInfo {
-            state: CryptoVerificationState::Invalid,
-            signer_count: 1,
-            algorithms: parsed.digest_algorithms,
-            certificate_sha256: Vec::new(),
-            detail: format!(
-                "v3 signer minSDK/maxSDK ({min_sdk}, {max_sdk}) do not match signed-data values ({}, {})",
+        if parsed.min_sdk != min_sdk || parsed.max_sdk != max_sdk {
+            results.push(CryptoSchemeInfo {
+                state: CryptoVerificationState::Invalid,
+                signer_count: 1,
+                algorithms: parsed.digest_algorithms,
+                certificate_sha256: Vec::new(),
+                sdk_ranges: vec![(min_sdk, max_sdk)],
+                detail: format!(
+                    "v3 signer minSDK/maxSDK ({min_sdk}, {max_sdk}) do not match signed-data values ({}, {})",
+                    parsed.min_sdk, parsed.max_sdk
+                ),
+            });
+            continue;
+        }
+
+        let selected = parse_and_select_signature(signatures)?;
+        verify_certificate_and_public_key(parsed.certificate, public_key)?;
+        verify_signature_bytes(
+            selected.algorithm_id,
+            parsed.certificate,
+            signed_data,
+            selected.signature,
+        )?;
+        let expected_digest = parsed
+            .digests
+            .iter()
+            .find(|(id, _)| *id == selected.algorithm_id)
+            .map(|(_, digest)| *digest)
+            .ok_or_else(|| {
+                SignatureVerificationError(format!(
+                    "v3 digest list does not contain signature algorithm 0x{:08x}",
+                    selected.algorithm_id
+                ))
+            })?;
+        verify_content_digest(file, block, expected_digest, selected.digest_algorithm)?;
+
+        if parsed.digest_algorithms != selected.all_signature_algorithms {
+            results.push(CryptoSchemeInfo {
+                state: CryptoVerificationState::Invalid,
+                signer_count: 1,
+                algorithms: parsed.digest_algorithms,
+                certificate_sha256: Vec::new(),
+                sdk_ranges: vec![(parsed.min_sdk, parsed.max_sdk)],
+                detail:
+                    "v3 digest and signature algorithm ID lists are not identical and ordered equally"
+                        .to_string(),
+            });
+            continue;
+        }
+
+        let state = if parsed.has_proof_of_rotation {
+            CryptoVerificationState::Unsupported
+        } else {
+            CryptoVerificationState::Verified
+        };
+        let detail = if parsed.has_proof_of_rotation {
+            format!(
+                "v3 cryptographic signature, certificate/public-key binding, SDK range, and APK content digest verified; proof-of-rotation validation remains pending for SDK range {}..={}",
                 parsed.min_sdk, parsed.max_sdk
-            ),
-        });
-    }
+            )
+        } else {
+            format!(
+                "v3 signer signature, certificate/public-key binding, SDK range, and APK content digest verified for SDK range {}..={}",
+                parsed.min_sdk, parsed.max_sdk
+            )
+        };
 
-    let selected = parse_and_select_signature(signatures)?;
-    verify_certificate_and_public_key(parsed.certificate, public_key)?;
-    verify_signature_bytes(
-        selected.algorithm_id,
-        parsed.certificate,
-        signed_data,
-        selected.signature,
-    )?;
-    let expected_digest = parsed
-        .digests
-        .iter()
-        .find(|(id, _)| *id == selected.algorithm_id)
-        .map(|(_, digest)| *digest)
-        .ok_or_else(|| {
-            SignatureVerificationError(format!(
-                "v3 digest list does not contain signature algorithm 0x{:08x}",
-                selected.algorithm_id
-            ))
-        })?;
-    verify_content_digest(file, block, expected_digest, selected.digest_algorithm)?;
-
-    if parsed.digest_algorithms != selected.all_signature_algorithms {
-        return Ok(CryptoSchemeInfo {
-            state: CryptoVerificationState::Invalid,
+        results.push(CryptoSchemeInfo {
+            state,
             signer_count: 1,
             algorithms: parsed.digest_algorithms,
-            certificate_sha256: Vec::new(),
-            detail:
-                "v3 digest and signature algorithm ID lists are not identical and ordered equally"
-                    .to_string(),
+            certificate_sha256: vec![certificate_sha256(parsed.certificate)?],
+            sdk_ranges: vec![(parsed.min_sdk, parsed.max_sdk)],
+            detail,
         });
     }
 
-    let state = if parsed.has_proof_of_rotation {
-        CryptoVerificationState::Unsupported
-    } else {
-        CryptoVerificationState::Verified
-    };
-    let detail = if parsed.has_proof_of_rotation {
-        format!(
-            "v3 cryptographic signature, certificate/public-key binding, SDK range, and APK content digest verified; proof-of-rotation validation remains pending for SDK range {}..={}",
-            parsed.min_sdk, parsed.max_sdk
-        )
-    } else {
-        format!(
-            "v3 signer signature, certificate/public-key binding, SDK range, and APK content digest verified for SDK range {}..={}",
-            parsed.min_sdk, parsed.max_sdk
-        )
-    };
-
-    Ok(CryptoSchemeInfo {
-        state,
-        signer_count: 1,
-        algorithms: parsed.digest_algorithms,
-        certificate_sha256: vec![certificate_sha256(parsed.certificate)?],
-        detail,
-    })
+    merge_scheme_results("v3", results)?
 }
 
 fn merge_scheme_results(
@@ -327,6 +329,7 @@ fn merge_scheme_results(
             signer_count: 0,
             algorithms: Vec::new(),
             certificate_sha256: Vec::new(),
+            sdk_ranges: Vec::new(),
             detail: format!("{scheme} signing block contains no signers"),
         });
     }
@@ -361,6 +364,10 @@ fn merge_scheme_results(
         signer_count: results.len(),
         algorithms,
         certificate_sha256,
+        sdk_ranges: results
+            .iter()
+            .flat_map(|result| result.sdk_ranges.iter().copied())
+            .collect(),
         detail: details.join("; "),
     })
 }
@@ -1221,4 +1228,36 @@ mod tests {
         assert_eq!(digest.len(), 32);
         std::fs::remove_file(path).expect("temporary APK should be removed");
     }
+
+    #[test]
+    fn merges_multiple_v3_targeted_signers_and_retains_sdk_ranges() {
+        let result = merge_scheme_results(
+            "v3",
+            vec![
+                CryptoSchemeInfo {
+                    state: CryptoVerificationState::Verified,
+                    signer_count: 1,
+                    algorithms: vec![0x0201],
+                    certificate_sha256: vec!["a".repeat(64)],
+                    sdk_ranges: vec![(28, 32)],
+                    detail: "targeted signer A".to_string(),
+                },
+                CryptoSchemeInfo {
+                    state: CryptoVerificationState::Verified,
+                    signer_count: 1,
+                    algorithms: vec![0x0201],
+                    certificate_sha256: vec!["b".repeat(64)],
+                    sdk_ranges: vec![(33, 36)],
+                    detail: "targeted signer B".to_string(),
+                },
+            ],
+        )
+        .expect("multiple v3 signer results should merge");
+
+        assert_eq!(result.state, CryptoVerificationState::Verified);
+        assert_eq!(result.signer_count, 2);
+        assert_eq!(result.sdk_ranges, vec![(28, 32), (33, 36)]);
+        assert_eq!(result.certificate_sha256.len(), 2);
+    }
+
 }
