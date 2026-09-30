@@ -48,11 +48,7 @@ pub fn inspect_shared_object(bytes: &[u8]) -> Result<ElfInspection, ElfError> {
             read_u16(bytes, 56)? as u64,
             56_u64,
         ),
-        _ => {
-            return Err(ElfError(format!(
-                "unsupported ELF class value {class}"
-            )))
-        }
+        _ => return Err(ElfError(format!("unsupported ELF class value {class}))),
     };
 
     if phnum == 0 {
@@ -209,11 +205,9 @@ mod tests {
         bytes.truncate(64);
 
         let error = inspect_shared_object(&bytes).expect_err("truncated ELF should fail");
-        assert!(
-            error
-                .to_string()
-                .contains("program-header table extends past")
-        );
+        assert!(error
+            .to_string()
+            .contains("program-header table extends past"));
     }
 
     #[test]
@@ -222,10 +216,6 @@ mod tests {
         bytes[64..68].copy_from_slice(&2_u32.to_le_bytes());
 
         let error = inspect_shared_object(&bytes).expect_err("missing PT_LOAD should fail");
-        assert!(
-            error
-                .to_string()
-                .contains("no PT_LOAD program segments")
-        );
+        assert!(error.to_string().contains("no PT_LOAD program segments"));
     }
 }
