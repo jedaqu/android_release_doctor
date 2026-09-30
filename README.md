@@ -135,7 +135,6 @@ The verifier now checks:
 - the APK content digest using Android's 1 MiB chunked digest construction;
 - v3 minimum/maximum SDK consistency;
 - the required equality and ordering of digest/signature algorithm ID lists;
-- v3 proof-of-rotation lineage structure and parent-to-child signatures when the lineage algorithms are supported;
 - v3.1 presence as an explicit manual-review boundary;
 - v3.2 presence as an explicit manual-review boundary.
 
