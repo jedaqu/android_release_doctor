@@ -113,35 +113,95 @@ pub fn evaluate_play_policy(
         "Review App content in Play Console, including the ads declaration, app access instructions when applicable, content rating, and audience declarations.",
     ));
 
-    if inventory.native_abis.is_empty() {
+    if inventory.native_libraries.is_empty() {
         findings.push(Finding::pass(
             "PLAY-005",
             "16 KB native payload check",
             "No packaged native .so libraries were detected, so there is no native ELF payload in this artifact for the 16 KB page-alignment check.",
         ));
-    } else if manifest
-        .and_then(|value| value.target_sdk)
-        .is_some_and(|target_sdk| target_sdk >= 35)
-    {
-        findings.push(Finding::warning(
-            "PLAY-005",
-            "16 KB page-size compatibility",
-            format!(
-                "The artifact contains native libraries for ABI(s): {}. Native 16 KB page-size compatibility requires verification outside the current M0.3 parser.",
-                inventory.native_abis.join(", ")
-            ),
-            "Verify the packaged native libraries and the final app against Google's 16 KB page-size guidance before release.",
-        ));
     } else {
-        findings.push(Finding::warning(
-            "PLAY-005",
-            "Native payload requires policy review",
-            format!(
-                "The artifact contains native libraries for ABI(s): {}.",
-                inventory.native_abis.join(", ")
-            ),
-            "Review native-library compatibility with the applicable Google Play and Android requirements for the target API level.",
-        ));
+        let target_sdk = manifest.and_then(|value| value.target_sdk);
+        let parse_errors = inventory
+            .native_libraries
+            .iter()
+            .filter(|library| library.error.is_some())
+            .collect::<Vec<_>>();
+        let incompatible = inventory
+            .native_libraries
+            .iter()
+            .filter(|library| {
+                crate::load_segments_are_16kb_aligned(&library.load_segment_alignments)
+                    .not()
+            })
+            .collect::<Vec<_>>();
+
+        if !parse_errors.is_empty() {
+            let paths = parse_errors
+                .iter()
+                .map(|library| library.path.as_str())
+                .collect::<Vec<_>>()
+                .join(", ");
+
+            findings.push(Finding::warning(
+                "PLAY-005",
+                "16 KB page-size compatibility unavailable",
+                format!(
+                    "Native ELF inspection could not be completed for: {paths}."
+                ),
+                "Verify every packaged native library with an ELF-aware tool and Google's 16 KB guidance before release.",
+            ));
+        } else if target_sdk.is_some_and(|value| value >= 35) && !incompatible.is_empty() {
+            let details = incompatible
+                .iter()
+                .map(|library| {
+                    format!(
+                        "{} [{}] alignments={:?}",
+                        library.path, library.abi, library.load_segment_alignments
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join("; ");
+
+            findings.push(Finding::blocker(
+                "PLAY-005",
+                "16 KB page-size compatibility",
+                format!(
+                    "The artifact targets API {} and contains native ELF load segments below the 16 KB alignment threshold: {details}.",
+                    target_sdk.unwrap()
+                ),
+                "Rebuild or replace the affected native libraries with 16 KB ELF load-segment alignment before Play submission.",
+            ));
+        } else if !incompatible.is_empty() {
+            let details = incompatible
+                .iter()
+                .map(|library| {
+                    format!(
+                        "{} [{}] alignments={:?}",
+                        library.path, library.abi, library.load_segment_alignments
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join("; ");
+
+            findings.push(Finding::warning(
+                "PLAY-005",
+                "Native ELF alignment below 16 KB",
+                format!(
+                    "The artifact contains native ELF load segments below the 16 KB alignment threshold: {details}."
+                ),
+                "Review the native libraries against the applicable Android/Google Play 16 KB guidance before publication.",
+            ));
+        } else {
+            findings.push(Finding::pass(
+                "PLAY-005",
+                "16 KB page-size compatibility",
+                if target_sdk.is_some_and(|value| value >= 35) {
+                    "All inspected native ELF PT_LOAD segments meet the 16 KB alignment threshold required for API 35+ targets."
+                } else {
+                    "All inspected native ELF PT_LOAD segments meet the 16 KB alignment threshold."
+                },
+            ));
+        }
     }
 
     findings
