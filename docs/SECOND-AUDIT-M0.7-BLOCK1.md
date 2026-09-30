@@ -98,3 +98,38 @@ The corrected block must demonstrate:
 - tracked `Cargo.lock` matches the declared dependencies;
 - Build/Test/Format/Clippy all pass.
 
+
+## 9. Correction and final re-audit
+
+The two focused regressions identified in AUDIT-M0.7-B1-002 were added in commit `e8996c7ffce11be146c1d04b49a0e575f2c3fe1a`:
+
+- v2 ECDSA/SHA-512 P-384 tampering now has a dedicated APK regression and must resolve to `Invalid`;
+- a non-P-384 `0x0202` certificate curve now has a dedicated regression and must resolve to `Unsupported`.
+
+Actions #308 / `36782554714` passed the complete Rust validation gate:
+
+- Build: PASS
+- Test: PASS
+- Format: PASS
+- Clippy: PASS
+
+The final branch also contains the generated `Cargo.lock` dependency graph for `p384` and `sha2`, and the temporary lock-generation workflows have been removed.
+
+## 10. Final second-audit result
+
+**SECOND AUDIT: PASS**
+
+The M0.7 Block 1 implementation now satisfies the bounded acceptance matrix established by the pre-change audit:
+
+- v2 `0x0202` / P-384 → real cryptographic verification → `Verified`;
+- v3 `0x0202` / P-384 → real cryptographic verification → `Verified`;
+- tampered v2/v3 `0x0202` fixtures → `Invalid`;
+- non-P-384 `0x0202` → explicit `Unsupported`;
+- existing M0.6 cryptographic behavior and signer-evidence semantics remain green;
+- tracked dependency lockfile is current;
+- CI workflow remains scoped and the temporary validation workflow has been removed;
+- no unresolved Block 1 production-code finding remains.
+
+No merge is performed by this audit.
+
+The next authorized movement is the **M0.7 Block 1 checkpoint**, followed by the milestone's next block only after that checkpoint is validated.
