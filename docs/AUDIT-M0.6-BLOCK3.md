@@ -82,6 +82,22 @@ Required change:
 - update the top-level status to reflect M0.6 Block 3 in progress;
 - keep historical checkpoint/audit documents unchanged as records.
 
+### AUDIT-013 — current implementation is not rustfmt-clean
+
+Actions run #169 (36743321096) confirmed that the previous compile correction was functionally successful: Build and Test passed. The remaining failure is the Format step only.
+
+The formatter reports one deterministic difference at the end of crates/doctor-core/src/signature_verify.rs: an extra blank line immediately before the final closing brace of the test module.
+
+Required change:
+- remove only that rustfmt-only blank line;
+- do not alter production logic or test behavior.
+
+Validation evidence:
+- Build: passed
+- Test: passed
+- Format: failed solely on the reported whitespace difference
+- Clippy: not reached because Format failed
+
 ## M0.6 Block 3 scope
 
 Only these findings are in scope:
