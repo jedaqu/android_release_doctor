@@ -506,3 +506,12 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction:** Update the status and add the bounded M0.7 Block 1 capability section without rewriting historical M0.5/M0.6 scope.
 - **Validation:** Final checkpoint validation will exercise the corrected README state through Build, Test, Format, and Clippy.
 - **Status:** OPEN
+
+## ERR-048 — M0.7 Block 1 README synchronization resolved
+
+- **Milestone:** M0.7 Block 1 / checkpoint preparation
+- **Type:** Documentation closure
+- **Correction:** README status and M0.7 Block 1 capability scope were synchronized with the validated implementation.
+- **Correction commit:** a65d613fbd28cc133fa09d891c3213bfbe386f24
+- **Validation:** Actions run #313 / 36782863855 passed Build, Test, Format, and Clippy with the synchronized documentation state.
+- **Status:** RESOLVED
