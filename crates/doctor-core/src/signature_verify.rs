@@ -1080,13 +1080,21 @@ mod tests {
 
     #[test]
     fn accepts_additional_v2_certificate_chain_entries() {
+        let digest_entry = {
+            let mut bytes = Vec::new();
+            bytes.extend_from_slice(&0x0201_u32.to_le_bytes());
+            bytes.extend_from_slice(&32_u32.to_le_bytes());
+            bytes.extend_from_slice(&[0_u8; 32]);
+            bytes
+        };
+        let digests = encode_sequence(&digest_entry);
         let mut certificates = Vec::new();
         certificates.extend_from_slice(&encode_sequence(b"signer"));
         certificates.extend_from_slice(&encode_sequence(b"intermediate"));
         certificates.extend_from_slice(&encode_sequence(b"root"));
 
         let mut signed_data = Vec::new();
-        signed_data.extend_from_slice(&encode_sequence(&[]));
+        signed_data.extend_from_slice(&encode_sequence(&digests));
         signed_data.extend_from_slice(&encode_sequence(&certificates));
         signed_data.extend_from_slice(&encode_sequence(&[]));
 
@@ -1096,12 +1104,20 @@ mod tests {
 
     #[test]
     fn accepts_additional_v3_certificate_chain_entries() {
+        let digest_entry = {
+            let mut bytes = Vec::new();
+            bytes.extend_from_slice(&0x0201_u32.to_le_bytes());
+            bytes.extend_from_slice(&32_u32.to_le_bytes());
+            bytes.extend_from_slice(&[0_u8; 32]);
+            bytes
+        };
+        let digests = encode_sequence(&digest_entry);
         let mut certificates = Vec::new();
         certificates.extend_from_slice(&encode_sequence(b"signer"));
         certificates.extend_from_slice(&encode_sequence(b"intermediate"));
 
         let mut signed_data = Vec::new();
-        signed_data.extend_from_slice(&encode_sequence(&[]));
+        signed_data.extend_from_slice(&encode_sequence(&digests));
         signed_data.extend_from_slice(&encode_sequence(&certificates));
         signed_data.extend_from_slice(&1_u32.to_le_bytes());
         signed_data.extend_from_slice(&2_u32.to_le_bytes());
