@@ -922,7 +922,7 @@ fn evaluate(
             .collect::<Vec<_>>()
             .join(", ");
 
-        findings.push(Finding::warning(
+        findings.push(Finding::manual_review(
             "NATIVE-002",
             "16 KB ELF inspection incomplete",
             format!("Could not parse the native ELF program headers for: {paths}."),
@@ -1026,7 +1026,7 @@ fn evaluate(
                 })
                 .collect::<Vec<_>>()
                 .join("; ");
-            findings.push(Finding::warning(
+            findings.push(Finding::manual_review(
                 "NATIVE-003",
                 "16 KB ZIP packaging alignment unavailable",
                 format!("Native ZIP packaging alignment could not be proven: {details}"),
@@ -1048,18 +1048,34 @@ fn evaluate(
     }
 
     if inventory.signature_files.is_empty() {
-        findings.push(Finding::warning(
-            "SIGNING-001",
-            "Signature material",
-            "No META-INF signature files were found.",
-            "Use a signed release artifact. APK v2/v3 cryptographic verification is reported separately by SIGNING-003.",
-        ));
+        let has_modern_apk_signing = matches!(
+            kind,
+            ArtifactKind::Apk
+        ) && inventory
+            .apk_signing
+            .as_ref()
+            .is_some_and(|info| info.v2 || info.v3 || info.v31 || info.v32);
+
+        if has_modern_apk_signing {
+            findings.push(Finding::pass(
+                "SIGNING-001",
+                "Legacy v1 signature material",
+                "No META-INF signature files were found; modern APK signing evidence is reported by SIGNING-002 and SIGNING-003.",
+            ));
+        } else {
+            findings.push(Finding::warning(
+                "SIGNING-001",
+                "Legacy v1 signature material",
+                "No META-INF signature files were found and no modern APK signing-block evidence is available.",
+                "Use a signed release artifact and verify its signing scheme before publication.",
+            ));
+        }
     } else {
         findings.push(Finding::pass(
             "SIGNING-001",
-            "Signature material",
+            "Legacy v1 signature material",
             format!(
-                "Detected {} signature metadata file(s).",
+                "Detected {} META-INF signature metadata file(s).",
                 inventory.signature_files.len()
             ),
         ));
@@ -1072,7 +1088,7 @@ fn evaluate(
             "APK signing-block inspection is not applicable to an AAB.",
         )),
         ArtifactKind::Apk => match (&inventory.apk_signing, &inventory.apk_signing_error) {
-            (_, Some(error)) => findings.push(Finding::warning(
+            (_, Some(error)) => findings.push(Finding::manual_review(
                 "SIGNING-002",
                 "APK signing block unreadable",
                 format!("The APK signing-block structure could not be validated: {error}"),
@@ -1124,7 +1140,7 @@ fn evaluate(
         )),
         ArtifactKind::Apk => {
             if let Some(error) = &inventory.apk_signature_verification_error {
-                findings.push(Finding::warning(
+                findings.push(Finding::manual_review(
                     "SIGNING-003",
                     "APK signature verification unavailable",
                     format!("Cryptographic APK signature verification could not be completed: {error}"),
@@ -1137,7 +1153,7 @@ fn evaluate(
                     .collect::<Vec<_>>();
 
                 if schemes.is_empty() {
-                    findings.push(Finding::warning(
+                    findings.push(Finding::manual_review(
                         "SIGNING-003",
                         "APK cryptographic signature unavailable",
                         "An APK signing block was found, but no supported v2/v3 cryptographic scheme was available for verification.",
@@ -1430,6 +1446,55 @@ mod tests {
         assert_eq!(report.manual_review_count(), 1);
         assert!(report.render_text().contains("MANUAL-REVIEW"));
         assert!(report.render_text().contains("MANUAL REVIEW 1"));
+    }
+
+    #[test]
+    fn unavailable_native_elf_evidence_requires_manual_review() {
+        let inventory = ArtifactInventory {
+            native_abis: vec!["arm64-v8a".to_string()],
+            native_libraries: vec![NativeLibraryInfo {
+                path: "lib/arm64-v8a/libunknown.so".to_string(),
+                abi: "arm64-v8a".to_string(),
+                load_segment_alignments: Vec::new(),
+                error: Some("missing ELF magic".to_string()),
+            }],
+            ..Default::default()
+        };
+
+        let findings = evaluate(ArtifactKind::Apk, &inventory, None, None);
+
+        assert_eq!(
+            findings
+                .iter()
+                .find(|finding| finding.rule_id == "NATIVE-002")
+                .map(|finding| finding.severity),
+            Some(Severity::ManualReview)
+        );
+    }
+
+    #[test]
+    fn unavailable_native_zip_evidence_requires_manual_review() {
+        let inventory = ArtifactInventory {
+            native_zip_entries: vec![NativeZipEntryInfo {
+                path: "base/lib/arm64-v8a/libnative.so".to_string(),
+                abi: "arm64-v8a".to_string(),
+                compression: NativeZipCompression::Stored,
+                data_offset: ZIP_ALIGNMENT_16KB,
+                alignment_16kb: None,
+                error: Some("AAB offset is not final APK evidence".to_string()),
+            }],
+            ..Default::default()
+        };
+
+        let findings = evaluate(ArtifactKind::Aab, &inventory, None, None);
+
+        assert_eq!(
+            findings
+                .iter()
+                .find(|finding| finding.rule_id == "NATIVE-003")
+                .map(|finding| finding.severity),
+            Some(Severity::ManualReview)
+        );
     }
 
     #[test]
