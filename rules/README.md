@@ -89,10 +89,10 @@ The verifier follows the Android v2/v3 verification model:
 - the selected content digest is recomputed using Android's 1 MiB chunk construction over the protected APK sections;
 - the first X.509 certificate SubjectPublicKeyInfo must exactly match the signer public key;
 - the first certificate SHA-256 fingerprint is retained as signer evidence;
-- v3 proof-of-rotation is detected but not fully verified in this block;
+- v3 proof-of-rotation lineage structure and parent-to-child signatures are verified when the lineage algorithms are supported;
 - v3.1 is detected structurally but not cryptographically verified in this block;
 - v3.2 is detected structurally but not cryptographically verified in this block;
-- algorithms, key sizes, curves, or PQC signatures outside the current Rust verifier's supported set remain manual-review evidence rather than being reported as verified.
+- algorithms, key sizes, curves, proof-of-rotation algorithms, or PQC signatures outside the current Rust verifier's supported set remain manual-review evidence rather than being reported as verified;
 
 Android documents the v2/v3 algorithm IDs, digest construction and verification sequence in the AOSP documentation:
 https://source.android.com/docs/security/features/apksigning/v2
