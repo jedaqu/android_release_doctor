@@ -90,14 +90,38 @@ pub fn verify_apk_signatures(
     };
 
     if let Some(value) = v2_block {
-        result.v2 = Some(verify_v2_block(&mut file, &block, value)?);
+        result.v2 = Some(match verify_v2_block(&mut file, &block, value) {
+            Ok(info) => info,
+            Err(error) => error_to_scheme_info(error),
+        });
     }
 
     if let Some(value) = v3_block {
-        result.v3 = Some(verify_v3_block(&mut file, &block, value)?);
+        result.v3 = Some(match verify_v3_block(&mut file, &block, value) {
+            Ok(info) => info,
+            Err(error) => error_to_scheme_info(error),
+        });
     }
 
     Ok(Some(result))
+}
+
+fn error_to_scheme_info(error: SignatureVerificationError) -> CryptoSchemeInfo {
+    let detail = error.to_string();
+    let unsupported = detail.strip_prefix("UNSUPPORTED: ").is_some();
+    CryptoSchemeInfo {
+        state: if unsupported {
+            CryptoVerificationState::Unsupported
+        } else {
+            CryptoVerificationState::Invalid
+        },
+        signer_count: 0,
+        algorithms: Vec::new(),
+        detail: detail
+            .strip_prefix("UNSUPPORTED: ")
+            .unwrap_or(&detail)
+            .to_string(),
+    }
 }
 
 fn verify_v2_block(
@@ -377,7 +401,7 @@ fn parse_and_select_signature<'a>(
     supported.sort_by_key(|(id, _, _)| std::cmp::Reverse(signature_strength(*id)));
     let Some((algorithm_id, signature, digest_algorithm)) = supported.into_iter().next() else {
         return Err(SignatureVerificationError(
-            "APK signer contains no cryptographically supported v2/v3 signature algorithm"
+            "UNSUPPORTED: APK signer contains no cryptographically supported v2/v3 signature algorithm"
                 .to_string(),
         ));
     };
