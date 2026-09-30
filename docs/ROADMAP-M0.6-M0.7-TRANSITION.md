@@ -39,7 +39,7 @@ Criterio cumplido: no se identificó ninguna corrección pendiente en el conteni
 
 ## Etapa 2 — Auditoría de transición M0.6 → M0.7
 
-**Estado: EN CURSO**
+**Estado: FINALIZADA**
 
 Objetivo: determinar, mediante evidencia y no por anticipación, qué trabajo tiene sentido abrir como M0.7.
 
@@ -64,8 +64,19 @@ La auditoría no asumirá que todos esos puntos pertenecen a M0.7. Se determinar
 
 Cierre requerido:
 - auditoría de transición aprobada;
+- segunda auditoría aprobada;
 - límites y dependencias documentados;
+- CI de la documentación de transición validado;
+- checkpoint formal registrado;
 - ninguna capacidad promovida a M0.7 sin evidencia suficiente.
+
+Evidencia de cierre:
+
+- `docs/AUDIT-M0.6-TRANSITION.md` — auditoría de transición aprobada;
+- `docs/SECOND-AUDIT-M0.6-TRANSITION.md` — segunda auditoría aprobada;
+- Actions run #270 / 36762113690 — documentación de transición validada;
+- Actions run #272 / 36762143731 — roadmap validado con Build/Test/Format/Clippy PASS;
+- checkpoint formal: `docs/CHECKPOINT-M0.6-TRANSITION-FINAL.md`.
 
 ## Etapa 3 — Definición de M0.7
 
