@@ -215,8 +215,8 @@ fn parse_string_pool(
                 .ok_or(AxmlError::Invalid("UTF-16 string length overflows"))?;
             let raw = cursor.take(byte_count)?;
             let mut units = Vec::with_capacity(character_count);
-            for pair in raw.chunks_exact(2) {
-                units.push(u16::from_le_bytes([pair[0], pair[1]]));
+            for pair in raw.as_chunks::<2>().0 {
+                units.push(u16::from_le_bytes(*pair));
             }
             String::from_utf16(&units)
                 .map_err(|_| AxmlError::Invalid("string pool contains invalid UTF-16"))?
