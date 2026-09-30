@@ -846,7 +846,12 @@ mod tests {
             .expect("v2 fixture should contain an APK signing block");
 
         let v2 = result.v2.expect("v2 scheme should be detected");
-        assert_eq!(v2.state, CryptoVerificationState::Verified);
+        assert_eq!(
+            v2.state,
+            CryptoVerificationState::Verified,
+            "verification detail: {}",
+            v2.detail
+        );
         assert_eq!(v2.signer_count, 1);
         assert!(v2.algorithms.contains(&0x0103));
         assert!(!result.v31_present);
