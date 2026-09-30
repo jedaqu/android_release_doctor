@@ -386,3 +386,25 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction:** Enumerate v3.1/v3 presence rules, rotation-min-SDK consistency, stripping-protection attribute linkage, targeted SDK coverage, and lineage/signer consistency as explicit acceptance boundaries.
 - **Validation:** Corrected definition will be re-audited and validated through Actions before Etapa 3 closure.
 - **Status:** RESOLVED
+
+## ERR-037 — M0.7 Block 1 ECDSA/SHA-512 coverage gap
+
+- **Milestone:** M0.7 Block 1 / AUDIT-M0.7-B1-001
+- **Type:** Cryptographic coverage defect
+- **Problem:** Signature algorithm `0x0202` (ECDSA with SHA-512) is defined and supported by Android v2/v3, but the current verifier excludes it from supported algorithm selection and returns `Unsupported` before cryptographic verification.
+- **Cause:** The initial M0.6 verifier implementation covered ECDSA/SHA-256 plus RSA variants but did not implement an ECDSA/SHA-512 backend.
+- **Required correction:** Add real ECDSA/SHA-512 verification for the bounded Block 1 P-384 coverage cell while preserving explicit Unsupported semantics outside that cell.
+- **Audit commit:** a016971b3052c29873b79111b2300307855e1071
+- **Validation:** Pre-change audit completed against Android v2/v3 specifications and AOSP apksig fixtures; production code not changed by the audit commit.
+- **Status:** OPEN — scoped for Block 1 implementation
+
+## ERR-038 — M0.7 Block 1 Android key/curve coverage gaps
+
+- **Milestone:** M0.7 Block 1 / AUDIT-M0.7-B1-003
+- **Type:** Cryptographic coverage defect
+- **Problem:** The current verifier intentionally narrows the Android v2/v3 matrix: ECDSA accepts only P-256/P-384, and RSA accepts only 2048–8192-bit keys, leaving Android-documented P-521 plus RSA 1024/16384 cases outside the current verification boundary.
+- **Cause:** The M0.6 verifier backend uses ring coverage that is narrower than the full Android signature/key matrix.
+- **Required correction:** Track the remaining key/curve cells explicitly and implement them only through future bounded increments; do not broaden the Block 1 scope beyond the selected 0x0202/P-384 increment.
+- **Audit commit:** a016971b3052c29873b79111b2300307855e1071
+- **Validation:** Pre-change audit completed against Android v2/v3 specifications and AOSP apksig verification fixtures; production code not changed by the audit commit.
+- **Status:** OPEN — explicitly out of scope for the selected first increment
