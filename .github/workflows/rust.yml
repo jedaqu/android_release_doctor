@@ -11,6 +11,7 @@ on:
       - m06-block2-signing-evidence
       - m06-block3-verification-hardening
       - m06-block4-signer-error-isolation
+      - m06-block5-verification-completeness
   pull_request:
     branches:
       - main
@@ -20,6 +21,7 @@ on:
       - m06-block1-state-hardening
       - m06-block2-signing-evidence
       - m06-block3-verification-hardening
+      - m06-block4-signer-error-isolation
 
 env:
   CARGO_TERM_COLOR: always
