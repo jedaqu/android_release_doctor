@@ -142,21 +142,24 @@ This file is the chronological engineering ledger for failures, errors, their ro
 - **Actions run:** #173 / 36743785845
 - **Problem:** Clippy rejected Ok(merge_scheme_results("v3", results)?) as an unnecessary enclosing Ok plus ?.
 - **Required correction:** Replace the expression with merge_scheme_results("v3", results).
-- **Validation at discovery:** Build passed, Test passed, Format passed; Clippy failed.
-- **Status:** PENDING CORRECTION
+- **Correction:** Applied the one-line return-expression correction only; no logic, API, or unrelated formatting changes.
+- **Correction commit:** 9126fd8d20fc49d410f640c345da15f3529a9f49
+- **Validation:** Awaiting the next complete Build/Test/Format/Clippy Actions run.
+- **Status:** CORRECTED — VALIDATION PENDING
 
 ---
 
 ## Current validation state
 
-The latest Block 3 validation run (#173 / 36743785845) has:
+ERR-015 has been corrected in commit 9126fd8d20fc49d410f640c345da15f3529a9f49.
 
+The latest completed validation run remains #173 / 36743785845:
 - Build: PASS
 - Test: PASS
 - Format: PASS
-- Clippy: FAIL due only to ERR-015
+- Clippy: FAIL due to ERR-015
 
-Therefore M0.6 Block 3 is not yet checkpointed. ERR-015 must be corrected and a complete Build/Test/Format/Clippy validation must pass before creating the Block 3 checkpoint.
+A new complete Build/Test/Format/Clippy Actions run is required. M0.6 Block 3 is not yet checkpointed.
 
 ## Maintenance rule
 
