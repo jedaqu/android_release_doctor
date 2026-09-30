@@ -105,7 +105,7 @@ pub fn parse_project(path: impl AsRef<Path>) -> Result<ProjectInfo, ProjectError
         .as_deref()
         .and_then(|value| extract_string_value(value, "versionName"));
 
-    let release_debuggable = release.and_then(|value| {
+    let release_debuggable = release.as_deref().and_then(|value| {
         extract_bool_value(value, "isDebuggable")
             .or_else(|| extract_bool_value(value, "debuggable"))
     });
