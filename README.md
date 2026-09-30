@@ -2,7 +2,7 @@
 
 Open-source, local-first tool for auditing Android APK and AAB releases before publication.
 
-> **Status:** early development — M0.6 Block 4 in progress (signer verification isolation and evidence hardening).
+> **Status:** early development — M0.6 Block 5 in progress (v3 proof-of-rotation verification and evidence hardening).
 
 Android Release Doctor inspects the **artifact you are actually going to distribute**, can compare it with the Android application Gradle configuration, and can apply a versioned Google Play submission-readiness profile.
 
@@ -135,13 +135,38 @@ The verifier now checks:
 - the APK content digest using Android's 1 MiB chunked digest construction;
 - v3 minimum/maximum SDK consistency;
 - the required equality and ordering of digest/signature algorithm ID lists;
-- v3 proof-of-rotation presence as an explicit manual-review boundary rather than a guessed pass;
+- v3 proof-of-rotation lineage structure and parent-to-child signatures when the lineage algorithms are supported;
 - v3.1 presence as an explicit manual-review boundary;
 - v3.2 presence as an explicit manual-review boundary.
 
 The verifier records a SHA-256 fingerprint of each verified signer's first certificate as additional signer evidence. It does **not** treat the certificate as trusted through a public CA; Android's app-signing model does not require a central certificate authority.
 
 A cryptographic failure is distinct from an unsupported verification capability. Unsupported or incomplete verification is surfaced as a warning/manual-review result; it is never converted into a cryptographic pass.
+
+## M0.6 Block 5 scope — v3 proof-of-rotation verification
+
+M0.6 Block 5 extends the v3 cryptographic evidence boundary to proof-of-rotation when the lineage uses algorithms supported by the current verifier.
+
+The verifier now:
+
+- parses the versioned proof-of-rotation lineage structure;
+- validates each lineage certificate and its length-prefixed structure;
+- verifies each parent-to-child lineage signature using the previous certificate and declared algorithm;
+- verifies the lineage's algorithm linkage and certificate uniqueness;
+- verifies that the final lineage certificate matches the current v3 signer certificate;
+- records structured proof-of-rotation evidence including lineage level count and verification state.
+
+A malformed or cryptographically invalid lineage is reported as Invalid. A lineage that requires an unsupported verification algorithm remains Unsupported/manual review. The tool does not infer Android runtime certificate trust decisions from the lineage beyond the artifact evidence it actually verifies.
+
+v3.1 and v3.2 remain explicit manual-review boundaries and are not cryptographically verified by this block.
+
+### M0.6 Block 5 usage
+
+Proof-of-rotation evidence is collected automatically during APK signing verification:
+
+```text
+android-release-doctor --play app-release.apk
+```
 
 ### M0.5 Block 2 usage
 
