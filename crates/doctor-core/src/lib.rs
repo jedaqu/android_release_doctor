@@ -456,6 +456,14 @@ fn evaluate(
                     "The manifest entry was found but no parsed manifest data is available.",
                     "Verify that the artifact contains a readable compiled AndroidManifest.xml.",
                 )),
+                (Some(_), Some(error)) => findings.push(Finding::blocker(
+                    "MANIFEST-002",
+                    "Manifest state inconsistent",
+                    format!(
+                        "The manifest parsed successfully but a parser error was also reported: {error}"
+                    ),
+                    "Report this condition as an Android Release Doctor defect.",
+                )),
                 (Some(manifest), None) => {
                     if let Some(package_name) = &manifest.package_name {
                         findings.push(Finding::pass(
