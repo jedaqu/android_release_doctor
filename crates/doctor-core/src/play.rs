@@ -150,7 +150,7 @@ pub fn evaluate_play_policy(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ArtifactInventory, ManifestInfo};
+    use crate::{ArtifactInventory, ManifestInfo, Severity};
 
     fn manifest(target_sdk: u32) -> ManifestInfo {
         ManifestInfo {
