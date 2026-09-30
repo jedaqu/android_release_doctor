@@ -1723,6 +1723,29 @@ mod tests {
         assert!(info.detail.contains("signature verification failed"));
     }
 
+    #[test]
+    fn signer_error_evidence_preserves_proof_of_rotation() {
+        let proof = ProofOfRotationInfo {
+            state: CryptoVerificationState::Verified,
+            level_count: 2,
+            detail: "proof-of-rotation lineage verified across 2 certificate level(s)"
+                .to_string(),
+        };
+
+        let info = error_to_scheme_info_with_rotation(
+            SignatureVerificationError("later signer verification failed".to_string()),
+            1,
+            vec![0x0201],
+            vec!["a".repeat(64)],
+            vec![(28, 35)],
+            vec![proof.clone()],
+        );
+
+        assert_eq!(info.state, CryptoVerificationState::Invalid);
+        assert_eq!(info.signer_count, 1);
+        assert_eq!(info.proof_of_rotation, vec![proof]);
+    }
+
     fn proof_rotation_fixture() -> Vec<u8> {
         std::fs::read(
             std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
