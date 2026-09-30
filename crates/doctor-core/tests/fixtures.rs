@@ -256,7 +256,11 @@ fn invalid_project_path_stays_inside_report() {
     );
 }
 
-fn native_zip_fixture(name: &str, compression: CompressionMethod, alignment: Option<u16>) -> PathBuf {
+fn native_zip_fixture(
+    name: &str,
+    compression: CompressionMethod,
+    alignment: Option<u16>,
+) -> PathBuf {
     let path = std::env::temp_dir().join(format!(
         "android-release-doctor-{name}-{}.apk",
         std::process::id()
