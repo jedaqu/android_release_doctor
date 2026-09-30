@@ -433,3 +433,16 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Validation:** Actions run #296 passed Build but failed Test compilation at the new regression assertion; the corrected commit must pass the full gate before this entry is resolved.
 - **Status:** OPEN
 
+
+## ERR-041 — M0.7 Block 1 crypto fixture encoding was malformed
+
+- **Milestone:** M0.7 Block 1 / implementation validation
+- **Type:** Test-fixture correctness defect
+- **Actions run:** #297 / 36779970794
+- **Problem:** The newly added v2/v3 ECDSA/SHA-512 fixtures had an incorrect signer encoding: the signed-data payload was not length-prefixed inside the signer structure. This caused the verifier to interpret digest/certificate bytes as signer-level signature/public-key fields.
+- **Cause:** The fixture builder constructed the signer payload as raw signed-data bytes followed by signatures and public key instead of encoding the signed-data field as the required length-prefixed sequence.
+- **Correction:** Regenerate both deterministic v2 and v3 fixtures with the correct signed-data sequence framing, while retaining the same bounded P-384 / ECDSA-SHA-512 scope. Regenerate the direct unit-test signature so it matches its embedded certificate and test message.
+- **Correction pending validation:** current follow-up implementation commit
+- **Validation:** Actions run #297 / 36779970794 passed Build but failed three focused crypto tests; 62 tests passed and the three failures were the malformed fixture/direct-signature cases described above.
+- **Status:** OPEN
+
