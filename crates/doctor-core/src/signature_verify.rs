@@ -1262,5 +1262,4 @@ mod tests {
         assert_eq!(result.sdk_ranges, vec![(28, 32), (33, 36)]);
         assert_eq!(result.certificate_sha256.len(), 2);
     }
-
 }
