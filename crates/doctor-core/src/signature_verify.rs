@@ -156,6 +156,34 @@ fn error_to_scheme_info_with_evidence(
     }
 }
 
+fn error_to_scheme_info_with_rotation(
+    error: SignatureVerificationError,
+    signer_count: usize,
+    algorithms: Vec<u32>,
+    certificate_sha256: Vec<String>,
+    sdk_ranges: Vec<(u32, u32)>,
+    proof_of_rotation: Vec<ProofOfRotationInfo>,
+) -> CryptoSchemeInfo {
+    let detail = error.to_string();
+    let unsupported = detail.strip_prefix("UNSUPPORTED: ").is_some();
+    CryptoSchemeInfo {
+        state: if unsupported {
+            CryptoVerificationState::Unsupported
+        } else {
+            CryptoVerificationState::Invalid
+        },
+        signer_count,
+        algorithms,
+        certificate_sha256,
+        sdk_ranges,
+        proof_of_rotation,
+        detail: detail
+            .strip_prefix("UNSUPPORTED: ")
+            .unwrap_or(&detail)
+            .to_string(),
+    }
+}
+
 fn verify_v2_block(
     file: &mut File,
     block: &ApkSigningBlock,
@@ -355,12 +383,13 @@ fn verify_v3_block(
         let certificate_sha256 = match certificate_sha256(parsed.certificate) {
             Ok(fingerprint) => vec![fingerprint],
             Err(error) => {
-                results.push(error_to_scheme_info_with_evidence(
+                results.push(error_to_scheme_info_with_rotation(
                     error,
                     1,
                     algorithms,
                     Vec::new(),
                     sdk_ranges.clone(),
+                    parsed.proof_of_rotation.clone().into_iter().collect(),
                 ));
                 continue;
             }
@@ -385,7 +414,7 @@ fn verify_v3_block(
         let selected = match parse_and_select_signature(signatures) {
             Ok(selected) => selected,
             Err(error) => {
-                results.push(error_to_scheme_info_with_evidence(
+                results.push(error_to_scheme_info_with_rotation(
                     error,
                     1,
                     algorithms.clone(),
@@ -397,7 +426,7 @@ fn verify_v3_block(
         };
 
         if let Err(error) = verify_certificate_and_public_key(parsed.certificate, public_key) {
-            results.push(error_to_scheme_info_with_evidence(
+            results.push(error_to_scheme_info_with_rotation(
                 error,
                 1,
                 algorithms.clone(),
@@ -413,7 +442,7 @@ fn verify_v3_block(
             signed_data,
             selected.signature,
         ) {
-            results.push(error_to_scheme_info_with_evidence(
+            results.push(error_to_scheme_info_with_rotation(
                 error,
                 1,
                 algorithms.clone(),
@@ -431,7 +460,7 @@ fn verify_v3_block(
         {
             Some(digest) => digest,
             None => {
-                results.push(error_to_scheme_info_with_evidence(
+                results.push(error_to_scheme_info_with_rotation(
                     SignatureVerificationError(format!(
                         "v3 digest list does not contain signature algorithm 0x{:08x}",
                         selected.algorithm_id
@@ -448,7 +477,7 @@ fn verify_v3_block(
         if let Err(error) =
             verify_content_digest(file, block, expected_digest, selected.digest_algorithm)
         {
-            results.push(error_to_scheme_info_with_evidence(
+            results.push(error_to_scheme_info_with_rotation(
                 error,
                 1,
                 algorithms.clone(),
