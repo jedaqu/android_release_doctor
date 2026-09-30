@@ -219,9 +219,11 @@ This file is the chronological engineering ledger for failures, errors, their ro
 
 - **Milestone:** M0.6 Block 4 / CI follow-up
 - **Type:** CI configuration / validation gap
-- **Problem:** Draft PR #11 targets m06-block3-verification-hardening, but the workflow on that base branch does not include m06-block3-verification-hardening in its pull_request.branches filter. The Block 4 branch workflow alone cannot establish PR-event coverage for a PR whose base is Block 3.
-- **Required correction:** Update the validated Block 3 base branch workflow so its pull_request.branches includes m06-block3-verification-hardening, without changing the Block 3 job graph or production code.
-- **Status:** PENDING CORRECTION
+- **Problem:** Draft PR #11 targets m06-block3-verification-hardening, but the workflow on that base branch did not include m06-block3-verification-hardening in its pull_request.branches filter. The Block 4 branch workflow alone could not establish PR-event coverage for a PR whose base is Block 3.
+- **Correction:** Updated the validated Block 3 base branch workflow so its pull_request.branches includes m06-block3-verification-hardening, without changing the Block 3 job graph or production code.
+- **Correction commit:** c2fb2ae978a3eb924b954cb4266fdbccebeffa14
+- **Validation:** Block 3 base branch Actions run #205 / 36747047095 passed Build, Test, Format, and Clippy. The open Block 4 PR will receive a synchronized PR validation after the next Block 4 head update.
+- **Status:** CORRECTED — PR-event validation pending
 ## Current validation state
 
 M0.6 Block 4 implementation and the current CI correction cycle have passed the complete validation gate.
