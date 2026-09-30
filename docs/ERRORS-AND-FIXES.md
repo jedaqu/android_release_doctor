@@ -480,3 +480,20 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction commit:** 3880246bc00ea45d78d04ea6b30449fa84bde54d
 - **Validation:** Final Rust CI run #305 / 36782365269 passed Build, Test, Format, and Clippy with the tracked lockfile present.
 - **Status:** RESOLVED
+
+## ERR-045 — M0.7 Block 1 second-audit correction closure
+
+- **Milestone:** M0.7 Block 1 / second audit
+- **Type:** Validation closure
+- **Problem addressed:** ERR-039 through ERR-043 represented the implementation compile/test/fixture/formatting sequence and the second-audit regression-coverage finding encountered during Block 1.
+- **Correction chain:** `68f9810ddc41d1782b0b8cb7625770baaec8d560`; `cfefb487ebdeaa6afe9a5544f5de2fb6b6e40bac`; `0c1c6f3a21165c4a1d9e5522ef85d15dafc275b7`; `0de900ec5590bcf2d3a18012de23a7b9d4e92a29`; `a446e92ebf62d17e53d5ed3657af58e6447337ca`; `597f497499910b5269278ed97130d1d071b49119`; `e8996c7ffce11be146c1d04b49a0e575f2c3fe1a`.
+- **Validation:** Final second-audit regression run #308 / 36782554714 passed Build, Test, Format, and Clippy. The final second-audit document records PASS.
+- **Status:** RESOLVED
+
+## ERR-046 — M0.7 Block 1 final second-audit result
+
+- **Milestone:** M0.7 Block 1 / second audit
+- **Type:** Audit closure
+- **Result:** The bounded ECDSA/SHA-512 P-384 increment satisfies the pre-change acceptance matrix, including v2/v3 positive fixtures, v2/v3 tamper rejection, explicit Unsupported semantics for non-P-384 curves, current dependency locking, and complete CI validation.
+- **Second-audit commit:** 26f9f956d0bf32080881bbbbbcc6d8b0687c1284
+- **Status:** PASS — ready for checkpoint
