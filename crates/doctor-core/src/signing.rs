@@ -255,7 +255,7 @@ mod tests {
 
         assert!(info.v2);
         assert!(info.v3);
-        assert_eq!(info.block_size, 8 + SIGNING_BLOCK_FOOTER_LEN + 8 + 8);
+        assert_eq!(info.block_size, 8 + SIGNING_BLOCK_FOOTER_LEN + 8 + 8 + 8);
     }
 
     #[test]
