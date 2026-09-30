@@ -9,7 +9,7 @@ use ring::{
     signature::{self, UnparsedPublicKey},
 };
 use subtle::ConstantTimeEq;
-use x509_parser::{certificate::X509Certificate, public_key::PublicKey, prelude::FromDer};
+use x509_parser::{certificate::X509Certificate, prelude::FromDer, public_key::PublicKey};
 
 use crate::signing::{read_apk_signing_block, ApkSigningBlock, SigningBlockError};
 
@@ -154,9 +154,6 @@ fn verify_v2_signer(
         })?;
     verify_content_digest(file, block, expected_digest, selected.digest_algorithm)?;
 
-    let algorithms = parsed
-        .digest_algorithms
-        .clone();
     let algorithms = parsed.digest_algorithms.clone();
     if algorithms != selected.all_signature_algorithms {
         return Err(SignatureVerificationError(
@@ -169,8 +166,9 @@ fn verify_v2_signer(
         state: CryptoVerificationState::Verified,
         signer_count: 1,
         algorithms,
-        detail: "v2 signer signature, certificate/public-key binding, and APK content digest verified"
-            .to_string(),
+        detail:
+            "v2 signer signature, certificate/public-key binding, and APK content digest verified"
+                .to_string(),
     })
 }
 
@@ -248,8 +246,9 @@ fn verify_v3_block(
             state: CryptoVerificationState::Invalid,
             signer_count: 1,
             algorithms: parsed.digest_algorithms,
-            detail: "v3 digest and signature algorithm ID lists are not identical and ordered equally"
-                .to_string(),
+            detail:
+                "v3 digest and signature algorithm ID lists are not identical and ordered equally"
+                    .to_string(),
         });
     }
 
@@ -370,7 +369,9 @@ fn parse_and_select_signature<'a>(
 
     let mut supported = entries
         .iter()
-        .filter_map(|(id, sig)| supported_signature_algorithm(*id).map(|digest| (*id, *sig, digest)))
+        .filter_map(|(id, sig)| {
+            supported_signature_algorithm(*id).map(|digest| (*id, *sig, digest))
+        })
         .collect::<Vec<_>>();
 
     supported.sort_by_key(|(id, _, _)| std::cmp::Reverse(signature_strength(*id)));
@@ -625,8 +626,9 @@ fn verify_certificate_and_public_key(
     certificate: &[u8],
     public_key: &[u8],
 ) -> Result<(), SignatureVerificationError> {
-    let (remaining, parsed) = X509Certificate::from_der(certificate)
-        .map_err(|error| SignatureVerificationError(format!("signer certificate is not valid DER: {error}")))?;
+    let (remaining, parsed) = X509Certificate::from_der(certificate).map_err(|error| {
+        SignatureVerificationError(format!("signer certificate is not valid DER: {error}"))
+    })?;
 
     if !remaining.is_empty() {
         return Err(SignatureVerificationError(
@@ -767,9 +769,7 @@ impl<'a> LengthReader<'a> {
 
     fn read_u32(&mut self, label: &str) -> Result<u32, SignatureVerificationError> {
         if self.bytes.len().saturating_sub(self.cursor) < 4 {
-            return Err(SignatureVerificationError(format!(
-                "{label} is truncated"
-            )));
+            return Err(SignatureVerificationError(format!("{label} is truncated")));
         }
         let value = u32::from_le_bytes(
             self.bytes[self.cursor..self.cursor + 4]
@@ -826,7 +826,6 @@ mod tests {
 
         let eocd = vec![
             0x50, 0x4b, 0x05, 0x06, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0,
         ];
         file.write_all(&eocd).expect("EOCD should be written");
         drop(file);
