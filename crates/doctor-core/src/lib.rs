@@ -458,13 +458,11 @@ pub fn audit_path_with_project_and_play(
     platform: PlayPlatform,
 ) -> Result<AuditReport, AuditError> {
     let mut report = audit_path_with_project(artifact_path, project_path)?;
-    report
-        .findings
-        .extend(play::evaluate_play_policy(
-            report.manifest.as_ref(),
-            &report.inventory,
-            platform,
-        ));
+    report.findings.extend(play::evaluate_play_policy(
+        report.manifest.as_ref(),
+        &report.inventory,
+        platform,
+    ));
     Ok(report)
 }
 
