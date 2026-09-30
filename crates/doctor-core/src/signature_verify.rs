@@ -853,7 +853,7 @@ mod tests {
             v2.detail
         );
         assert_eq!(v2.signer_count, 1);
-        assert!(v2.algorithms.contains(&0x0103));
+        assert!(v2.algorithms.contains(&0x0201));
         assert!(!result.v31_present);
     }
 
@@ -891,18 +891,74 @@ mod tests {
         assert_eq!(v3.state, CryptoVerificationState::Invalid);
     }
 
+    fn tampered_fixture(source_name: &str, label: &str) -> std::path::PathBuf {
+        let source = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures")
+            .join(source_name);
+        let target = std::env::temp_dir().join(format!(
+            "android-release-doctor-{label}-{}.apk",
+            std::process::id()
+        ));
+        let mut bytes = std::fs::read(source).expect("source fixture should be readable");
+        let index = 40;
+        bytes[index] ^= 0x01;
+        std::fs::write(&target, bytes).expect("tampered fixture should be writable");
+        target
+    }
+
     #[test]
     fn detects_tampered_apk_content_as_invalid_v2_signature() {
-        let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../tests/fixtures/crypto-v2-release-tampered.apk");
-
+        let path = tampered_fixture("crypto-v2-release.apk", "v2-tampered");
         let result = verify_apk_signatures(&path)
-            .expect("tampered fixture should be structurally readable")
-            .expect("tampered fixture should still contain an APK signing block");
+            .expect("tampered v2 fixture should be structurally readable")
+            .expect("tampered v2 fixture should contain an APK signing block");
 
         let v2 = result.v2.expect("v2 scheme should be detected");
         assert_eq!(v2.state, CryptoVerificationState::Invalid);
-        assert!(v2.detail.contains("digest mismatch"));
+        assert!(
+            v2.detail.contains("digest mismatch"),
+            "verification detail: {}",
+            v2.detail
+        );
+        std::fs::remove_file(path).expect("temporary tampered v2 fixture should be removed");
+    }
+
+    #[test]
+    fn verifies_real_v3_signed_apk_fixture() {
+        let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures/crypto-v3-release.apk");
+
+        let result = verify_apk_signatures(&path)
+            .expect("v3 fixture should be structurally readable")
+            .expect("v3 fixture should contain an APK signing block");
+
+        let v3 = result.v3.expect("v3 scheme should be detected");
+        assert_eq!(
+            v3.state,
+            CryptoVerificationState::Verified,
+            "verification detail: {}",
+            v3.detail
+        );
+        assert_eq!(v3.signer_count, 1);
+        assert!(v3.algorithms.contains(&0x0201));
+        assert!(!result.v31_present);
+    }
+
+    #[test]
+    fn detects_tampered_apk_content_as_invalid_v3_signature() {
+        let path = tampered_fixture("crypto-v3-release.apk", "v3-tampered");
+        let result = verify_apk_signatures(&path)
+            .expect("tampered v3 fixture should be structurally readable")
+            .expect("tampered v3 fixture should contain an APK signing block");
+
+        let v3 = result.v3.expect("v3 scheme should be detected");
+        assert_eq!(v3.state, CryptoVerificationState::Invalid);
+        assert!(
+            v3.detail.contains("digest mismatch") || v3.detail.contains("signature verification"),
+            "verification detail: {}",
+            v3.detail
+        );
+        std::fs::remove_file(path).expect("temporary tampered v3 fixture should be removed");
     }
 
     #[test]
