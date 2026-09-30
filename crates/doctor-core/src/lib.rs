@@ -129,11 +129,15 @@ impl AuditReport {
         let (passes, warnings, blockers) = self.counts();
         let mut out = String::new();
 
-        out.push_str("ANDROID RELEASE REPORT
-");
-        out.push_str("=======================
+        out.push_str(
+            "ANDROID RELEASE REPORT
+",
+        );
+        out.push_str(
+            "=======================
 
-");
+",
+        );
         out.push_str(&format!(
             "Artifact
   Type: {}
@@ -149,8 +153,10 @@ impl AuditReport {
         ));
 
         if let Some(manifest) = &self.manifest {
-            out.push_str("Application
-");
+            out.push_str(
+                "Application
+",
+            );
             out.push_str(&format!(
                 "  Package: {}
 ",
@@ -189,15 +195,23 @@ impl AuditReport {
                     .debuggable
                     .map_or_else(|| "<missing>".to_string(), |value| value.to_string())
             ));
-            out.push_str(&format!("  Permissions: {}
-", manifest.permissions.len()));
-            out.push_str(&format!("  Components: {}
+            out.push_str(&format!(
+                "  Permissions: {}
+",
+                manifest.permissions.len()
+            ));
+            out.push_str(&format!(
+                "  Components: {}
 
-", manifest.components.len()));
+",
+                manifest.components.len()
+            ));
         }
 
-        out.push_str("Checks
-");
+        out.push_str(
+            "Checks
+",
+        );
         for finding in &self.findings {
             out.push_str(&format!(
                 "  {:<7} {:<24} [{}]
@@ -206,17 +220,25 @@ impl AuditReport {
                 finding.title,
                 finding.rule_id
             ));
-            out.push_str(&format!("      {}
-", finding.summary));
+            out.push_str(&format!(
+                "      {}
+",
+                finding.summary
+            ));
             if !finding.remediation.is_empty() {
-                out.push_str(&format!("      Fix: {}
-", finding.remediation));
+                out.push_str(&format!(
+                    "      Fix: {}
+",
+                    finding.remediation
+                ));
             }
         }
 
-        out.push_str("
+        out.push_str(
+            "
 Summary
-");
+",
+        );
         out.push_str(&format!(
             "  BLOCKERS {}
   WARNINGS {}
@@ -272,7 +294,7 @@ pub fn audit_path(path: impl AsRef<Path>) -> Result<AuditReport, AuditError> {
     let metadata = file.metadata()?;
     let mut magic = [0_u8; 4];
     let bytes_read = file.read(&mut magic)?;
-    if bytes_read < 4 || magic != *b"PK\x03\x04" {
+    if bytes_read < 4 || magic != *b"PK" {
         return Err(AuditError::InvalidArtifact(
             "file does not start with a ZIP local-file header".to_string(),
         ));
