@@ -48,7 +48,7 @@ pub fn inspect_shared_object(bytes: &[u8]) -> Result<ElfInspection, ElfError> {
             read_u16(bytes, 56)? as u64,
             56_u64,
         ),
-        _ => return Err(ElfError(format!("unsupported ELF class value {class}))),
+        _ => Err(ElfError(format!("unsupported ELF class value {class}))),
     };
 
     if phnum == 0 {
