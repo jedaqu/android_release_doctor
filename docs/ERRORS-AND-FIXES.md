@@ -323,17 +323,34 @@ This file is the chronological engineering ledger for failures, errors, their ro
 - **Status:** RESOLVED
 ## Current validation state
 
-M0.6 Block 4 implementation and the current CI correction cycle have passed the complete validation gate.
+M0.6 Block 5 implementation and stacked pull-request validation have passed the complete validation gate.
 
-Actions run #198 / 36746555546:
+Block 5 push run #235 / 36751525004:
 - Build: PASS
 - Test: PASS
 - Format: PASS
 - Clippy: PASS
 
-Final branch workflow configuration places m06-block4-signer-error-isolation in push coverage and m06-block3-verification-hardening in the pull-request target coverage for the stacked path.
+Stacked PR-event run #236 / 36751740474 for draft PR #12:
+- Build: PASS
+- Test: PASS
+- Format: PASS
+- Clippy: PASS
 
-A Block 4 checkpoint may now be created. No merge is performed as part of this checkpoint.
+Block 4 base workflow run #212 / 36750176041:
+- Build: PASS
+- Test: PASS
+- Format: PASS
+- Clippy: PASS
+
+Final ledger-state push run #237 / 36751850590:
+- Build: PASS
+- Test: PASS
+- Format: PASS
+- Clippy: PASS
+
+M0.6 Block 5 is validated and its final checkpoint documentation is now being recorded. No merge is performed as part of the checkpoint cycle.
+
 
 ## Maintenance rule
 
