@@ -151,16 +151,16 @@ pub fn evaluate_play_policy(
             ));
         } else if let Some(target_sdk) = target_sdk.filter(|value| *value >= 35) {
             if !incompatible.is_empty() {
-            let details = incompatible
-                .iter()
-                .map(|library| {
-                    format!(
-                        "{} [{}] alignments={:?}",
-                        library.path, library.abi, library.load_segment_alignments
-                    )
-                })
-                .collect::<Vec<_>>()
-                .join("; ");
+                let details = incompatible
+                    .iter()
+                    .map(|library| {
+                        format!(
+                            "{} [{}] alignments={:?}",
+                            library.path, library.abi, library.load_segment_alignments
+                        )
+                    })
+                    .collect::<Vec<_>>()
+                    .join("; ");
 
                 findings.push(Finding::blocker(
                     "PLAY-005",
@@ -201,11 +201,7 @@ pub fn evaluate_play_policy(
             findings.push(Finding::pass(
                 "PLAY-005",
                 "16 KB page-size compatibility",
-                if target_sdk.is_some_and(|value| value >= 35) {
-                    "All inspected native ELF PT_LOAD segments meet the 16 KB alignment threshold required for API 35+ targets."
-                } else {
-                    "All inspected native ELF PT_LOAD segments meet the 16 KB alignment threshold."
-                },
+                "All inspected native ELF PT_LOAD segments meet the 16 KB alignment threshold.",
             ));
         }
     }
