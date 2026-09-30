@@ -1,7 +1,7 @@
 # Second Audit — M0.7 Definition
 
 Date: 2026-09-30
-Status: **FINDINGS IDENTIFIED — CORRECTION REQUIRED**
+Status: **PASS — CORRECTIONS VERIFIED**
 
 ## 1. Purpose
 
@@ -111,3 +111,47 @@ After correction:
 - create the final Etapa 3 checkpoint.
 
 **Production implementation remains prohibited until Etapa 3 is formally closed.**
+
+
+## 7. Re-audit after correction
+
+The corrected `docs/M0.7-DEFINITION.md` was re-read against the findings above.
+
+### AUDIT-M0.7-001 re-check — PASS
+
+Block 2 no longer defines arbitrary capability-bit combinations as inherently invalid. It now requires explicit modeling of defined capability bits, handling of unknown/reserved bits where encountered, representative capability-state fixtures, and semantic validation only for deterministic artifact-verifiable rules.
+
+This matches the capability model used by Android `apksig`, where the lineage flags represent independent capabilities.
+
+### AUDIT-M0.7-002 re-check — PASS
+
+Block 3 now explicitly names:
+
+- required v3 base-block pairing;
+- v3.1 rotation-min-SDK targeting;
+- v3 stripping-protection linkage;
+- v3/v3.1 signer-range consistency;
+- targeted-range coverage and non-overlap;
+- signer/lineage consistency;
+- negative cases for cross-block mismatch and missing-block conditions.
+
+This closes the previous scope ambiguity without expanding M0.7 beyond its cryptographic axis.
+
+## 8. Final second-audit conclusion
+
+- ledger-first review: PASS;
+- M0.7 objective: PASS;
+- block ordering and dependency discipline: PASS;
+- Block 2 semantic boundary: PASS after correction;
+- Block 3 v3.1 boundary: PASS after correction;
+- out-of-scope boundaries: PASS;
+- fixtures/regression strategy: PASS;
+- stacked CI strategy: PASS;
+- acceptance criteria: PASS;
+- no production-code change introduced by the definition stage: PASS.
+
+**No unresolved definition finding remains.**
+
+The definition is ready for CI validation and formal Etapa 3 closure.
+
+Production implementation remains prohibited until the final checkpoint is recorded.
