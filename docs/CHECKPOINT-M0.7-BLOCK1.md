@@ -1,9 +1,10 @@
 # CHECKPOINT M0.7 Block 1 — Cryptographic coverage
 
+**Status:** FINALIZADO  
 **Branch:** `m07-block1-crypto-coverage`  
 **M0.7 baseline:** `25c9bf07ab6b5747f11b11ecc9e01933ae2ead81`  
 **Implementation head validated by final second audit:** `e8996c7ffce11be146c1d04b49a0e575f2c3fe1a`  
-**Documentation/ledger head before this checkpoint:** `2bb93421df98fe9fdda3c0491b8af02df36dd285`
+**Documentation/ledger head before final checkpoint commit:** `e100d446604e80ec8a87c5c5e606f4c780c5da0b`
 
 ## 1. Scope delivered
 
@@ -25,23 +26,27 @@ Validated:
 - direct deterministic P-384 ECDSA/SHA-512 verification → pass;
 - direct tampered ECDSA/SHA-512 verification → `Invalid`;
 - existing M0.6 signer isolation/evidence regressions → pass;
-- tracked `Cargo.lock` contains the declared `p384` and `sha2` dependency graph.
+- tracked `Cargo.lock` contains the declared `p384` and `sha2` dependency graph;
+- README capability/status documentation matches the validated implementation.
 
-Final second-audit validation run:
+The complete validation gate passed on the documentation state immediately preceding this final checkpoint.
 
-**Actions #308 / 36782554714**
+**Actions #313 / 36782863855**
 - Build: PASS
 - Test: PASS
 - Format: PASS
 - Clippy: PASS
+
+The final checkpoint commit itself is also subjected to the permanent Rust CI workflow.
 
 ## 3. Documentation
 
 - Pre-change audit: `docs/AUDIT-M0.7-BLOCK1.md`
 - Second audit: `docs/SECOND-AUDIT-M0.7-BLOCK1.md`
 - Incremental ledger: `docs/ERRORS-AND-FIXES.md`
+- Checkpoint: `docs/CHECKPOINT-M0.7-BLOCK1.md`
 
-The second audit is explicitly **PASS**.
+The second audit is **PASS**.
 
 ## 4. Explicit boundaries retained
 
@@ -65,8 +70,8 @@ Temporary lockfile-generation workflows used during validation were removed.
 
 No merge is performed.
 
-## 6. Checkpoint rule
+## 6. Closure
 
-This document records the Block 1 checkpoint candidate. The checkpoint becomes **FINALIZADO** only after the validation run for this exact documentation state passes Build, Test, Format, and Clippy.
+**M0.7 Block 1 — FINALIZADO.**
 
-After that validation, M0.7 Block 1 is formally closed and the next block may begin only from this recorded lineage.
+The next M0.7 block may begin only from this recorded checkpoint lineage and after the ledger review required by the repository engineering principle.
