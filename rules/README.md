@@ -23,7 +23,7 @@ Rules are versioned with the audit engine. Each rule should answer:
 | `COMPONENT-001` | Require explicit `android:exported` for activity, activity-alias, service, and receiver declarations with intent filters. |
 | `DEX-001` | Check for compiled DEX payloads. |
 | `NATIVE-001` | Inventory native library ABIs. |
-| `SIGNING-001` | Detect signature metadata. Cryptographic verification is deferred. |
+| `SIGNING-001` | Inventory legacy/v1 `META-INF` signature material without implying that absence makes a v2/v3-signed APK unsigned. |
 
 ## M0.2 project/artifact rules
 
@@ -49,26 +49,35 @@ Policy profile version: `2026-08-31`
 | `PLAY-002` | Manual Data Safety review item; the binary cannot prove the Play Console declaration. |
 | `PLAY-003` | Manual privacy-policy review item; the binary cannot prove URL validity or policy completeness. |
 | `PLAY-004` | Manual Play Console App content/declaration review item, including ads and applicable access/content declarations. |
-| `PLAY-005` | Check native ELF 16 KB load-segment alignment against the applicable API requirement; parsing failures remain manual-review warnings. |
+| `PLAY-005` | Check native ELF 16 KB load-segment alignment against the applicable API requirement; unavailable evidence is `MANUAL-REVIEW`. |
 
 ### M0.4 artifact rules
 
 | ID | Purpose |
 | --- | --- |
-| `NATIVE-002` | Inspect every packaged `.so` ELF PT_LOAD `p_align` value. Report explicit alignment evidence or a manual-review warning when the ELF cannot be parsed. |
+| `NATIVE-002` | Inspect every packaged `.so` ELF PT_LOAD `p_align` value. Report explicit alignment evidence; unparseable ELF evidence is `MANUAL-REVIEW`. |
 | `SIGNING-002` | Inspect APK signing-block structure, including placement, magic, size consistency, and supported v2/v3 IDs. This is structural evidence only; cryptographic signature verification is deferred. |
 
 ### M0.5 Block 1 artifact rules
 
 | ID | Purpose |
 | --- | --- |
-| `NATIVE-003` | Inspect native ZIP packaging. For uncompressed native APK libraries, compare the actual ZIP data-start offset with the 16 KB boundary. Compressed native libraries do not require the offset check. AAB entry offsets are recorded but not treated as proof of final APK alignment. |
+| `NATIVE-003` | Inspect native ZIP packaging. For uncompressed native APK libraries, compare the actual ZIP data-start offset with the 16 KB boundary. Compressed native libraries do not require the offset check. AAB entry offsets are recorded but not treated as proof of final APK alignment; unavailable proof is `MANUAL-REVIEW`. |
 
 ### M0.5 Block 2 artifact rules
 
 | ID | Purpose |
 | --- | --- |
-| `SIGNING-003` | Cryptographically verify supported APK v2/v3 signer data, certificate/public-key binding and the protected APK content digest. Report `PASS` only when all required supported checks for the applicable scheme succeed; cryptographic failure is a blocker; unsupported/incomplete verification is a manual-review warning. |
+| `SIGNING-003` | Cryptographically verify supported APK v2/v3 signer data, certificate/public-key binding and the protected APK content digest. Report `PASS` only when all required supported checks for the applicable scheme succeed; cryptographic failure is a blocker; unsupported/incomplete verification is `MANUAL-REVIEW`. |
+
+### Severity semantics
+
+| State | Runtime meaning |
+| --- | --- |
+| PASS | The artifact evidence proves the rule condition or the rule is not applicable. |
+| WARNING | An actionable advisory exists, but the condition is not itself a confirmed release blocker and does not represent an external verification boundary. |
+| BLOCKER | Artifact evidence confirms a release-breaking condition under the active rule. |
+| MANUAL-REVIEW | The artifact cannot prove the required property, or the current verifier cannot complete the applicable verification. External verification or Play Console review is required. |
 
 ### M0.5 Block 2 verification boundary
 
