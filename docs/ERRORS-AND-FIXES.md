@@ -215,6 +215,13 @@ This file is the chronological engineering ledger for failures, errors, their ro
 - **Correction commit:** f71c16ae43cd9f57748ad494c10ada9f4a7f6dd4
 - **Validation:** Final workflow configuration inspected; Actions run #198 / 36746555546 passed all four gates. A Block 4 pull-request event itself will be exercised when the stacked PR is opened.
 - **Status:** RESOLVED — PR-event validation pending PR creation
+## ERR-023 — Block 4 PR validation is gated by the base branch workflow configuration
+
+- **Milestone:** M0.6 Block 4 / CI follow-up
+- **Type:** CI configuration / validation gap
+- **Problem:** Draft PR #11 targets m06-block3-verification-hardening, but the workflow on that base branch does not include m06-block3-verification-hardening in its pull_request.branches filter. The Block 4 branch workflow alone cannot establish PR-event coverage for a PR whose base is Block 3.
+- **Required correction:** Update the validated Block 3 base branch workflow so its pull_request.branches includes m06-block3-verification-hardening, without changing the Block 3 job graph or production code.
+- **Status:** PENDING CORRECTION
 ## Current validation state
 
 M0.6 Block 4 implementation and the current CI correction cycle have passed the complete validation gate.
