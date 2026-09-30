@@ -2,7 +2,7 @@
 
 Open-source, local-first tool for auditing Android APK and AAB releases before publication.
 
-> **Status:** early development — M0.6 Block 5 validated (v3 proof-of-rotation verification and evidence hardening).
+> **Status:** early development — M0.7 Block 1 validated (ECDSA/SHA-512 P-384 coverage for APK v2/v3).
 
 Android Release Doctor inspects the **artifact you are actually going to distribute**, can compare it with the Android application Gradle configuration, and can apply a versioned Google Play submission-readiness profile.
 
@@ -158,6 +158,29 @@ The verifier now:
 A malformed or cryptographically invalid lineage is reported as Invalid. A lineage that requires an unsupported verification algorithm remains Unsupported/manual review. The tool does not infer Android runtime certificate trust decisions from the lineage beyond the artifact evidence it actually verifies.
 
 v3.1 and v3.2 remain explicit manual-review boundaries and are not cryptographically verified by this block.
+
+## M0.7 Block 1 scope — ECDSA/SHA-512 P-384 coverage
+
+M0.7 Block 1 extends the APK v2/v3 cryptographic verifier with real verification for signature algorithm `0x0202` (ECDSA with SHA-512) when the signer uses NIST P-384.
+
+The verifier now:
+
+- selects `0x0202` as a supported signature algorithm;
+- verifies the actual ECDSA/SHA-512 signature over v2/v3 signed data;
+- preserves certificate-to-signer-public-key binding verification;
+- preserves the APK content-digest verification path;
+- reports cryptographic failures as `Invalid`;
+- reports non-P-384 `0x0202` cases as explicit `Unsupported` evidence.
+
+M0.7 Block 1 does **not** claim support for ECDSA/SHA-512 P-256/P-521, DSA/SHA-256, RSA 1024/16384-bit expansion, v3.1/v3.2, or AAB cryptographic signing verification.
+
+### M0.7 Block 1 usage
+
+The additional cryptographic evidence is collected automatically when auditing an APK:
+
+```text
+android-release-doctor --play app-release.apk
+```
 
 ### M0.6 Block 5 usage
 
