@@ -12,12 +12,16 @@ pub mod elf;
 pub mod play;
 pub mod project;
 pub mod signing;
+pub mod signature_verify;
 pub mod zip_alignment;
 pub use axml::{ComponentInfo, ManifestInfo};
 pub use elf::{inspect_shared_object, load_segments_are_16kb_aligned, ElfInspection};
 pub use play::{evaluate_play_policy, PlayPlatform, PLAY_POLICY_VERSION};
 pub use project::{parse_project, GradleSyntax, ProjectInfo};
 pub use signing::{inspect_apk_signing_block, ApkSigningInfo};
+pub use signature_verify::{
+    verify_apk_signatures, ApkSignatureVerification, CryptoSchemeInfo, CryptoVerificationState,
+};
 pub use zip_alignment::{is_16kb_aligned, NativeZipCompression, ZIP_ALIGNMENT_16KB};
 
 pub const ENGINE_VERSION: &str = "0.1.0";
@@ -134,6 +138,8 @@ pub struct ArtifactInventory {
     pub signature_files: Vec<String>,
     pub apk_signing: Option<ApkSigningInfo>,
     pub apk_signing_error: Option<String>,
+    pub apk_signature_verification: Option<ApkSignatureVerification>,
+    pub apk_signature_verification_error: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -436,6 +442,11 @@ pub fn audit_path(path: impl AsRef<Path>) -> Result<AuditReport, AuditError> {
         match signing::inspect_apk_signing_block(&mut signing_file) {
             Ok(info) => inventory.apk_signing = info,
             Err(error) => inventory.apk_signing_error = Some(error.to_string()),
+        }
+
+        match signature_verify::verify_apk_signatures(path) {
+            Ok(info) => inventory.apk_signature_verification = info,
+            Err(error) => inventory.apk_signature_verification_error = Some(error.to_string()),
         }
     }
 
@@ -1062,6 +1073,91 @@ fn evaluate(
                 "Verify the APK signing schemes with apksigner before publication.",
             )),
         },
+    }
+
+    match kind {
+        ArtifactKind::Aab => findings.push(Finding::pass(
+            "SIGNING-003",
+            "APK cryptographic signature verification",
+            "Cryptographic APK signature verification is not applicable to an AAB.",
+        )),
+        ArtifactKind::Apk => {
+            if let Some(error) = &inventory.apk_signature_verification_error {
+                findings.push(Finding::warning(
+                    "SIGNING-003",
+                    "APK signature verification unavailable",
+                    format!("Cryptographic APK signature verification could not be completed: {error}"),
+                    "Verify the APK with apksigner and review the signing scheme before publication.",
+                ));
+            } else if let Some(verification) = &inventory.apk_signature_verification {
+                let schemes = [verification.v2.as_ref(), verification.v3.as_ref()]
+                    .into_iter()
+                    .flatten()
+                    .collect::<Vec<_>>();
+
+                if schemes.is_empty() {
+                    findings.push(Finding::warning(
+                        "SIGNING-003",
+                        "APK cryptographic signature unavailable",
+                        "An APK signing block was found, but no supported v2/v3 cryptographic scheme was available for verification.",
+                        "Verify the intended signing scheme with apksigner before publication.",
+                    ));
+                } else if schemes
+                    .iter()
+                    .any(|scheme| scheme.state == CryptoVerificationState::Invalid)
+                {
+                    let details = schemes
+                        .iter()
+                        .filter(|scheme| scheme.state == CryptoVerificationState::Invalid)
+                        .map(|scheme| scheme.detail.as_str())
+                        .collect::<Vec<_>>()
+                        .join("; ");
+                    findings.push(Finding::blocker(
+                        "SIGNING-003",
+                        "APK cryptographic signature invalid",
+                        format!("At least one detected APK signing scheme failed cryptographic verification: {details}"),
+                        "Re-sign the release APK with a valid v2/v3 signing configuration and rerun the audit.",
+                    ));
+                } else if schemes
+                    .iter()
+                    .any(|scheme| scheme.state == CryptoVerificationState::Unsupported)
+                    || verification.v31_present
+                {
+                    let details = schemes
+                        .iter()
+                        .filter(|scheme| scheme.state == CryptoVerificationState::Unsupported)
+                        .map(|scheme| scheme.detail.as_str())
+                        .collect::<Vec<_>>()
+                        .join("; ");
+                    let suffix = if verification.v31_present {
+                        " A v3.1 signing block is also present and is not cryptographically verified in this block."
+                    } else {
+                        ""
+                    };
+                    findings.push(Finding::warning(
+                        "SIGNING-003",
+                        "APK cryptographic verification requires manual review",
+                        format!(
+                            "The current verifier confirmed the supported cryptographic parts, but complete verification is not available: {details}.{suffix}"
+                        ),
+                        "Verify the APK with apksigner and review proof-of-rotation/v3.1 signing details before publication.",
+                    ));
+                } else {
+                    findings.push(Finding::pass(
+                        "SIGNING-003",
+                        "APK cryptographic signature verified",
+                        "The supported v2/v3 APK signer data, certificate/public-key binding, cryptographic signature, and APK content digest were verified.",
+                    ));
+                }
+            } else {
+                findings.push(Finding::warning(
+                    "SIGNING-003",
+                    "APK cryptographic signature unavailable",
+                    "No v2/v3 cryptographic verification result is available for this APK.",
+                    "Verify the release APK signing scheme with apksigner before publication.",
+                ));
+            }
+        }
     }
 
     findings
