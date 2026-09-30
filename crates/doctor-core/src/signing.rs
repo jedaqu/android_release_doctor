@@ -232,13 +232,13 @@ mod tests {
 
         let eocd_start = apk.len();
         apk.extend_from_slice(&EOCD_SIGNATURE);
-        apk.extend_from_slice(&[0, 0, 0, 0]);
-        apk.extend_from_slice(&[0, 0, 0, 0]);
-        apk.extend_from_slice(&0_u16.to_le_bytes());
-        apk.extend_from_slice(&0_u16.to_le_bytes());
-        apk.extend_from_slice(&0_u32.to_le_bytes());
+        apk.extend_from_slice(&0_u16.to_le_bytes()); // disk number
+        apk.extend_from_slice(&0_u16.to_le_bytes()); // central-directory disk
+        apk.extend_from_slice(&1_u16.to_le_bytes()); // entries on disk
+        apk.extend_from_slice(&1_u16.to_le_bytes()); // total entries
+        apk.extend_from_slice(&0_u32.to_le_bytes()); // central-directory size
         apk.extend_from_slice(&(central_directory_offset as u32).to_le_bytes());
-        apk.extend_from_slice(&0_u16.to_le_bytes());
+        apk.extend_from_slice(&0_u16.to_le_bytes()); // comment length
 
         assert_eq!(apk.len(), eocd_start + 22);
         apk
@@ -263,13 +263,13 @@ mod tests {
         let mut bytes = vec![0x41; 64];
         let central_directory_offset = bytes.len() as u32;
         bytes.extend_from_slice(&EOCD_SIGNATURE);
-        bytes.extend_from_slice(&[0, 0, 0, 0]);
-        bytes.extend_from_slice(&[0, 0, 0, 0]);
-        bytes.extend_from_slice(&0_u16.to_le_bytes());
-        bytes.extend_from_slice(&0_u16.to_le_bytes());
-        bytes.extend_from_slice(&0_u32.to_le_bytes());
+        bytes.extend_from_slice(&0_u16.to_le_bytes()); // disk number
+        bytes.extend_from_slice(&0_u16.to_le_bytes()); // central-directory disk
+        bytes.extend_from_slice(&0_u16.to_le_bytes()); // entries on disk
+        bytes.extend_from_slice(&0_u16.to_le_bytes()); // total entries
+        bytes.extend_from_slice(&0_u32.to_le_bytes()); // central-directory size
         bytes.extend_from_slice(&central_directory_offset.to_le_bytes());
-        bytes.extend_from_slice(&0_u16.to_le_bytes());
+        bytes.extend_from_slice(&0_u16.to_le_bytes()); // comment length
 
         let mut cursor = Cursor::new(bytes);
         assert_eq!(
