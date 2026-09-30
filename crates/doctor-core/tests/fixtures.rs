@@ -291,7 +291,7 @@ fn reports_uncompressed_native_zip_alignment_when_misaligned() {
     let entry = &report.inventory.native_zip_entries[0];
     assert_eq!(entry.compression, doctor_core::NativeZipCompression::Stored);
     assert_eq!(entry.alignment_16kb, Some(false));
-    assert!(entry.data_offset.is_some());
+    assert!(entry.data_offset > 0);
 
     assert_eq!(
         report
@@ -319,7 +319,7 @@ fn reports_uncompressed_native_zip_alignment_when_aligned() {
     let entry = &report.inventory.native_zip_entries[0];
     assert_eq!(entry.compression, doctor_core::NativeZipCompression::Stored);
     assert_eq!(entry.alignment_16kb, Some(true));
-    assert_eq!(entry.data_offset, Some(doctor_core::ZIP_ALIGNMENT_16KB));
+    assert_eq!(entry.data_offset, doctor_core::ZIP_ALIGNMENT_16KB);
 
     assert_eq!(
         report
