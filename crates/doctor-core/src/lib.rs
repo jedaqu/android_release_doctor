@@ -1051,15 +1051,26 @@ fn evaluate(
                 format!("The APK signing-block structure could not be validated: {error}"),
                 "Verify the APK with apksigner and rerun the audit before publication.",
             )),
-            (Some(info), None) if info.v2 || info.v3 => findings.push(Finding::pass(
-                "SIGNING-002",
-                "APK signing block",
-                format!(
-                    "Detected APK signing-block scheme(s): {}{}.",
-                    if info.v2 { "v2" } else { "" },
-                    if info.v2 && info.v3 { ", v3" } else if info.v3 { "v3" } else { "none" }
-                ),
-            )),
+            (Some(info), None) if info.v2 || info.v3 || info.v31 => {
+                let mut schemes = Vec::new();
+                if info.v2 {
+                    schemes.push("v2");
+                }
+                if info.v3 {
+                    schemes.push("v3");
+                }
+                if info.v31 {
+                    schemes.push("v3.1");
+                }
+                findings.push(Finding::pass(
+                    "SIGNING-002",
+                    "APK signing block",
+                    format!(
+                        "Detected APK signing-block scheme(s): {}.",
+                        schemes.join(", ")
+                    ),
+                ));
+            }
             (Some(_), None) => findings.push(Finding::warning(
                 "SIGNING-002",
                 "APK signing block",
