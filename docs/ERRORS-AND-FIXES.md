@@ -258,6 +258,22 @@ This file is the chronological engineering ledger for failures, errors, their ro
 - **Correction commit:** f3886a25e8d8321832d04d575f302c15c4880384
 - **Validation:** Re-read of `docs/AUDIT-M0.6-BLOCK5.md` confirmed the citation markers are absent and the AOSP references are represented as plain URLs.
 - **Status:** RESOLVED
+## ERR-028 — Block 5 proof-of-rotation fixture commit is not reachable from the working branch
+
+- **Milestone:** M0.6 Block 5 / second audit
+- **Type:** Test-fixture / Git history defect
+- **Problem:** The proof-of-rotation fixture was created in commit `f40076f941813f398b6c07441c96377c69741cbd`, but that commit was not connected to the `m06-block5-verification-completeness` branch. The current branch tree therefore does not contain `tests/fixtures/proof-rotation-valid.bin`, while tests reference that path.
+- **Required correction:** Integrate the fixture into the Block 5 branch history without changing its intended test content.
+- **Status:** PENDING
+
+## ERR-029 — Proof-of-rotation evidence is dropped on later signer verification failures
+
+- **Milestone:** M0.6 Block 5 / second audit
+- **Type:** Evidence-model propagation defect
+- **Problem:** After `parse_signed_data_v3()` successfully produces proof-of-rotation evidence, several later signer failure paths call `error_to_scheme_info_with_evidence()` without carrying the parsed proof-of-rotation evidence forward. A signer can therefore retain SDK range/certificate evidence but lose already-verified lineage evidence.
+- **Required correction:** Preserve the parsed proof-of-rotation evidence across every later signer-level Invalid/Unsupported conversion path.
+- **Status:** PENDING
+
 ## Current validation state
 
 M0.6 Block 4 implementation and the current CI correction cycle have passed the complete validation gate.
