@@ -156,7 +156,8 @@ This file is the chronological engineering ledger for failures, errors, their ro
 - **Problem:** v2/v3 signer verification propagated signer-local errors with `?`, so one failing signer could abort the whole multi-signer verification pass.
 - **Correction:** Contain signer-level failures, retain each failure as an Invalid/Unsupported signer result, continue with remaining signers, and merge the evidence using existing state semantics.
 - **Correction commit:** 135e3df81507ad48d6b03608f282da7154c028af
-- **Status:** CORRECTED — VALIDATION PENDING
+- **Validation:** Actions run #198 / 36746555546 passed Build, Test, Format, and Clippy with the correction present.
+- **Status:** RESOLVED
 
 ## ERR-017 — v3 signer failure lost known SDK-range evidence
 
@@ -165,15 +166,17 @@ This file is the chronological engineering ledger for failures, errors, their ro
 - **Problem:** A signer failure after outer minSDK/maxSDK parsing was converted at the top level, losing the already-known signer range and signer count.
 - **Correction:** Preserve signer count, SDK range, algorithms, and certificate fingerprint whenever those values were successfully parsed before the failure.
 - **Correction commit:** 135e3df81507ad48d6b03608f282da7154c028af
-- **Status:** CORRECTED — VALIDATION PENDING
+- **Validation:** Actions run #198 / 36746555546 passed Build, Test, Format, and Clippy.
+- **Status:** RESOLVED
 
 ## ERR-018 — M0.6 Block 4 branch missing from CI trigger coverage
 
 - **Milestone:** M0.6 Block 4 / AUDIT-016
 - **Type:** CI configuration
-- **Problem:** The new Block 4 branch was not yet covered by the workflow's push/PR trigger lists.
-- **Correction:** Add the Block 4 branch to both existing trigger lists without redesigning the workflow.
-- **Status:** IMPLEMENTED — SECOND-AUDIT FOUND EDIT DEFECT; SEE ERR-020
+- **Problem:** The new Block 4 branch was not yet covered by the workflow's required stacked validation path.
+- **Correction:** Add the Block 4 branch to push coverage and add the active Block 3 stacked base to pull-request target coverage.
+- **Validation:** Final workflow configuration inspected; Actions run #198 / 36746555546 passed all four gates.
+- **Status:** RESOLVED
 
 ## ERR-019 — Repository status stale after Block 3 checkpoint
 
@@ -189,34 +192,42 @@ This file is the chronological engineering ledger for failures, errors, their ro
 - **Milestone:** M0.6 Block 4 / second audit
 - **Type:** CI configuration correction defect
 - **Problem:** The scoped workflow edit inserted `m06-block4-signer-error-isolation` twice under push.branches and did not add it to pull_request.branches.
-- **Required correction:** Keep the Block 4 branch exactly once in push.branches and exactly once in pull_request.branches; preserve all existing entries.
-- **Status:** PENDING CORRECTION
+- **Correction:** Keep the Block 4 branch exactly once in push.branches and use the correct stacked Block 3 base in pull_request.branches.
+- **Correction commit:** f71c16ae43cd9f57748ad494c10ada9f4a7f6dd4
+- **Validation:** Final workflow configuration inspected; Actions run #198 / 36746555546 passed all four gates.
+- **Status:** RESOLVED
 ## ERR-021 — rustfmt layout after Block 4 test addition
 
 - **Milestone:** M0.6 Block 4
 - **Type:** CI formatting failure
 - **Actions run:** #190 / 36746316865 and #191 / 36746324902
 - **Problem:** `cargo fmt --all -- --check` required a multi-line layout for the final `assert!(result.detail.contains(...))` in the new regression test.
-- **Correction required:** Apply only the rustfmt-indicated line wrap; no test logic or production behavior changes.
-- **Status:** PENDING CORRECTION
+- **Correction:** Apply only the rustfmt-indicated line wrap; no test logic or production behavior changes.
+- **Correction commit:** af70dcb1175c092de319eee9c601ff1830b42a1e
+- **Validation:** Actions run #196 / 36746459364 and #198 / 36746555546 passed Format.
+- **Status:** RESOLVED
 ## ERR-022 — PR trigger audit targeted the source branch instead of the stacked base branch
 
 - **Milestone:** M0.6 Block 4 / CI follow-up
 - **Type:** Audit/CI-scope defect
 - **Problem:** The Block 4 CI audit treated pull_request.branches as if it filtered the PR source branch. For the stacked workflow, that filter selects the PR target/base branch. A Block 4 PR stacked on Block 3 therefore requires m06-block3-verification-hardening in the PR trigger list.
-- **Required correction:** Keep m06-block4-signer-error-isolation in push.branches, and use m06-block3-verification-hardening as the Block 4 pull-request target branch. Preserve the previously validated Block 1 and Block 2 PR targets.
-- **Status:** PENDING CORRECTION
+- **Correction:** Keep m06-block4-signer-error-isolation in push.branches, and use m06-block3-verification-hardening as the Block 4 pull-request target branch. Preserve the previously validated Block 1 and Block 2 PR targets.
+- **Correction commit:** f71c16ae43cd9f57748ad494c10ada9f4a7f6dd4
+- **Validation:** Final workflow configuration inspected; Actions run #198 / 36746555546 passed all four gates. A Block 4 pull-request event itself will be exercised when the stacked PR is opened.
+- **Status:** RESOLVED — PR-event validation pending PR creation
 ## Current validation state
 
-ERR-015 was corrected in commit 9126fd8d20fc49d410f640c345da15f3529a9f49.
+M0.6 Block 4 implementation and the current CI correction cycle have passed the complete validation gate.
 
-Actions run #184 / 36745400537 completed successfully:
+Actions run #198 / 36746555546:
 - Build: PASS
 - Test: PASS
 - Format: PASS
 - Clippy: PASS
 
-The Block 3 code is therefore fully validated at this point. The branch is ready for the M0.6 Block 3 checkpoint; the PR remains unmerged.
+Final branch workflow configuration places m06-block4-signer-error-isolation in push coverage and m06-block3-verification-hardening in the pull-request target coverage for the stacked path.
+
+A Block 4 checkpoint may now be created. No merge is performed as part of this checkpoint.
 
 ## Maintenance rule
 
