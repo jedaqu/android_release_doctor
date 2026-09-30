@@ -681,6 +681,9 @@ fn parse_signed_data_v2(bytes: &[u8]) -> Result<ParsedSignedData<'_>, SignatureV
     let (digest_algorithms, selected_digest) = parse_digest_sequence(digests)?;
     let mut certificates_reader = LengthReader::new(certificates);
     let certificate = certificates_reader.read_length_prefixed("v2 certificate")?;
+    while !certificates_reader.is_empty() {
+        certificates_reader.read_length_prefixed("v2 certificate chain entry")?;
+    }
     certificates_reader.finish("v2 certificate sequence")?;
 
     Ok(ParsedSignedData {
@@ -709,6 +712,9 @@ fn parse_signed_data_v3(
     let (digest_algorithms, selected_digest) = parse_digest_sequence(digests)?;
     let mut certificates_reader = LengthReader::new(certificates);
     let certificate = certificates_reader.read_length_prefixed("v3 certificate")?;
+    while !certificates_reader.is_empty() {
+        certificates_reader.read_length_prefixed("v3 certificate chain entry")?;
+    }
     certificates_reader.finish("v3 certificate sequence")?;
 
     let mut attributes_reader = LengthReader::new(attributes);
@@ -1070,6 +1076,39 @@ mod tests {
             payload.extend_from_slice(&encode_sequence(&entry));
         }
         payload
+    }
+
+    #[test]
+    fn accepts_additional_v2_certificate_chain_entries() {
+        let mut certificates = Vec::new();
+        certificates.extend_from_slice(&encode_sequence(b"signer"));
+        certificates.extend_from_slice(&encode_sequence(b"intermediate"));
+        certificates.extend_from_slice(&encode_sequence(b"root"));
+
+        let mut signed_data = Vec::new();
+        signed_data.extend_from_slice(&encode_sequence(&[]));
+        signed_data.extend_from_slice(&encode_sequence(&certificates));
+        signed_data.extend_from_slice(&encode_sequence(&[]));
+
+        let parsed = parse_signed_data_v2(&signed_data).expect("certificate chain should parse");
+        assert_eq!(parsed.certificate, b"signer");
+    }
+
+    #[test]
+    fn accepts_additional_v3_certificate_chain_entries() {
+        let mut certificates = Vec::new();
+        certificates.extend_from_slice(&encode_sequence(b"signer"));
+        certificates.extend_from_slice(&encode_sequence(b"intermediate"));
+
+        let mut signed_data = Vec::new();
+        signed_data.extend_from_slice(&encode_sequence(&[]));
+        signed_data.extend_from_slice(&encode_sequence(&certificates));
+        signed_data.extend_from_slice(&1_u32.to_le_bytes());
+        signed_data.extend_from_slice(&2_u32.to_le_bytes());
+        signed_data.extend_from_slice(&encode_sequence(&[]));
+
+        let parsed = parse_signed_data_v3(&signed_data).expect("certificate chain should parse");
+        assert_eq!(parsed.certificate, b"signer");
     }
 
     #[test]
