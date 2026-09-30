@@ -55,8 +55,26 @@ Policy profile version: `2026-08-31`
 
 | ID | Purpose |
 | --- | --- |
-| `NATIVE-002` | Inspect every packaged `.so` ELF PT_LOAD `p_align` value. Report a pass when all inspected load segments meet 16 KB alignment, or a warning when the ELF cannot be parsed or an alignment below 16 KB is found outside the API 35+ Play blocker path. |
+| `NATIVE-002` | Inspect every packaged `.so` ELF PT_LOAD `p_align` value. Report explicit alignment evidence or a manual-review warning when the ELF cannot be parsed. |
 | `SIGNING-002` | Inspect APK signing-block structure, including placement, magic, size consistency, and supported v2/v3 IDs. This is structural evidence only; cryptographic signature verification is deferred. |
+
+### M0.5 Block 1 artifact rules
+
+| ID | Purpose |
+| --- | --- |
+| `NATIVE-003` | Inspect native ZIP packaging. For uncompressed native APK libraries, compare the actual ZIP data-start offset with the 16 KB boundary. Compressed native libraries do not require the offset check. AAB entry offsets are recorded but not treated as proof of final APK alignment. |
+
+### M0.5 Block 1 16 KB semantics
+
+The package-level evidence is intentionally narrower than a full bundle/package validation:
+
+- APK + stored `.so` + 16 KB data offset: verifiable package alignment;
+- APK + stored `.so` + non-16 KB data offset: package misalignment;
+- APK + compressed `.so`: ZIP data-offset alignment is not applicable;
+- AAB + stored `.so`: raw AAB offset is not treated as final APK alignment evidence;
+- any unsupported/unverifiable packaging state: warning/manual review, never a guessed pass.
+
+`PLAY-005` combines these package findings with M0.4 ELF PT_LOAD evidence. For API 35+ targets, confirmed native alignment failure is a blocker; missing evidence remains a warning/manual review.
 
 ### M0.4 signing coverage
 

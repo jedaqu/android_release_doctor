@@ -2,7 +2,7 @@
 
 Open-source, local-first tool for auditing Android APK and AAB releases before publication.
 
-> **Status:** early development — M0.4 native ELF and APK signing inspection.
+> **Status:** early development — M0.5 Block 1 (ZIP/package alignment).
 
 Android Release Doctor inspects the **artifact you are actually going to distribute**, can compare it with the Android application Gradle configuration, and can apply a versioned Google Play submission-readiness profile.
 
@@ -94,6 +94,34 @@ M0.4 also inspects the APK signing-block structure. It can detect the standard v
 
 M0.4 does **not** yet verify ZIP entry alignment for uncompressed native libraries. Google's 16 KB guidance covers both ELF load-segment alignment and APK/AAB packaging alignment, so final verification of the packaged native payload still requires an appropriate Android packaging check such as `zipalign`/bundletool outside the current parser.
 
+## M0.5 Block 1 scope — ZIP/package alignment
+
+M0.5 Block 1 closes the next part of the native 16 KB evidence chain.
+
+For each packaged native `.so`, the audit now records:
+
+- whether the ZIP entry is stored (uncompressed) or compressed;
+- the real ZIP data-start offset exposed by the archive;
+- whether an uncompressed APK native library starts on a 16 KB boundary;
+- explicit verification errors instead of guessing.
+
+For APKs, an uncompressed native library with a non-16 KB-aligned data offset is surfaced through `NATIVE-003`. Compressed native libraries do not require this ZIP-offset check.
+
+For AABs, a raw entry offset inside the bundle is **not** treated as proof of the final APK's native-library alignment. An uncompressed native library in an AAB therefore remains a manual-review case unless the generated APK and bundle alignment configuration are separately verified.
+
+The Play `PLAY-005` check now combines ELF PT_LOAD evidence from M0.4 with the package-alignment evidence from this block. For API 35+ targets, a confirmed ELF or applicable ZIP misalignment is a blocker; an unverifiable part remains a manual-review warning rather than a guessed pass.
+
+### M0.5 Block 1 usage
+
+The ZIP/package evidence is collected automatically by the existing artifact audit:
+
+```text
+android-release-doctor --play app-release.apk
+android-release-doctor --play --play-platform mobile app-release.apk
+```
+
+No external packaging command is executed by the core engine. Google documents `zipalign -v -c -P 16 4 <APK>` for checking APK alignment and recommends inspecting AAB alignment configuration with bundletool; those checks remain useful corroboration for the release pipeline.
+
 ### M0.4 usage
 
 The existing CLI commands remain unchanged:
@@ -110,8 +138,7 @@ The native ELF and APK signing evidence is collected automatically as part of th
 - full Gradle/variant evaluation;
 - product-flavor-aware expected-value resolution;
 - CI/generated version resolution;
-- cryptographic signature verification;
-- ZIP-entry/package alignment verification for uncompressed native libraries;
+- cryptographic APK signature verification;
 - current Google Play policy automation beyond the M0.3 readiness checks;
 - permission risk classification;
 - HTML/SARIF output.
