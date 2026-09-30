@@ -177,6 +177,23 @@ The native ELF and APK signing evidence is collected automatically as part of th
 - permission risk classification;
 - HTML/SARIF output.
 
+## Engineering work principle — consult the incremental error ledger first
+
+Before starting any new audit, code change, correction, refactor, or validation cycle, the current `docs/ERRORS-AND-FIXES.md` ledger must be reviewed first.
+
+The ledger is the project's incremental memory of previously discovered failures and their resolutions. Reviewing it before touching code is intended to:
+
+- avoid repeating previously identified mistakes;
+- preserve successful corrective patterns;
+- recognize regressions and related failure modes earlier;
+- make audits and changes more precise and smaller in scope;
+- reduce unnecessary trial-and-error changes;
+- connect new failures with their historical context before choosing a correction.
+
+Every newly discovered failure or audit finding that represents an error, defect, CI failure, or corrective event must be appended to that ledger with its cause, correction, validation evidence, and status. Historical entries must not be renumbered or rewritten.
+
+This principle is mandatory for the project's working discipline and complements the sequence: **ledger review → audit → scoped changes → second audit → Actions → follow-up → individual correction → new validation → checkpoint**.
+
 ## Development
 
 ```bash
