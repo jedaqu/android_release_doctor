@@ -118,7 +118,7 @@ pub struct NativeZipEntryInfo {
     pub path: String,
     pub abi: String,
     pub compression: NativeZipCompression,
-    pub data_offset: Option<u64>,
+    pub data_offset: u64,
     pub alignment_16kb: Option<bool>,
     pub error: Option<String>,
 }
@@ -578,15 +578,10 @@ fn inspect_archive<R: Read + io::Seek>(
 
             let data_offset = entry.data_start();
             let (alignment_16kb, alignment_error) = match kind {
-                ArtifactKind::Apk if compression == NativeZipCompression::Stored => {
-                    match data_offset {
-                        Some(offset) => (Some(zip_alignment::is_16kb_aligned(offset)), None),
-                        None => (
-                            None,
-                            Some("ZIP data offset could not be resolved for this native library.".to_string()),
-                        ),
-                    }
-                }
+                ArtifactKind::Apk if compression == NativeZipCompression::Stored => (
+                    Some(zip_alignment::is_16kb_aligned(data_offset)),
+                    None,
+                ),
                 ArtifactKind::Apk => (None, None),
                 ArtifactKind::Aab if compression == NativeZipCompression::Stored => (
                     None,
@@ -963,7 +958,7 @@ fn evaluate(
                 .iter()
                 .map(|entry| {
                     format!(
-                        "{} [{}] offset={:?}",
+                        "{} [{}] offset={}",
                         entry.path, entry.abi, entry.data_offset
                     )
                 })
