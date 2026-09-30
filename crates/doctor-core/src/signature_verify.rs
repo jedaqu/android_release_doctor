@@ -420,6 +420,7 @@ fn verify_v3_block(
                     algorithms.clone(),
                     certificate_sha256.clone(),
                     sdk_ranges.clone(),
+                    parsed.proof_of_rotation.clone().into_iter().collect(),
                 ));
                 continue;
             }
@@ -432,6 +433,7 @@ fn verify_v3_block(
                 algorithms.clone(),
                 certificate_sha256.clone(),
                 sdk_ranges.clone(),
+                parsed.proof_of_rotation.clone().into_iter().collect(),
             ));
             continue;
         }
@@ -448,6 +450,7 @@ fn verify_v3_block(
                 algorithms.clone(),
                 certificate_sha256.clone(),
                 sdk_ranges.clone(),
+                parsed.proof_of_rotation.clone().into_iter().collect(),
             ));
             continue;
         }
@@ -469,6 +472,7 @@ fn verify_v3_block(
                     algorithms.clone(),
                     certificate_sha256.clone(),
                     sdk_ranges.clone(),
+                    parsed.proof_of_rotation.clone().into_iter().collect(),
                 ));
                 continue;
             }
@@ -483,6 +487,7 @@ fn verify_v3_block(
                 algorithms.clone(),
                 certificate_sha256.clone(),
                 sdk_ranges.clone(),
+                parsed.proof_of_rotation.clone().into_iter().collect(),
             ));
             continue;
         }
