@@ -9,6 +9,7 @@ on:
   pull_request:
     branches:
       - main
+      - m04-elf-signing
 
 env:
   CARGO_TERM_COLOR: always
