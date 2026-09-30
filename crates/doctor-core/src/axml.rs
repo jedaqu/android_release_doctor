@@ -180,7 +180,15 @@ fn parse_string_pool(
     }
 
     let data_start = chunk_start + strings_start;
-    let data_end = chunk_start + chunk_size;
+    let data_end = match styles_start {
+        0 => chunk_start + chunk_size,
+        value if value >= strings_start && value <= chunk_size => chunk_start + value,
+        _ => {
+            return Err(AxmlError::Invalid(
+                "string pool styles offset is invalid",
+            ))
+        }
+    };
     let utf8 = flags & 0x100 != 0;
     let mut strings = Vec::with_capacity(string_count);
 
@@ -206,8 +214,14 @@ fn parse_string_pool(
             let _character_count = decode_u8_length(&mut cursor)?;
             let byte_count = decode_u8_length(&mut cursor)?;
             let raw = cursor.take(byte_count)?;
-            String::from_utf8(raw.to_vec())
-                .map_err(|_| AxmlError::Invalid("string pool contains invalid UTF-8"))?
+            let value = String::from_utf8(raw.to_vec())
+                .map_err(|_| AxmlError::Invalid("string pool contains invalid UTF-8"))?;
+            if cursor.read_u8()? != 0 {
+                return Err(AxmlError::Invalid(
+                    "UTF-8 string is missing its null terminator",
+                ));
+            }
+            value
         } else {
             let character_count = decode_u16_length(&mut cursor)?;
             let byte_count = character_count
@@ -217,6 +231,11 @@ fn parse_string_pool(
             let mut units = Vec::with_capacity(character_count);
             for pair in raw.as_chunks::<2>().0 {
                 units.push(u16::from_le_bytes(*pair));
+            }
+            if cursor.read_u16()? != 0 {
+                return Err(AxmlError::Invalid(
+                    "UTF-16 string is missing its null terminator",
+                ));
             }
             String::from_utf16(&units)
                 .map_err(|_| AxmlError::Invalid("string pool contains invalid UTF-16"))?
@@ -297,6 +316,10 @@ fn parse_attributes(
     let mut attributes = Vec::with_capacity(attribute_count);
 
     for _ in 0..attribute_count {
+        if cursor.remaining() < attribute_size {
+            return Err(AxmlError::Truncated);
+        }
+
         let namespace_index = cursor.read_u32()?;
         let name_index = cursor.read_u32()?;
         let raw_value_index = cursor.read_u32()?;
@@ -305,12 +328,13 @@ fn parse_attributes(
         let data_type = cursor.read_u8()?;
         let data = cursor.read_u32()?;
 
-        if value_size < 8 {
-            return Err(AxmlError::Invalid("typed value is smaller than 8 bytes"));
+        if value_size != 8 {
+            return Err(AxmlError::Invalid(
+                "typed value size is not 8 bytes",
+            ));
         }
-        if value_size > 8 {
-            cursor.skip((value_size - 8) as usize)?;
-        }
+
+        cursor.skip(attribute_size - 20)?;
 
         attributes.push(Attribute {
             namespace: pool_optional(pool, namespace_index)?,
@@ -611,5 +635,46 @@ mod tests {
     #[test]
     fn rejects_truncated_binary_xml() {
         assert!(parse_manifest(&[0x03, 0x00, 0x08]).is_err());
+    }
+
+    #[test]
+    fn respects_attribute_stride() {
+        let pool = vec!["first".to_string(), "second".to_string()];
+        let mut bytes = Vec::new();
+
+        for name_index in [0_u32, 1_u32] {
+            bytes.extend_from_slice(&u32::MAX.to_le_bytes());
+            bytes.extend_from_slice(&name_index.to_le_bytes());
+            bytes.extend_from_slice(&u32::MAX.to_le_bytes());
+            bytes.extend_from_slice(&8_u16.to_le_bytes());
+            bytes.push(0);
+            bytes.push(0x03);
+            bytes.extend_from_slice(&name_index.to_le_bytes());
+            bytes.extend_from_slice(&[0xAA, 0xBB, 0xCC, 0xDD]);
+        }
+
+        let mut cursor = Cursor::new(&bytes);
+        let attributes = parse_attributes(&pool, &mut cursor, 20, 24, 2).unwrap();
+
+        assert_eq!(attributes.len(), 2);
+        assert_eq!(attributes[0].name, "first");
+        assert_eq!(attributes[1].name, "second");
+        assert_eq!(cursor.remaining(), 0);
+    }
+
+    #[test]
+    fn rejects_non_standard_typed_value_size() {
+        let pool = vec!["name".to_string()];
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(&u32::MAX.to_le_bytes());
+        bytes.extend_from_slice(&0_u32.to_le_bytes());
+        bytes.extend_from_slice(&u32::MAX.to_le_bytes());
+        bytes.extend_from_slice(&4_u16.to_le_bytes());
+        bytes.push(0);
+        bytes.push(0x03);
+        bytes.extend_from_slice(&0_u32.to_le_bytes());
+
+        let mut cursor = Cursor::new(&bytes);
+        assert!(parse_attributes(&pool, &mut cursor, 20, 20, 1).is_err());
     }
 }
