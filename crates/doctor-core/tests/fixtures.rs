@@ -4,7 +4,7 @@ use std::{
     path::PathBuf,
 };
 
-use doctor_core::{audit_path, ArtifactKind, Severity};
+use doctor_core::{audit_path, audit_path_with_project, parse_project, ArtifactKind, Severity};
 use zip::write::SimpleFileOptions;
 use zip::{CompressionMethod, ZipWriter};
 
@@ -12,6 +12,13 @@ fn fixture(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../tests/fixtures")
         .join(name)
+}
+
+fn project_fixture(module: &str, file: &str) -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests/fixtures")
+        .join(module)
+        .join(file)
 }
 
 #[test]
@@ -124,4 +131,108 @@ fn reports_manifest_parse_error_in_the_audit_report() {
     );
 
     fs::remove_file(path).expect("temporary APK should be removed");
+}
+
+
+#[test]
+fn cross_checks_gradle_groovy_against_apk_artifact() {
+    let report = audit_path_with_project(
+        fixture("minimal-release.apk"),
+        project_fixture("project-release", "build.gradle"),
+    )
+    .expect("project and artifact should be audited together");
+
+    let project = report.project.expect("project should be parsed");
+    assert_eq!(project.application_id.as_deref(), Some("com.example.doctorfixture"));
+    assert_eq!(project.target_sdk, Some(35));
+    assert_eq!(project.version_code, Some(7));
+    assert_eq!(project.release_debuggable, Some(false));
+
+    for rule_id in [
+        "CROSSCHECK-001",
+        "CROSSCHECK-002",
+        "CROSSCHECK-003",
+        "CROSSCHECK-004",
+        "CROSSCHECK-005",
+        "CROSSCHECK-006",
+    ] {
+        assert_eq!(
+            report
+                .findings
+                .iter()
+                .find(|finding| finding.rule_id == rule_id)
+                .map(|finding| finding.severity),
+            Some(Severity::Pass),
+            "{rule_id} should pass for matching project and artifact fixtures"
+        );
+    }
+}
+
+#[test]
+fn parses_kotlin_dsl_fixture() {
+    let project = parse_project(project_fixture(
+        "project-release-kotlin",
+        "build.gradle.kts",
+    ))
+    .expect("Kotlin DSL fixture should parse");
+
+    assert_eq!(project.syntax.as_str(), "Kotlin DSL");
+    assert_eq!(
+        project.application_id.as_deref(),
+        Some("com.example.doctorfixture")
+    );
+    assert_eq!(project.compile_sdk, Some(36));
+    assert_eq!(project.min_sdk, Some(24));
+    assert_eq!(project.target_sdk, Some(35));
+    assert_eq!(project.version_code, Some(7));
+    assert_eq!(project.version_name.as_deref(), Some("1.2.3"));
+    assert_eq!(project.release_debuggable, Some(false));
+}
+
+#[test]
+fn target_sdk_mismatch_is_a_blocker() {
+    let path = std::env::temp_dir().join(format!(
+        "android-release-doctor-project-mismatch-{}",
+        std::process::id()
+    ));
+    let source = fs::read_to_string(project_fixture("project-release", "build.gradle"))
+        .expect("project fixture should be readable");
+    let source = source.replace("targetSdk 35", "targetSdk 36");
+    fs::write(&path, source).expect("temporary project build file should be written");
+
+    let report = audit_path_with_project(fixture("minimal-release.apk"), &path)
+        .expect("project/artifact audit should complete");
+
+    assert_eq!(
+        report
+            .findings
+            .iter()
+            .find(|finding| finding.rule_id == "CROSSCHECK-002")
+            .map(|finding| finding.severity),
+        Some(Severity::Blocker)
+    );
+
+    fs::remove_file(path).expect("temporary project file should be removed");
+}
+
+#[test]
+fn invalid_project_path_stays_inside_report() {
+    let path = std::env::temp_dir().join(format!(
+        "android-release-doctor-missing-project-{}",
+        std::process::id()
+    ));
+
+    let report = audit_path_with_project(fixture("minimal-release.apk"), &path)
+        .expect("missing project should stay inside the audit report");
+
+    assert!(report.project.is_none());
+    assert!(report.project_error.is_some());
+    assert_eq!(
+        report
+            .findings
+            .iter()
+            .find(|finding| finding.rule_id == "PROJECT-001")
+            .map(|finding| finding.severity),
+        Some(Severity::Blocker)
+    );
 }
