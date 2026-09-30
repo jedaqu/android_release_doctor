@@ -12,11 +12,13 @@ pub mod elf;
 pub mod play;
 pub mod project;
 pub mod signing;
+pub mod zip_alignment;
 pub use axml::{ComponentInfo, ManifestInfo};
 pub use elf::{inspect_shared_object, load_segments_are_16kb_aligned, ElfInspection};
 pub use play::{evaluate_play_policy, PlayPlatform, PLAY_POLICY_VERSION};
 pub use project::{parse_project, GradleSyntax, ProjectInfo};
 pub use signing::{inspect_apk_signing_block, ApkSigningInfo};
+pub use zip_alignment::{is_16kb_aligned, NativeZipCompression, ZIP_ALIGNMENT_16KB};
 
 pub const ENGINE_VERSION: &str = "0.1.0";
 
@@ -111,6 +113,16 @@ pub struct NativeLibraryInfo {
     pub error: Option<String>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NativeZipEntryInfo {
+    pub path: String,
+    pub abi: String,
+    pub compression: NativeZipCompression,
+    pub data_offset: Option<u64>,
+    pub alignment_16kb: Option<bool>,
+    pub error: Option<String>,
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ArtifactInventory {
     pub entries: Vec<String>,
@@ -118,6 +130,7 @@ pub struct ArtifactInventory {
     pub dex_files: Vec<String>,
     pub native_abis: Vec<String>,
     pub native_libraries: Vec<NativeLibraryInfo>,
+    pub native_zip_entries: Vec<NativeZipEntryInfo>,
     pub signature_files: Vec<String>,
     pub apk_signing: Option<ApkSigningInfo>,
     pub apk_signing_error: Option<String>,
@@ -554,25 +567,56 @@ fn inspect_archive<R: Read + io::Seek>(
         }
 
         if name.ends_with(".so") {
-            if let Some(abi) = native_abi_from_path(&name) {
-                if !inventory.native_abis.iter().any(|item| item == abi) {
-                    inventory.native_abis.push(abi.to_string());
-                }
+            let abi = native_abi_from_path(&name).unwrap_or("unknown").to_string();
+            if abi != "unknown" && !inventory.native_abis.iter().any(|item| item == &abi) {
+                inventory.native_abis.push(abi.clone());
             }
 
+            let compression = zip_alignment::classify_compression(entry.compression());
             let mut bytes = Vec::new();
             entry.read_to_end(&mut bytes)?;
+
+            let data_offset = entry.data_start();
+            let (alignment_16kb, alignment_error) = match kind {
+                ArtifactKind::Apk if compression == NativeZipCompression::Stored => {
+                    match data_offset {
+                        Some(offset) => (Some(zip_alignment::is_16kb_aligned(offset)), None),
+                        None => (
+                            None,
+                            Some("ZIP data offset could not be resolved for this native library.".to_string()),
+                        ),
+                    }
+                }
+                ArtifactKind::Apk => (None, None),
+                ArtifactKind::Aab if compression == NativeZipCompression::Stored => (
+                    None,
+                    Some(
+                        "AAB entry offset does not establish the final APK ZIP alignment; verify the bundle alignment configuration and generated APK."
+                            .to_string(),
+                    ),
+                ),
+                ArtifactKind::Aab => (None, None),
+            };
+
+            inventory.native_zip_entries.push(NativeZipEntryInfo {
+                path: name.clone(),
+                abi: abi.clone(),
+                compression,
+                data_offset,
+                alignment_16kb,
+                error: alignment_error,
+            });
 
             match elf::inspect_shared_object(&bytes) {
                 Ok(inspection) => inventory.native_libraries.push(NativeLibraryInfo {
                     path: name.clone(),
-                    abi: native_abi_from_path(&name).unwrap_or("unknown").to_string(),
+                    abi,
                     load_segment_alignments: inspection.load_segment_alignments,
                     error: None,
                 }),
                 Err(error) => inventory.native_libraries.push(NativeLibraryInfo {
                     path: name.clone(),
-                    abi: native_abi_from_path(&name).unwrap_or("unknown").to_string(),
+                    abi,
                     load_segment_alignments: Vec::new(),
                     error: Some(error.to_string()),
                 }),
@@ -593,6 +637,9 @@ fn inspect_archive<R: Read + io::Seek>(
     inventory.native_abis.sort();
     inventory
         .native_libraries
+        .sort_by(|left, right| left.path.cmp(&right.path));
+    inventory
+        .native_zip_entries
         .sort_by(|left, right| left.path.cmp(&right.path));
     inventory.signature_files.sort();
     inventory.dex_files.sort();
@@ -884,6 +931,82 @@ fn evaluate(
                 "16 KB ELF alignment",
                 format!("One or more native libraries contain PT_LOAD alignment below 16 KB: {details}."),
                 "Rebuild or replace the affected native libraries with 16 KB ELF load-segment alignment.",
+            ));
+        }
+    }
+
+    if inventory.native_zip_entries.is_empty() {
+        findings.push(Finding::pass(
+            "NATIVE-003",
+            "16 KB ZIP packaging",
+            "No native .so libraries are present, so native ZIP packaging alignment is not applicable.",
+        ));
+    } else {
+        let packaging_errors = inventory
+            .native_zip_entries
+            .iter()
+            .filter(|entry| entry.error.is_some())
+            .collect::<Vec<_>>();
+        let incompatible = inventory
+            .native_zip_entries
+            .iter()
+            .filter(|entry| entry.alignment_16kb == Some(false))
+            .collect::<Vec<_>>();
+        let stored = inventory
+            .native_zip_entries
+            .iter()
+            .filter(|entry| entry.compression == NativeZipCompression::Stored)
+            .collect::<Vec<_>>();
+
+        if !incompatible.is_empty() {
+            let details = incompatible
+                .iter()
+                .map(|entry| {
+                    format!(
+                        "{} [{}] offset={:?}",
+                        entry.path, entry.abi, entry.data_offset
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join("; ");
+            findings.push(Finding::warning(
+                "NATIVE-003",
+                "16 KB ZIP packaging alignment",
+                format!(
+                    "One or more uncompressed native libraries are not aligned to a 16 KB ZIP data boundary: {details}."
+                ),
+                "Repackage the affected uncompressed native libraries with 16 KB ZIP alignment, or use compressed native libraries.",
+            ));
+        } else if !packaging_errors.is_empty() {
+            let details = packaging_errors
+                .iter()
+                .map(|entry| {
+                    format!(
+                        "{} [{}]: {}",
+                        entry.path,
+                        entry.abi,
+                        entry.error.as_deref().unwrap_or("alignment could not be verified")
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join("; ");
+            findings.push(Finding::warning(
+                "NATIVE-003",
+                "16 KB ZIP packaging alignment unavailable",
+                format!("Native ZIP packaging alignment could not be proven: {details}"),
+                "For APKs, verify uncompressed native libraries with zipalign. For AABs, verify the bundle's ZIP alignment configuration and the generated APK before release.",
+            ));
+        } else if stored.is_empty() {
+            findings.push(Finding::pass(
+                "NATIVE-003",
+                "16 KB ZIP packaging",
+                "All packaged native libraries are compressed, so uncompressed ZIP data alignment is not applicable.",
+            ));
+        } else {
+            findings.push(Finding::pass(
+                "NATIVE-003",
+                "16 KB ZIP packaging alignment",
+                "All inspected uncompressed native APK libraries have 16 KB-aligned ZIP data offsets.",
             ));
         }
     }
