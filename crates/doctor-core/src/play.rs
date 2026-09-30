@@ -502,7 +502,7 @@ mod tests {
                 .iter()
                 .find(|finding| finding.rule_id == "PLAY-005")
                 .map(|finding| finding.severity),
-            Some(Severity::Warning)
+            Some(Severity::ManualReview)
         );
     }
 }
