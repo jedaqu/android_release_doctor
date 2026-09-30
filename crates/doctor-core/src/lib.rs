@@ -18,10 +18,10 @@ pub use axml::{ComponentInfo, ManifestInfo};
 pub use elf::{inspect_shared_object, load_segments_are_16kb_aligned, ElfInspection};
 pub use play::{evaluate_play_policy, PlayPlatform, PLAY_POLICY_VERSION};
 pub use project::{parse_project, GradleSyntax, ProjectInfo};
-pub use signing::{inspect_apk_signing_block, ApkSigningInfo};
 pub use signature_verify::{
     verify_apk_signatures, ApkSignatureVerification, CryptoSchemeInfo, CryptoVerificationState,
 };
+pub use signing::{inspect_apk_signing_block, ApkSigningInfo};
 pub use zip_alignment::{is_16kb_aligned, NativeZipCompression, ZIP_ALIGNMENT_16KB};
 
 pub const ENGINE_VERSION: &str = "0.1.0";
