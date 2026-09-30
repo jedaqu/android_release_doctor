@@ -2,7 +2,7 @@
 
 Open-source, local-first tool for auditing Android APK and AAB releases before publication.
 
-> **Status:** early development — M0.5 Block 1 (ZIP/package alignment).
+> **Status:** early development — M0.5 Block 2 (APK v2/v3 cryptographic signature verification).
 
 Android Release Doctor inspects the **artifact you are actually going to distribute**, can compare it with the Android application Gradle configuration, and can apply a versioned Google Play submission-readiness profile.
 
@@ -122,6 +122,39 @@ android-release-doctor --play --play-platform mobile app-release.apk
 
 No external packaging command is executed by the core engine. Google documents `zipalign -v -c -P 16 4 <APK>` for checking APK alignment and recommends inspecting AAB alignment configuration with bundletool; those checks remain useful corroboration for the release pipeline.
 
+## M0.5 Block 2 scope — APK cryptographic signature verification
+
+M0.5 Block 2 adds cryptographic evidence for APK Signature Scheme v2 and v3 on top of the structural signing-block inspection from M0.4.
+
+The verifier now checks:
+
+- the v2/v3 signer structures and length-prefixed framing;
+- the strongest **supported** signature algorithm according to Android's digest-algorithm preference;
+- the cryptographic signature over `signed data`;
+- the first X.509 certificate's SubjectPublicKeyInfo against the signer public key;
+- the APK content digest using Android's 1 MiB chunked digest construction;
+- v3 minimum/maximum SDK consistency;
+- the required equality and ordering of digest/signature algorithm ID lists;
+- v3 proof-of-rotation presence as an explicit manual-review boundary rather than a guessed pass;
+- v3.1 presence as an explicit manual-review boundary.
+
+The verifier records a SHA-256 fingerprint of each verified signer's first certificate as additional signer evidence. It does **not** treat the certificate as trusted through a public CA; Android's app-signing model does not require a central certificate authority. citehttps://source.android.com/docs/security/features/apksigning|AOSP app signing 
+
+A cryptographic failure is distinct from an unsupported verification capability. Unsupported or incomplete verification is surfaced as a warning/manual-review result; it is never converted into a cryptographic pass.
+
+### M0.5 Block 2 usage
+
+Cryptographic verification is collected automatically when auditing an APK:
+
+```text
+android-release-doctor --play app-release.apk
+android-release-doctor --play app-release.apk
+```
+
+AABs are not cryptographically verified in this module because APK v2/v3 signatures live in the generated APK signing block rather than in the AAB artifact itself.
+
+The implementation follows Google's documented v2/v3 verification flow, including signer signature verification, digest verification and certificate/public-key binding. citehttps://source.android.com/docs/security/features/apksigning/v2|AOSP APK Signature Scheme v2 citehttps://source.android.com/docs/security/features/apksigning/v3|AOSP APK Signature Scheme v3 
+
 ### M0.4 usage
 
 The existing CLI commands remain unchanged:
@@ -138,7 +171,7 @@ The native ELF and APK signing evidence is collected automatically as part of th
 - full Gradle/variant evaluation;
 - product-flavor-aware expected-value resolution;
 - CI/generated version resolution;
-- cryptographic APK signature verification;
+- full cryptographic coverage of every Android-supported v2/v3 signature algorithm and key size;
 - current Google Play policy automation beyond the M0.3 readiness checks;
 - permission risk classification;
 - HTML/SARIF output.
