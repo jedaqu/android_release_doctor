@@ -1728,8 +1728,7 @@ mod tests {
         let proof = ProofOfRotationInfo {
             state: CryptoVerificationState::Verified,
             level_count: 2,
-            detail: "proof-of-rotation lineage verified across 2 certificate level(s)"
-                .to_string(),
+            detail: "proof-of-rotation lineage verified across 2 certificate level(s)".to_string(),
         };
 
         let info = error_to_scheme_info_with_rotation(
