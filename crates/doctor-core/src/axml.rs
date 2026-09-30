@@ -2,7 +2,7 @@ use std::{error::Error, fmt};
 
 pub const ANDROID_NAMESPACE: &str = "http://schemas.android.com/apk/res/android";
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ManifestInfo {
     pub package_name: Option<String>,
     pub version_code: Option<u32>,
@@ -14,7 +14,7 @@ pub struct ManifestInfo {
     pub components: Vec<ComponentInfo>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ComponentInfo {
     pub kind: String,
     pub name: String,
