@@ -1639,6 +1639,21 @@ mod tests {
     }
 
     #[test]
+    fn detects_tampered_ecdsa_sha512_p384_v2_apk_as_invalid() {
+        let path = tampered_fixture(
+            "m07-crypto-v2-ecdsa-sha512-p384.apk",
+            "v2-ecdsa-sha512-tampered",
+        );
+        let result = verify_apk_signatures(&path)
+            .expect("tampered v2 ECDSA/SHA-512 fixture should remain readable")
+            .expect("tampered v2 ECDSA/SHA-512 fixture should contain a signing block");
+
+        let v2 = result.v2.expect("v2 scheme should be detected");
+        assert_eq!(v2.state, CryptoVerificationState::Invalid);
+        std::fs::remove_file(path).expect("temporary tampered fixture should be removed");
+    }
+
+    #[test]
     fn detects_tampered_ecdsa_sha512_p384_v3_apk_as_invalid() {
         let path = tampered_fixture(
             "m07-crypto-v3-ecdsa-sha512-p384.apk",
@@ -1752,6 +1767,29 @@ mod tests {
         assert!(error
             .to_string()
             .contains("cryptographic signature verification failed for algorithm 0x00000202"));
+    }
+
+    #[test]
+    fn reports_unsupported_curve_for_ecdsa_sha512() {
+        const CERTIFICATE_HEX: &str = "3082018a30820110a003020102020101300a06082a8648ce3d0403023030312e302c06035504030c25416e64726f69642052656c6561736520446f63746f72204d302e3720503338342054657374301e170d3230303130313030303030305a170d3330303130313030303030305a3030312e302c06035504030c25416e64726f69642052656c6561736520446f63746f72204d302e37205033383420546573743076301006072a8648ce3d020106052b8104002203620004aa87ca22be8b05378eb1c71ef320ad746e1d3b628ba79b9859f741e082542a385502f25dbf55296c3a545e3872760ab73617de4a96262c6f5d9e98bf9292dc29f8f41dbd289a147ce9da3113b5f0b8c00a60b1ce1d7e819d7a431d7c90ea0e5f300a06082a8648ce3d0403020368003065023100e3e95b7cbcdb11f7848ff4b0bfac569efbea08246f376cc87bd115c66cdb80045e676627ce5f9610cefe4d33cf3e0dfe023062ea2e6d0c514053881751194ccd3009265198faca21850ace1503328481ca7785d380a26b6914cfe04e506d5bbf4d6a";
+        let mut certificate = decode_hex_bytes(CERTIFICATE_HEX);
+        let curve_oid = [0x06_u8, 0x05, 0x2b, 0x81, 0x04, 0x00, 0x22];
+        let position = certificate
+            .windows(curve_oid.len())
+            .position(|window| window == curve_oid)
+            .expect("P-384 curve OID should be present in certificate");
+        certificate[position + curve_oid.len() - 1] = 0x23;
+
+        let result = verify_signature_bytes(
+            0x0202,
+            &certificate,
+            b"M0.7 Block 1 deterministic ECDSA/SHA-512 verification test message",
+            &[],
+        );
+        let error = result.expect_err("non-P-384 ECDSA/SHA-512 must remain unsupported");
+        assert!(error
+            .to_string()
+            .starts_with("UNSUPPORTED: ECDSA SHA-512 signer curve is not P-384"));
     }
 
     #[test]
