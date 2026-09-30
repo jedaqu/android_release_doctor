@@ -1013,8 +1013,12 @@ mod tests {
 
         let result = parse_signed_data_v3(&signed_data);
         assert!(result.is_err());
-        let error = result.err().expect("reversed SDK range should produce an error");
-        assert!(error.to_string().contains("minSDK 100 is greater than maxSDK 1"));
+        let error = result
+            .err()
+            .expect("reversed SDK range should produce an error");
+        assert!(error
+            .to_string()
+            .contains("minSDK 100 is greater than maxSDK 1"));
     }
 
     #[test]
