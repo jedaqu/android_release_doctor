@@ -191,6 +191,14 @@ This file is the chronological engineering ledger for failures, errors, their ro
 - **Problem:** The scoped workflow edit inserted `m06-block4-signer-error-isolation` twice under push.branches and did not add it to pull_request.branches.
 - **Required correction:** Keep the Block 4 branch exactly once in push.branches and exactly once in pull_request.branches; preserve all existing entries.
 - **Status:** PENDING CORRECTION
+## ERR-021 — rustfmt layout after Block 4 test addition
+
+- **Milestone:** M0.6 Block 4
+- **Type:** CI formatting failure
+- **Actions run:** #190 / 36746316865 and #191 / 36746324902
+- **Problem:** `cargo fmt --all -- --check` required a multi-line layout for the final `assert!(result.detail.contains(...))` in the new regression test.
+- **Correction required:** Apply only the rustfmt-indicated line wrap; no test logic or production behavior changes.
+- **Status:** PENDING CORRECTION
 ## Current validation state
 
 ERR-015 was corrected in commit 9126fd8d20fc49d410f640c345da15f3529a9f49.
