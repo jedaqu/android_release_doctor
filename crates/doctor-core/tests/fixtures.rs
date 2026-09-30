@@ -364,6 +364,18 @@ fn compressed_native_library_does_not_require_zip_offset_alignment() {
     fs::remove_file(path).expect("temporary APK should be removed");
 }
 
+fn tampered_apk_fixture(source_name: &str, label: &str) -> PathBuf {
+    let source = fixture(source_name);
+    let path = std::env::temp_dir().join(format!(
+        "android-release-doctor-{label}-{}.apk",
+        std::process::id()
+    ));
+    let mut bytes = fs::read(source).expect("crypto fixture should be readable");
+    bytes[40] ^= 0x01;
+    fs::write(&path, bytes).expect("tampered crypto fixture should be writable");
+    path
+}
+
 #[test]
 fn valid_v2_fixture_produces_verified_signing_finding() {
     let report = audit_path(fixture("crypto-v2-release.apk"))
@@ -391,8 +403,8 @@ fn valid_v2_fixture_produces_verified_signing_finding() {
 
 #[test]
 fn tampered_v2_fixture_produces_signature_blocker() {
-    let report = audit_path(fixture("crypto-v2-release-tampered.apk"))
-        .expect("tampered v2 crypto fixture should remain auditable");
+    let path = tampered_apk_fixture("crypto-v2-release.apk", "v2-integration-tampered");
+    let report = audit_path(&path).expect("tampered v2 crypto fixture should remain auditable");
 
     assert_eq!(
         report
@@ -412,6 +424,60 @@ fn tampered_v2_fixture_produces_signature_blocker() {
         verification.v2.as_ref().map(|scheme| scheme.state),
         Some(doctor_core::CryptoVerificationState::Invalid)
     );
+
+    fs::remove_file(path).expect("temporary tampered v2 fixture should be removed");
+}
+
+#[test]
+fn valid_v3_fixture_produces_verified_signing_finding() {
+    let report = audit_path(fixture("crypto-v3-release.apk"))
+        .expect("valid v3 crypto fixture should remain auditable");
+
+    assert_eq!(
+        report
+            .findings
+            .iter()
+            .find(|finding| finding.rule_id == "SIGNING-003")
+            .map(|finding| finding.severity),
+        Some(Severity::Pass)
+    );
+
+    let verification = report
+        .inventory
+        .apk_signature_verification
+        .as_ref()
+        .expect("v3 verification result should be present");
+    assert_eq!(
+        verification.v3.as_ref().map(|scheme| scheme.state),
+        Some(doctor_core::CryptoVerificationState::Verified)
+    );
+}
+
+#[test]
+fn tampered_v3_fixture_produces_signature_blocker() {
+    let path = tampered_apk_fixture("crypto-v3-release.apk", "v3-integration-tampered");
+    let report = audit_path(&path).expect("tampered v3 crypto fixture should remain auditable");
+
+    assert_eq!(
+        report
+            .findings
+            .iter()
+            .find(|finding| finding.rule_id == "SIGNING-003")
+            .map(|finding| finding.severity),
+        Some(Severity::Blocker)
+    );
+
+    let verification = report
+        .inventory
+        .apk_signature_verification
+        .as_ref()
+        .expect("tampered v3 verification result should be present");
+    assert_eq!(
+        verification.v3.as_ref().map(|scheme| scheme.state),
+        Some(doctor_core::CryptoVerificationState::Invalid)
+    );
+
+    fs::remove_file(path).expect("temporary tampered v3 fixture should be removed");
 }
 
 #[test]
