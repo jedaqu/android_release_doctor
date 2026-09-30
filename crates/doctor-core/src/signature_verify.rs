@@ -317,7 +317,7 @@ fn verify_v3_block(
         });
     }
 
-    merge_scheme_results("v3", results)?
+    Ok(merge_scheme_results("v3", results)?)
 }
 
 fn merge_scheme_results(
