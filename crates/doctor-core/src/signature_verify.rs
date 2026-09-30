@@ -522,6 +522,8 @@ fn append_der_length(output: &mut Vec<u8>, length: usize) {
     }
 }
 
+type ParsedDigestSequence<'a> = (Vec<u32>, Vec<(u32, &'a [u8])>);
+
 struct ParsedSignedData<'a> {
     digests: Vec<(u32, &'a [u8])>,
     digest_algorithms: Vec<u32>,
@@ -597,7 +599,7 @@ fn parse_signed_data_v3(
 
 fn parse_digest_sequence(
     bytes: &[u8],
-) -> Result<(Vec<u32>, Vec<(u32, &[u8])>), SignatureVerificationError> {
+) -> Result<ParsedDigestSequence<'_>, SignatureVerificationError> {
     let mut reader = LengthReader::new(bytes);
     let mut algorithms = Vec::new();
     let mut digests = Vec::new();
