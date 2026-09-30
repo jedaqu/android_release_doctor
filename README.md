@@ -13,11 +13,11 @@ The release artifact is now inspected deeply enough to extract:
 - application/package identity;
 - versionCode and versionName;
 - minSdkVersion and targetSdkVersion;
-- explicit `android:debuggable`;
+- effective `android:debuggable` state;
 - declared permissions;
-- Android components and explicit `android:exported` when intent filters are present.
+- Android components and explicit `android:exported` requirements for supported component types with intent filters.
 
-The parser reads the compiled binary AndroidManifest.xml directly from the APK/AAB. It does not invoke the Android SDK or external shell tools.
+The parser reads the compiled binary AndroidManifest.xml directly from the APK/AAB. It does not invoke the Android SDK or external shell tools. For AABs, M0.1 inspects the base module manifest.
 
 Still not implemented:
 
