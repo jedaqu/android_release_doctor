@@ -31,6 +31,7 @@ pub struct CryptoSchemeInfo {
     pub state: CryptoVerificationState,
     pub signer_count: usize,
     pub algorithms: Vec<u32>,
+    pub certificate_sha256: Vec<String>,
     pub detail: String,
 }
 
@@ -190,6 +191,7 @@ fn verify_v2_signer(
         state: CryptoVerificationState::Verified,
         signer_count: 1,
         algorithms,
+        certificate_sha256: vec![certificate_sha256(parsed.certificate)?],
         detail:
             "v2 signer signature, certificate/public-key binding, and APK content digest verified"
                 .to_string(),
@@ -217,6 +219,7 @@ fn verify_v3_block(
             state: CryptoVerificationState::Invalid,
             signer_count: signer_values.len(),
             algorithms: Vec::new(),
+            certificate_sha256: Vec::new(),
             detail: "v3 requires exactly one signer".to_string(),
         });
     }
@@ -237,6 +240,7 @@ fn verify_v3_block(
             state: CryptoVerificationState::Invalid,
             signer_count: 1,
             algorithms: parsed.digest_algorithms,
+            certificate_sha256: Vec::new(),
             detail: format!(
                 "v3 signer minSDK/maxSDK ({min_sdk}, {max_sdk}) do not match signed-data values ({}, {})",
                 parsed.min_sdk, parsed.max_sdk
@@ -270,6 +274,7 @@ fn verify_v3_block(
             state: CryptoVerificationState::Invalid,
             signer_count: 1,
             algorithms: parsed.digest_algorithms,
+            certificate_sha256: Vec::new(),
             detail:
                 "v3 digest and signature algorithm ID lists are not identical and ordered equally"
                     .to_string(),
@@ -297,6 +302,7 @@ fn verify_v3_block(
         state,
         signer_count: 1,
         algorithms: parsed.digest_algorithms,
+        certificate_sha256: vec![certificate_sha256(parsed.certificate)?],
         detail,
     })
 }
@@ -310,17 +316,20 @@ fn merge_scheme_results(
             state: CryptoVerificationState::Invalid,
             signer_count: 0,
             algorithms: Vec::new(),
+            certificate_sha256: Vec::new(),
             detail: format!("{scheme} signing block contains no signers"),
         });
     }
 
     let mut algorithms = Vec::new();
+    let mut certificate_sha256 = Vec::new();
     let mut unsupported = false;
     let mut invalid = false;
     let mut details = Vec::new();
 
     for result in &results {
         algorithms.extend_from_slice(&result.algorithms);
+        certificate_sha256.extend(result.certificate_sha256.iter().cloned());
         match result.state {
             CryptoVerificationState::Verified => {}
             CryptoVerificationState::Unsupported => unsupported = true,
@@ -341,6 +350,7 @@ fn merge_scheme_results(
         state,
         signer_count: results.len(),
         algorithms,
+        certificate_sha256,
         detail: details.join("; "),
     })
 }
@@ -415,15 +425,10 @@ fn parse_and_select_signature<'a>(
 }
 
 fn signature_strength(id: u32) -> u32 {
-    match id {
-        0x0102 => 70,
-        0x0101 => 60,
-        0x0104 => 55,
-        0x0202 => 54,
-        0x0301 => 53,
-        0x0103 => 50,
-        0x0201 => 50,
-        _ => 0,
+    match signature_algorithm_digest(id) {
+        Some(DigestAlgorithm::Sha512) => 2,
+        Some(DigestAlgorithm::Sha256) => 1,
+        None => 0,
     }
 }
 
@@ -590,6 +595,11 @@ fn parse_signed_data_v3(
     let certificates = reader.read_sequence("v3 certificates")?;
     let min_sdk = reader.read_u32("v3 signed-data minSDK")?;
     let max_sdk = reader.read_u32("v3 signed-data maxSDK")?;
+    if min_sdk > max_sdk {
+        return Err(SignatureVerificationError(format!(
+            "v3 signed-data minSDK {min_sdk} is greater than maxSDK {max_sdk}"
+        )));
+    }
     let attributes = reader.read_sequence("v3 additional attributes")?;
     reader.finish("v3 signed data")?;
 
@@ -670,6 +680,15 @@ fn verify_certificate_and_public_key(
     }
 
     Ok(())
+}
+
+fn certificate_sha256(certificate: &[u8]) -> Result<String, SignatureVerificationError> {
+    let digest = digest::digest(&digest::SHA256, certificate);
+    Ok(digest
+        .as_ref()
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<String>())
 }
 
 fn verify_content_digest(
@@ -854,6 +873,8 @@ mod tests {
         );
         assert_eq!(v2.signer_count, 1);
         assert!(v2.algorithms.contains(&0x0201));
+        assert_eq!(v2.certificate_sha256.len(), 1);
+        assert_eq!(v2.certificate_sha256[0].len(), 64);
         assert!(!result.v31_present);
     }
 
@@ -907,6 +928,8 @@ mod tests {
         );
         assert_eq!(v3.signer_count, 1);
         assert!(v3.algorithms.contains(&0x0201));
+        assert_eq!(v3.certificate_sha256.len(), 1);
+        assert_eq!(v3.certificate_sha256[0].len(), 64);
         assert!(!result.v31_present);
     }
 
@@ -925,6 +948,71 @@ mod tests {
             v3.detail
         );
         std::fs::remove_file(path).expect("temporary tampered v3 fixture should be removed");
+    }
+
+    fn encode_sequence(payload: &[u8]) -> Vec<u8> {
+        let mut output = Vec::new();
+        output.extend_from_slice(&(payload.len() as u32).to_le_bytes());
+        output.extend_from_slice(payload);
+        output
+    }
+
+    fn encode_signature_entries(entries: &[(u32, &[u8])]) -> Vec<u8> {
+        let mut payload = Vec::new();
+        for (algorithm_id, signature) in entries {
+            let mut entry = Vec::new();
+            entry.extend_from_slice(&algorithm_id.to_le_bytes());
+            entry.extend_from_slice(&(signature.len() as u32).to_le_bytes());
+            entry.extend_from_slice(signature);
+            payload.extend_from_slice(&encode_sequence(&entry));
+        }
+        payload
+    }
+
+    #[test]
+    fn signature_selection_prefers_sha512_content_digests() {
+        let signatures = encode_signature_entries(&[
+            (0x0103, b"sha256"),
+            (0x0104, b"sha512"),
+            (0x0201, b"sha256-ecdsa"),
+        ]);
+
+        let selected =
+            parse_and_select_signature(&signatures).expect("signature records should parse");
+        assert_eq!(selected.algorithm_id, 0x0104);
+        assert_eq!(selected.digest_algorithm, DigestAlgorithm::Sha512);
+    }
+
+    #[test]
+    fn signature_strength_matches_android_digest_preference() {
+        assert_eq!(signature_strength(0x0102), signature_strength(0x0104));
+        assert_eq!(signature_strength(0x0104), signature_strength(0x0202));
+        assert!(signature_strength(0x0104) > signature_strength(0x0103));
+    }
+
+    #[test]
+    fn rejects_v3_signed_data_with_reversed_sdk_range() {
+        let digest_entry = {
+            let mut bytes = Vec::new();
+            bytes.extend_from_slice(&0x0201_u32.to_le_bytes());
+            bytes.extend_from_slice(&32_u32.to_le_bytes());
+            bytes.extend_from_slice(&[0_u8; 32]);
+            bytes
+        };
+        let mut digests = Vec::new();
+        digests.extend_from_slice(&encode_sequence(&digest_entry));
+
+        let certificate = encode_sequence(&[0_u8]);
+        let mut signed_data = Vec::new();
+        signed_data.extend_from_slice(&encode_sequence(&digests));
+        signed_data.extend_from_slice(&encode_sequence(&certificate));
+        signed_data.extend_from_slice(&100_u32.to_le_bytes());
+        signed_data.extend_from_slice(&1_u32.to_le_bytes());
+        signed_data.extend_from_slice(&encode_sequence(&[]));
+
+        let error =
+            parse_signed_data_v3(&signed_data).expect_err("reversed SDK range should fail");
+        assert!(error.to_string().contains("minSDK 100 is greater than maxSDK 1"));
     }
 
     #[test]
