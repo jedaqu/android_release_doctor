@@ -703,12 +703,7 @@ mod tests {
             ..Default::default()
         };
 
-        let findings = evaluate(
-            ArtifactKind::Apk,
-            &inventory,
-            Some(&manifest),
-            None,
-        );
+        let findings = evaluate(ArtifactKind::Apk, &inventory, Some(&manifest), None);
 
         let finding = findings
             .iter()
@@ -731,12 +726,7 @@ mod tests {
             ..Default::default()
         };
 
-        let findings = evaluate(
-            ArtifactKind::Apk,
-            &inventory,
-            Some(&manifest),
-            None,
-        );
+        let findings = evaluate(ArtifactKind::Apk, &inventory, Some(&manifest), None);
 
         assert_eq!(
             findings
@@ -787,12 +777,7 @@ mod tests {
             ..Default::default()
         };
 
-        let findings = evaluate(
-            ArtifactKind::Apk,
-            &inventory,
-            Some(&manifest),
-            None,
-        );
+        let findings = evaluate(ArtifactKind::Apk, &inventory, Some(&manifest), None);
 
         assert_eq!(
             findings
@@ -820,19 +805,12 @@ mod tests {
             ..Default::default()
         };
 
-        let findings = evaluate(
-            ArtifactKind::Apk,
-            &inventory,
-            Some(&manifest),
-            None,
-        );
+        let findings = evaluate(ArtifactKind::Apk, &inventory, Some(&manifest), None);
 
-        assert!(
-            findings
-                .iter()
-                .find(|finding| finding.rule_id == "COMPONENT-001")
-                .is_none()
-        );
+        assert!(findings
+            .iter()
+            .find(|finding| finding.rule_id == "COMPONENT-001")
+            .is_none());
     }
 
     #[test]
