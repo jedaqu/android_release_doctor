@@ -64,6 +64,31 @@ Policy profile version: `2026-08-31`
 | --- | --- |
 | `NATIVE-003` | Inspect native ZIP packaging. For uncompressed native APK libraries, compare the actual ZIP data-start offset with the 16 KB boundary. Compressed native libraries do not require the offset check. AAB entry offsets are recorded but not treated as proof of final APK alignment. |
 
+### M0.5 Block 2 artifact rules
+
+| ID | Purpose |
+| --- | --- |
+| `SIGNING-003` | Cryptographically verify supported APK v2/v3 signer data, certificate/public-key binding and the protected APK content digest. Report `PASS` only when all required supported checks for the applicable scheme succeed; cryptographic failure is a blocker; unsupported/incomplete verification is a manual-review warning. |
+
+### M0.5 Block 2 verification boundary
+
+The verifier follows the Android v2/v3 verification model:
+
+- v2 signer signature is verified over signed data;
+- v3 signer signature is verified over signed data and its outer/inner SDK ranges must match;
+- digest and signature algorithm ID lists must be identical and ordered equally;
+- the selected content digest is recomputed using Android's 1 MiB chunk construction over the protected APK sections;
+- the first X.509 certificate SubjectPublicKeyInfo must exactly match the signer public key;
+- the first certificate SHA-256 fingerprint is retained as signer evidence;
+- v3 proof-of-rotation is detected but not fully verified in this block;
+- v3.1 is detected structurally but not cryptographically verified in this block;
+- algorithms or key sizes outside the current Rust verifier's supported set remain manual-review evidence rather than being reported as verified.
+
+Android documents the v2/v3 algorithm IDs, digest construction and verification sequence in the AOSP documentation:
+https://source.android.com/docs/security/features/apksigning/v2
+https://source.android.com/docs/security/features/apksigning/v3
+https://source.android.com/docs/security/features/apksigning/v3-1
+
 ### M0.5 Block 1 16 KB semantics
 
 The package-level evidence is intentionally narrower than a full bundle/package validation:
