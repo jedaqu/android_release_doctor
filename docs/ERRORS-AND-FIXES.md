@@ -321,6 +321,16 @@ This file is the chronological engineering ledger for failures, errors, their ro
 - **Correction commit:** 3318ab3cc3c173e0bdfa9855d9c567b041ebc00b
 - **Validation:** Actions run #234 / 36751391708 passed Format.
 - **Status:** RESOLVED
+## ERR-034 — README historical M0.5 scope included M0.6 proof-of-rotation verification
+
+- **Milestone:** M0.6 / global evaluation
+- **Type:** Documentation chronology defect
+- **Problem:** The README M0.5 Block 2 capability list stated that v3 proof-of-rotation lineage structure and parent-to-child signatures were verified, even though the validated M0.5 Block 2 checkpoint explicitly kept proof-of-rotation as a manual-review boundary. The M0.6 Block 5 section correctly assigns that verification capability to Block 5.
+- **Correction:** Remove only the proof-of-rotation verification bullet from the historical M0.5 Block 2 capability list and keep the capability documented under M0.6 Block 5.
+- **Correction commit:** 97c2748a475bebd55a7150f5ea136eec223e2467
+- **Validation:** Pending current-branch Rust CI validation after the documentation correction.
+- **Status:** OPEN — awaiting validation
+
 ## Current validation state
 
 M0.6 Block 5 implementation and stacked pull-request validation have passed the complete validation gate.
