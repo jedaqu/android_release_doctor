@@ -6,7 +6,6 @@ on:
       - main
       - m0-foundation
       - m05-package-alignment
-      - m06-block2-signing-evidence
       - m05-crypto-signatures
       - m06-block1-state-hardening
       - m06-block2-signing-evidence
@@ -16,6 +15,9 @@ on:
       - main
       - m04-elf-signing
       - m05-package-alignment
+      - m05-crypto-signatures
+      - m06-block1-state-hardening
+      - m06-block2-signing-evidence
 
 env:
   CARGO_TERM_COLOR: always
