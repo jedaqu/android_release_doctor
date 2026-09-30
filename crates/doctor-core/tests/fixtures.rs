@@ -58,6 +58,9 @@ fn audits_minimal_apk_fixture() {
 
     assert_eq!(report.inventory.dex_files, vec!["classes.dex"]);
     assert_eq!(report.inventory.native_abis, vec!["arm64-v8a"]);
+    assert_eq!(report.inventory.native_libraries.len(), 1);
+    assert_eq!(report.inventory.native_libraries[0].path, "lib/arm64-v8a/libdemo.so");
+    assert!(report.inventory.native_libraries[0].error.is_some());
     assert_eq!(report.inventory.signature_files.len(), 2);
     assert!(report
         .findings
@@ -90,6 +93,12 @@ fn audits_minimal_aab_fixture() {
         report.inventory.native_abis,
         vec!["arm64-v8a", "armeabi-v7a"]
     );
+    assert_eq!(report.inventory.native_libraries.len(), 2);
+    assert!(report
+        .inventory
+        .native_libraries
+        .iter()
+        .all(|library| library.error.is_some()));
     assert_eq!(report.inventory.signature_files.len(), 2);
     assert!(report
         .findings
@@ -242,6 +251,23 @@ fn invalid_project_path_stays_inside_report() {
             .map(|finding| finding.severity),
         Some(Severity::Blocker)
     );
+}
+
+#[test]
+fn signing_block_absence_is_reported_without_a_blocker() {
+    let report = audit_path(fixture("minimal-release.apk"))
+        .expect("fixture should remain auditable");
+
+    assert_eq!(
+        report
+            .findings
+            .iter()
+            .find(|finding| finding.rule_id == "SIGNING-002")
+            .map(|finding| finding.severity),
+        Some(Severity::Warning)
+    );
+    assert!(report.inventory.apk_signing.is_none());
+    assert!(report.inventory.apk_signing_error.is_none());
 }
 
 #[test]
