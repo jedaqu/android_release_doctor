@@ -6,9 +6,11 @@ on:
       - main
       - m0-foundation
       - m05-package-alignment
+      - m06-block2-signing-evidence
       - m05-crypto-signatures
       - m06-block1-state-hardening
       - m06-block2-signing-evidence
+      - m06-block3-verification-hardening
   pull_request:
     branches:
       - main
