@@ -1077,7 +1077,7 @@ fn evaluate(
             (Some(_), None) => findings.push(Finding::warning(
                 "SIGNING-002",
                 "APK signing block",
-                "An APK signing block is present, but no supported v2/v3 signing scheme block was detected.",
+                "An APK signing block is present, but no supported v2/v3/v3.1/v3.2 signing scheme block was detected.",
                 "Verify the APK signing scheme with apksigner and publish only the intended signed release artifact.",
             )),
             (None, None) => findings.push(Finding::warning(
