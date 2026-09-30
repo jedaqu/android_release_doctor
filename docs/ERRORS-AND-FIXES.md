@@ -144,22 +144,22 @@ This file is the chronological engineering ledger for failures, errors, their ro
 - **Required correction:** Replace the expression with merge_scheme_results("v3", results).
 - **Correction:** Applied the one-line return-expression correction only; no logic, API, or unrelated formatting changes.
 - **Correction commit:** 9126fd8d20fc49d410f640c345da15f3529a9f49
-- **Validation:** Awaiting the next complete Build/Test/Format/Clippy Actions run.
-- **Status:** CORRECTED — VALIDATION PENDING
+- **Validation:** Actions run #184 / 36745400537 passed Build, Test, Format, and Clippy.
+- **Status:** RESOLVED
 
 ---
 
 ## Current validation state
 
-ERR-015 has been corrected in commit 9126fd8d20fc49d410f640c345da15f3529a9f49.
+ERR-015 was corrected in commit 9126fd8d20fc49d410f640c345da15f3529a9f49.
 
-The latest completed validation run remains #173 / 36743785845:
+Actions run #184 / 36745400537 completed successfully:
 - Build: PASS
 - Test: PASS
 - Format: PASS
-- Clippy: FAIL due to ERR-015
+- Clippy: PASS
 
-A new complete Build/Test/Format/Clippy Actions run is required. M0.6 Block 3 is not yet checkpointed.
+The Block 3 code is therefore fully validated at this point. The branch is ready for the M0.6 Block 3 checkpoint; the PR remains unmerged.
 
 ## Maintenance rule
 
