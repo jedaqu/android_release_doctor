@@ -2,7 +2,7 @@
 
 Open-source, local-first tool for auditing Android APK and AAB releases before publication.
 
-> **Status:** early development — M0.6 Block 3 in progress (v3 verification hardening).
+> **Status:** early development — M0.6 Block 4 in progress (signer verification isolation and evidence hardening).
 
 Android Release Doctor inspects the **artifact you are actually going to distribute**, can compare it with the Android application Gradle configuration, and can apply a versioned Google Play submission-readiness profile.
 
