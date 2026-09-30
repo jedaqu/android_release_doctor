@@ -133,7 +133,6 @@ fn reports_manifest_parse_error_in_the_audit_report() {
     fs::remove_file(path).expect("temporary APK should be removed");
 }
 
-
 #[test]
 fn cross_checks_gradle_groovy_against_apk_artifact() {
     let report = audit_path_with_project(
