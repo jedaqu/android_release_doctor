@@ -591,7 +591,9 @@ fn inspect_archive<R: Read + io::Seek>(
     }
 
     inventory.native_abis.sort();
-    inventory.native_libraries.sort_by(|left, right| left.path.cmp(&right.path));
+    inventory
+        .native_libraries
+        .sort_by(|left, right| left.path.cmp(&right.path));
     inventory.signature_files.sort();
     inventory.dex_files.sort();
     inventory.entries.sort();
@@ -827,7 +829,11 @@ fn evaluate(
         ));
     }
 
-    if inventory.native_libraries.iter().any(|library| library.error.is_some()) {
+    if inventory
+        .native_libraries
+        .iter()
+        .any(|library| library.error.is_some())
+    {
         let paths = inventory
             .native_libraries
             .iter()
@@ -852,9 +858,7 @@ fn evaluate(
         let incompatible = inventory
             .native_libraries
             .iter()
-            .filter(|library| {
-                !load_segments_are_16kb_aligned(&library.load_segment_alignments)
-            })
+            .filter(|library| !load_segments_are_16kb_aligned(&library.load_segment_alignments))
             .collect::<Vec<_>>();
 
         if incompatible.is_empty() {
