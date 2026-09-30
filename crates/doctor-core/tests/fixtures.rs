@@ -87,7 +87,6 @@ fn audits_minimal_aab_fixture() {
         .all(|finding| finding.severity != Severity::Blocker));
 }
 
-
 #[test]
 fn reports_manifest_parse_error_in_the_audit_report() {
     let path = std::env::temp_dir().join(format!(
