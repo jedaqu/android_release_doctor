@@ -25,7 +25,7 @@ pub fn classify_compression(method: CompressionMethod) -> NativeZipCompression {
 }
 
 pub fn is_16kb_aligned(data_offset: u64) -> bool {
-    data_offset % ZIP_ALIGNMENT_16KB == 0
+    data_offset.is_multiple_of(ZIP_ALIGNMENT_16KB)
 }
 
 #[cfg(test)]
