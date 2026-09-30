@@ -256,6 +256,110 @@ fn invalid_project_path_stays_inside_report() {
     );
 }
 
+fn native_zip_fixture(name: &str, compression: CompressionMethod, alignment: Option<u16>) -> PathBuf {
+    let path = std::env::temp_dir().join(format!(
+        "android-release-doctor-{name}-{}.apk",
+        std::process::id()
+    ));
+
+    let file = File::create(&path).expect("temporary APK should be created");
+    let mut archive = ZipWriter::new(file);
+
+    let mut options = SimpleFileOptions::default().compression_method(compression);
+    if let Some(alignment) = alignment {
+        options = options.with_alignment(alignment);
+    }
+
+    archive
+        .start_file("lib/arm64-v8a/libdemo.so", options)
+        .expect("native library entry should be created");
+    archive
+        .write_all(b"not-an-elf")
+        .expect("native library bytes should be written");
+    archive.finish().expect("temporary APK should be finalized");
+
+    path
+}
+
+#[test]
+fn reports_uncompressed_native_zip_alignment_when_misaligned() {
+    let path = native_zip_fixture("native-zip-misaligned", CompressionMethod::Stored, None);
+
+    let report = audit_path(&path).expect("stored native fixture should parse");
+    assert_eq!(report.inventory.native_zip_entries.len(), 1);
+
+    let entry = &report.inventory.native_zip_entries[0];
+    assert_eq!(entry.compression, doctor_core::NativeZipCompression::Stored);
+    assert_eq!(entry.alignment_16kb, Some(false));
+    assert!(entry.data_offset.is_some());
+
+    assert_eq!(
+        report
+            .findings
+            .iter()
+            .find(|finding| finding.rule_id == "NATIVE-003")
+            .map(|finding| finding.severity),
+        Some(Severity::Warning)
+    );
+
+    fs::remove_file(path).expect("temporary APK should be removed");
+}
+
+#[test]
+fn reports_uncompressed_native_zip_alignment_when_aligned() {
+    let path = native_zip_fixture(
+        "native-zip-aligned",
+        CompressionMethod::Stored,
+        Some(doctor_core::ZIP_ALIGNMENT_16KB as u16),
+    );
+
+    let report = audit_path(&path).expect("aligned stored native fixture should parse");
+    assert_eq!(report.inventory.native_zip_entries.len(), 1);
+
+    let entry = &report.inventory.native_zip_entries[0];
+    assert_eq!(entry.compression, doctor_core::NativeZipCompression::Stored);
+    assert_eq!(entry.alignment_16kb, Some(true));
+    assert_eq!(entry.data_offset, Some(doctor_core::ZIP_ALIGNMENT_16KB));
+
+    assert_eq!(
+        report
+            .findings
+            .iter()
+            .find(|finding| finding.rule_id == "NATIVE-003")
+            .map(|finding| finding.severity),
+        Some(Severity::Pass)
+    );
+
+    fs::remove_file(path).expect("temporary APK should be removed");
+}
+
+#[test]
+fn compressed_native_library_does_not_require_zip_offset_alignment() {
+    let path = native_zip_fixture("native-zip-compressed", CompressionMethod::Deflated, None);
+
+    let report = audit_path(&path).expect("compressed native fixture should parse");
+    assert_eq!(report.inventory.native_zip_entries.len(), 1);
+
+    let entry = &report.inventory.native_zip_entries[0];
+    assert_eq!(
+        entry.compression,
+        doctor_core::NativeZipCompression::Compressed
+    );
+    assert_eq!(entry.alignment_16kb, None);
+    assert!(entry.error.is_none());
+
+    assert_eq!(
+        report
+            .findings
+            .iter()
+            .find(|finding| finding.rule_id == "NATIVE-003")
+            .map(|finding| finding.severity),
+        Some(Severity::Pass)
+    );
+
+    fs::remove_file(path).expect("temporary APK should be removed");
+}
+
 #[test]
 fn signing_block_absence_is_reported_without_a_blocker() {
     let report =
