@@ -385,6 +385,14 @@ fn valid_v2_fixture_produces_verified_signing_finding() {
         report
             .findings
             .iter()
+            .find(|finding| finding.rule_id == "SIGNING-001")
+            .map(|finding| finding.severity),
+        Some(Severity::Pass)
+    );
+    assert_eq!(
+        report
+            .findings
+            .iter()
             .find(|finding| finding.rule_id == "SIGNING-003")
             .map(|finding| finding.severity),
         Some(Severity::Pass)
@@ -433,6 +441,14 @@ fn valid_v3_fixture_produces_verified_signing_finding() {
     let report = audit_path(fixture("crypto-v3-release.apk"))
         .expect("valid v3 crypto fixture should remain auditable");
 
+    assert_eq!(
+        report
+            .findings
+            .iter()
+            .find(|finding| finding.rule_id == "SIGNING-001")
+            .map(|finding| finding.severity),
+        Some(Severity::Pass)
+    );
     assert_eq!(
         report
             .findings
@@ -517,7 +533,7 @@ fn play_mobile_profile_flags_existing_fixture_target_api() {
             .iter()
             .find(|finding| finding.rule_id == "PLAY-002")
             .map(|finding| finding.severity),
-        Some(Severity::Warning)
+        Some(Severity::ManualReview)
     );
     assert_eq!(
         report
@@ -525,7 +541,7 @@ fn play_mobile_profile_flags_existing_fixture_target_api() {
             .iter()
             .find(|finding| finding.rule_id == "PLAY-003")
             .map(|finding| finding.severity),
-        Some(Severity::Warning)
+        Some(Severity::ManualReview)
     );
     assert_eq!(
         report
@@ -533,7 +549,7 @@ fn play_mobile_profile_flags_existing_fixture_target_api() {
             .iter()
             .find(|finding| finding.rule_id == "PLAY-004")
             .map(|finding| finding.severity),
-        Some(Severity::Warning)
+        Some(Severity::ManualReview)
     );
     assert_eq!(
         report
@@ -541,6 +557,6 @@ fn play_mobile_profile_flags_existing_fixture_target_api() {
             .iter()
             .find(|finding| finding.rule_id == "PLAY-005")
             .map(|finding| finding.severity),
-        Some(Severity::Warning)
+        Some(Severity::ManualReview)
     );
 }
