@@ -49,7 +49,37 @@ Policy profile version: `2026-08-31`
 | `PLAY-002` | Manual Data Safety review item; the binary cannot prove the Play Console declaration. |
 | `PLAY-003` | Manual privacy-policy review item; the binary cannot prove URL validity or policy completeness. |
 | `PLAY-004` | Manual Play Console App content/declaration review item, including ads and applicable access/content declarations. |
-| `PLAY-005` | Check whether native payloads require 16 KB page-size compatibility review; detailed ELF alignment inspection is deferred. |
+| `PLAY-005` | Check native ELF 16 KB load-segment alignment against the applicable API requirement; parsing failures remain manual-review warnings. |
+
+### M0.4 artifact rules
+
+| ID | Purpose |
+| --- | --- |
+| `NATIVE-002` | Inspect every packaged `.so` ELF PT_LOAD `p_align` value. Report a pass when all inspected load segments meet 16 KB alignment, or a warning when the ELF cannot be parsed or an alignment below 16 KB is found outside the API 35+ Play blocker path. |
+| `SIGNING-002` | Inspect APK signing-block structure, including placement, magic, size consistency, and supported v2/v3 IDs. This is structural evidence only; cryptographic signature verification is deferred. |
+
+### M0.4 signing coverage
+
+The APK signing-block parser recognizes:
+
+| Scheme | Block ID |
+| --- | --- |
+| v2 | `0x7109871a` |
+| v3 | `0xf05368c0` |
+
+AABs do not use the APK signing block, so `SIGNING-002` is not applied to them. M0.4 also continues to report existing `META-INF` signature metadata through `SIGNING-001`.
+
+### M0.4 16 KB boundary
+
+`PLAY-005` uses the final artifact evidence collected by `NATIVE-002`:
+
+- no native `.so`: pass;
+- native ELF cannot be parsed: warning/manual review;
+- API 35+ target with confirmed PT_LOAD alignment below 16 KB: blocker;
+- API 35+ target with all inspected PT_LOAD alignments at or above 16 KB: pass;
+- target below API 35 with a confirmed alignment below 16 KB: warning.
+
+M0.4 does not yet verify ZIP entry alignment for uncompressed native libraries, so it does not claim complete end-to-end 16 KB packaging compatibility.
 
 ### M0.3 platform matrix
 
