@@ -8,7 +8,9 @@ use std::{
 use zip::ZipArchive;
 
 pub mod axml;
+pub mod project;
 pub use axml::{ComponentInfo, ManifestInfo};
+pub use project::{parse_project, GradleSyntax, ProjectInfo};
 
 pub const ENGINE_VERSION: &str = "0.1.0";
 
@@ -112,6 +114,8 @@ pub struct AuditReport {
     pub inventory: ArtifactInventory,
     pub manifest: Option<ManifestInfo>,
     pub manifest_error: Option<String>,
+    pub project: Option<ProjectInfo>,
+    pub project_error: Option<String>,
     pub findings: Vec<Finding>,
 }
 
@@ -219,6 +223,92 @@ impl AuditReport {
 
 ",
                 manifest.components.len()
+            ));
+        }
+
+        if let Some(error) = &self.project_error {
+            out.push_str(
+                "Project
+",
+            );
+            out.push_str(&format!(
+                "  Parse error: {}
+
+",
+                error
+            ));
+        }
+
+        if let Some(project) = &self.project {
+            out.push_str(
+                "Project
+",
+            );
+            out.push_str(&format!(
+                "  Syntax: {}
+",
+                project.syntax.as_str()
+            ));
+            out.push_str(&format!(
+                "  Build file: {}
+",
+                project.build_file.display()
+            ));
+            out.push_str(&format!(
+                "  Module: {}
+",
+                project.module_name
+            ));
+            out.push_str(&format!(
+                "  Namespace: {}
+",
+                project.namespace.as_deref().unwrap_or("<missing>")
+            ));
+            out.push_str(&format!(
+                "  Application ID: {}
+",
+                project.application_id.as_deref().unwrap_or("<missing>")
+            ));
+            out.push_str(&format!(
+                "  compileSdk: {}
+",
+                project
+                    .compile_sdk
+                    .map_or_else(|| "<missing>".to_string(), |value| value.to_string())
+            ));
+            out.push_str(&format!(
+                "  minSdk: {}
+",
+                project
+                    .min_sdk
+                    .map_or_else(|| "<missing>".to_string(), |value| value.to_string())
+            ));
+            out.push_str(&format!(
+                "  targetSdk: {}
+",
+                project
+                    .target_sdk
+                    .map_or_else(|| "<missing>".to_string(), |value| value.to_string())
+            ));
+            out.push_str(&format!(
+                "  Version code: {}
+",
+                project
+                    .version_code
+                    .map_or_else(|| "<missing>".to_string(), |value| value.to_string())
+            ));
+            out.push_str(&format!(
+                "  Version name: {}
+",
+                project.version_name.as_deref().unwrap_or("<missing>")
+            ));
+            out.push_str(&format!(
+                "  Release debuggable: {}
+
+",
+                project
+                    .release_debuggable
+                    .map_or_else(|| "<missing>".to_string(), |value| value.to_string())
             ));
         }
 
@@ -341,8 +431,37 @@ pub fn audit_path(path: impl AsRef<Path>) -> Result<AuditReport, AuditError> {
         inventory,
         manifest,
         manifest_error,
+        project: None,
+        project_error: None,
         findings,
     })
+}
+
+pub fn audit_path_with_project(
+    artifact_path: impl AsRef<Path>,
+    project_path: impl AsRef<Path>,
+) -> Result<AuditReport, AuditError> {
+    let mut report = audit_path(artifact_path)?;
+
+    match project::parse_project(project_path) {
+        Ok(project) => {
+            report
+                .findings
+                .extend(evaluate_project_crosscheck(report.manifest.as_ref(), &project));
+            report.project = Some(project);
+        }
+        Err(error) => {
+            report.project_error = Some(error.to_string());
+            report.findings.push(Finding::blocker(
+                "PROJECT-001",
+                "Project configuration unavailable",
+                format!("The Android application Gradle configuration could not be parsed: {error}"),
+                "Point --project at the Android application module containing a supported build.gradle or build.gradle.kts file.",
+            ));
+        }
+    }
+
+    Ok(report)
 }
 
 fn artifact_kind(path: &Path) -> Option<ArtifactKind> {
@@ -641,6 +760,203 @@ fn evaluate(
     }
 
     findings
+}
+
+
+fn evaluate_project_crosscheck(
+    manifest: Option<&ManifestInfo>,
+    project: &ProjectInfo,
+) -> Vec<Finding> {
+    let mut findings = vec![Finding::pass(
+        "PROJECT-001",
+        "Project configuration",
+        format!(
+            "Loaded {} Android application Gradle configuration from {}.",
+            project.syntax.as_str(),
+            project.build_file.display()
+        ),
+    )];
+
+    let Some(manifest) = manifest else {
+        findings.push(Finding::warning(
+            "CROSSCHECK-000",
+            "Project/artifact comparison skipped",
+            "The project configuration was parsed, but the final artifact manifest is unavailable.",
+            "Resolve the artifact manifest findings before relying on project-vs-artifact comparison.",
+        ));
+        return findings;
+    };
+
+    match (&project.application_id, &manifest.package_name) {
+        (Some(project_id), Some(artifact_id)) if project_id == artifact_id => findings.push(
+            Finding::pass(
+                "CROSSCHECK-001",
+                "Application ID match",
+                format!("Project applicationId and artifact package are both {artifact_id}."),
+            ),
+        ),
+        (Some(project_id), Some(artifact_id)) => findings.push(Finding::blocker(
+            "CROSSCHECK-001",
+            "Application ID mismatch",
+            format!(
+                "Project defaultConfig declares applicationId {project_id}, but the artifact package is {artifact_id}."
+            ),
+            "Build and audit the artifact produced by the intended Android application module and release variant.",
+        )),
+        _ => findings.push(Finding::warning(
+            "CROSSCHECK-001",
+            "Application ID not comparable",
+            "The project or artifact does not expose a comparable application identity.",
+            "Ensure defaultConfig contains a literal applicationId and the artifact manifest contains its final package identity.",
+        )),
+    }
+
+    compare_sdk(
+        &mut findings,
+        "CROSSCHECK-002",
+        "targetSdk match",
+        project.target_sdk,
+        manifest.target_sdk,
+        true,
+        "Build the release from the intended project configuration and audit the resulting artifact.",
+    );
+    compare_sdk(
+        &mut findings,
+        "CROSSCHECK-003",
+        "minSdk match",
+        project.min_sdk,
+        manifest.min_sdk,
+        false,
+        "Review variant or flavor configuration and rebuild the release artifact.",
+    );
+
+    match (project.version_code, manifest.version_code) {
+        (Some(project_value), Some(artifact_value)) if project_value == artifact_value => {
+            findings.push(Finding::pass(
+                "CROSSCHECK-004",
+                "Version code match",
+                format!("Project versionCode and artifact versionCode are both {artifact_value}."),
+            ));
+        }
+        (Some(project_value), Some(artifact_value)) => findings.push(Finding::warning(
+            "CROSSCHECK-004",
+            "Version code mismatch",
+            format!(
+                "Project defaultConfig declares versionCode {project_value}, but the artifact contains {artifact_value}."
+            ),
+            "Verify that no variant-specific or CI override changed the final release versionCode unexpectedly.",
+        )),
+        _ => findings.push(Finding::warning(
+            "CROSSCHECK-004",
+            "Version code not comparable",
+            "The project or artifact does not expose a comparable versionCode.",
+            "Use a literal defaultConfig versionCode when static project-vs-artifact comparison is required.",
+        )),
+    }
+
+    match (&project.version_name, &manifest.version_name) {
+        (Some(project_value), Some(artifact_value)) if project_value == artifact_value => {
+            findings.push(Finding::pass(
+                "CROSSCHECK-005",
+                "Version name match",
+                format!("Project versionName and artifact versionName are both {artifact_value}."),
+            ));
+        }
+        (Some(project_value), Some(artifact_value)) => findings.push(Finding::warning(
+            "CROSSCHECK-005",
+            "Version name mismatch",
+            format!(
+                "Project defaultConfig declares versionName {project_value}, but the artifact contains {artifact_value}."
+            ),
+            "Verify that no variant-specific or CI override changed the final release versionName unexpectedly.",
+        )),
+        _ => findings.push(Finding::warning(
+            "CROSSCHECK-005",
+            "Version name not comparable",
+            "The project or artifact does not expose a comparable versionName.",
+            "Use a literal defaultConfig versionName when static project-vs-artifact comparison is required.",
+        )),
+    }
+
+    match (project.release_debuggable, manifest.debuggable.unwrap_or(false)) {
+        (Some(project_value), artifact_value) if project_value == artifact_value => findings.push(
+            Finding::pass(
+                "CROSSCHECK-006",
+                "Release debuggable match",
+                format!(
+                    "Project release configuration and the artifact both evaluate android:debuggable to {artifact_value}."
+                ),
+            ),
+        ),
+        (Some(true), false) => findings.push(Finding::blocker(
+            "CROSSCHECK-006",
+            "Release debuggable mismatch",
+            "The project release configuration enables debuggable, while the audited artifact is non-debuggable.",
+            "Verify the release build type and ensure the project configuration being audited matches the artifact you intend to publish.",
+        )),
+        (Some(false), true) => findings.push(Finding::blocker(
+            "CROSSCHECK-006",
+            "Release debuggable mismatch",
+            "The project release configuration disables debuggable, while the audited artifact is debuggable.",
+            "Do not publish the artifact until the intended release configuration produces a non-debuggable artifact.",
+        )),
+        (None, _) => findings.push(Finding::warning(
+            "CROSSCHECK-006",
+            "Release debuggable not declared",
+            "The parsed release build type does not contain an explicit debuggable/isDebuggable value.",
+            "Use an explicit non-debuggable release configuration when static project-vs-artifact comparison is required.",
+        )),
+    }
+
+    findings
+}
+
+fn compare_sdk(
+    findings: &mut Vec<Finding>,
+    rule_id: &'static str,
+    title: &'static str,
+    project_value: Option<u32>,
+    artifact_value: Option<u32>,
+    mismatch_is_blocker: bool,
+    remediation: &'static str,
+) {
+    match (project_value, artifact_value) {
+        (Some(project_value), Some(artifact_value)) if project_value == artifact_value => {
+            findings.push(Finding::pass(
+                rule_id,
+                title,
+                format!(
+                    "Project and artifact both declare SDK level {artifact_value}."
+                ),
+            ));
+        }
+        (Some(project_value), Some(artifact_value)) => {
+            let message = format!(
+                "Project declares SDK level {project_value}, but the artifact contains {artifact_value}."
+            );
+            if mismatch_is_blocker {
+                findings.push(Finding::blocker(
+                    rule_id,
+                    title,
+                    message,
+                    remediation,
+                ));
+            } else {
+                findings.push(Finding::warning(
+                    rule_id,
+                    title,
+                    message,
+                    remediation,
+                ));
+            }
+        }
+        _ => findings.push(Finding::warning(
+            rule_id,
+            title,
+            "The project or artifact does not expose a comparable SDK level.",
+            "Use literal Gradle SDK declarations when static project-vs-artifact comparison is required.",
+        )),
+    }
 }
 
 #[cfg(test)]
