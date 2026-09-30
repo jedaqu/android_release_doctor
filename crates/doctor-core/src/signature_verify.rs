@@ -493,7 +493,7 @@ fn verify_signature_bytes(
             &signature::RSA_PSS_2048_8192_SHA256
         }
         0x0102 => {
-            let PublicKey::RSA(rsa) = parsed_public_key else {
+            let PublicKey::RSA(rsa) = &parsed_public_key else {
                 return Err(SignatureVerificationError(
                     "RSA signature algorithm is paired with a non-RSA signer public key".to_string(),
                 ));
@@ -507,7 +507,7 @@ fn verify_signature_bytes(
             &signature::RSA_PSS_2048_8192_SHA512
         }
         0x0103 => {
-            let PublicKey::RSA(rsa) = parsed_public_key else {
+            let PublicKey::RSA(rsa) = &parsed_public_key else {
                 return Err(SignatureVerificationError(
                     "RSA signature algorithm is paired with a non-RSA signer public key".to_string(),
                 ));
@@ -521,7 +521,7 @@ fn verify_signature_bytes(
             &signature::RSA_PKCS1_2048_8192_SHA256
         }
         0x0104 => {
-            let PublicKey::RSA(rsa) = parsed_public_key else {
+            let PublicKey::RSA(rsa) = &parsed_public_key else {
                 return Err(SignatureVerificationError(
                     "RSA signature algorithm is paired with a non-RSA signer public key".to_string(),
                 ));
