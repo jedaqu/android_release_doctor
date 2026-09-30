@@ -446,3 +446,16 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Validation:** Actions run #297 / 36779970794 passed Build but failed three focused crypto tests; 62 tests passed and the three failures were the malformed fixture/direct-signature cases described above.
 - **Status:** OPEN
 
+
+## ERR-042 — M0.7 Block 1 rustfmt failure
+
+- **Milestone:** M0.7 Block 1 / implementation validation
+- **Type:** CI formatting failure
+- **Actions run:** #300 / 36781123329
+- **Problem:** `cargo fmt --all -- --check` reported three deterministic layout differences in the new ECDSA/SHA-512 implementation.
+- **Cause:** The implementation was logically valid, but the new import grouping and two long error expressions had not yet been formatted by rustfmt.
+- **Correction:** Apply only the rustfmt-indicated import grouping and line wrapping; no logic or test behavior changes.
+- **Correction commit pending:** current follow-up formatting commit
+- **Validation:** Actions run #300 / 36781123329 passed Build and Test (65 unit tests + 16 integration tests) and failed only Format on the three reported layout differences.
+- **Status:** OPEN
+

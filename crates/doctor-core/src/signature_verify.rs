@@ -5,8 +5,7 @@ use std::{
 };
 
 use p384::ecdsa::{
-    signature::hazmat::PrehashVerifier,
-    Signature as P384Signature,
+    signature::hazmat::PrehashVerifier, Signature as P384Signature,
     VerifyingKey as P384VerifyingKey,
 };
 use ring::{
@@ -742,9 +741,7 @@ fn verify_signature_bytes(
             ))
         })?;
         let signature = P384Signature::from_der(signature_bytes).map_err(|error| {
-            SignatureVerificationError(format!(
-                "ECDSA SHA-512 signature is not valid DER: {error}"
-            ))
+            SignatureVerificationError(format!("ECDSA SHA-512 signature is not valid DER: {error}"))
         })?;
         let prehash = Sha512::digest(signed_data);
         PrehashVerifier::<P384Signature>::verify_prehash(
@@ -754,8 +751,7 @@ fn verify_signature_bytes(
         )
         .map_err(|_| {
             SignatureVerificationError(
-                "cryptographic signature verification failed for algorithm 0x00000202"
-                    .to_string(),
+                "cryptographic signature verification failed for algorithm 0x00000202".to_string(),
             )
         })?;
         return Ok(());
