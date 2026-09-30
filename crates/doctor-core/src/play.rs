@@ -168,7 +168,10 @@ pub fn evaluate_play_policy(
                                 "{} [{}]: {}",
                                 entry.path,
                                 entry.abi,
-                                entry.error.as_deref().unwrap_or("unknown ZIP alignment state")
+                                entry
+                                    .error
+                                    .as_deref()
+                                    .unwrap_or("unknown ZIP alignment state")
                             )
                         })
                         .collect::<Vec<_>>()
