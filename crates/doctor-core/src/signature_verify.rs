@@ -691,8 +691,7 @@ fn compute_apk_content_digest(
                 .to_string(),
         )
     })?;
-    eocd[eocd_offset_field..eocd_offset_field + 4]
-        .copy_from_slice(&signed_cd_offset.to_le_bytes());
+    eocd[eocd_offset_field..eocd_offset_field + 4].copy_from_slice(&signed_cd_offset.to_le_bytes());
 
     if !eocd.is_empty() {
         chunk_digests.push(hash_chunk(digest_algorithm, &eocd));
