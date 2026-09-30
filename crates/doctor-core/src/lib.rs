@@ -1025,7 +1025,7 @@ fn evaluate(
             "SIGNING-001",
             "Signature material",
             "No META-INF signature files were found.",
-            "Use a signed release artifact. Cryptographic signature validation will be added in a later rule set.",
+            "Use a signed release artifact. APK v2/v3 cryptographic verification is reported separately by SIGNING-003.",
         ));
     } else {
         findings.push(Finding::pass(
