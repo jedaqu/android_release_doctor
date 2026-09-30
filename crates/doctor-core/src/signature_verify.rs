@@ -5,10 +5,10 @@ use std::{
 };
 
 use ring::{
-    constant_time,
     digest,
     signature::{self, UnparsedPublicKey},
 };
+use subtle::ConstantTimeEq;
 use x509_parser::{certificate::X509Certificate, public_key::PublicKey, prelude::FromDer};
 
 use crate::signing::{read_apk_signing_block, ApkSigningBlock, SigningBlockError};
@@ -434,10 +434,10 @@ fn verify_signature_bytes(
     }
 
     let algorithm: &dyn signature::VerificationAlgorithm = match algorithm_id {
-        0x0101 => &signature::RSA_PSS_SHA256,
-        0x0102 => &signature::RSA_PSS_SHA512,
-        0x0103 => &signature::RSA_PKCS1_SHA256,
-        0x0104 => &signature::RSA_PKCS1_SHA512,
+        0x0101 => &signature::RSA_PSS_2048_8192_SHA256,
+        0x0102 => &signature::RSA_PSS_2048_8192_SHA512,
+        0x0103 => &signature::RSA_PKCS1_2048_8192_SHA256,
+        0x0104 => &signature::RSA_PKCS1_2048_8192_SHA512,
         0x0201 => &signature::ECDSA_P256_SHA256_ASN1,
         _ => {
             return Err(SignatureVerificationError(format!(
@@ -449,7 +449,7 @@ fn verify_signature_bytes(
     let key_bytes = match cert.public_key().parsed().map_err(|error| {
         SignatureVerificationError(format!("failed to parse signer public key: {error}"))
     })? {
-        PublicKey::RSA(rsa) => encode_rsa_public_key(rsa.modulus, rsa.exponent)?,
+        PublicKey::RSA(rsa) => encode_rsa_public_key(rsa.modulus, rsa.exponent),
         PublicKey::EC(_) => cert.public_key().subject_public_key.data.to_vec(),
         _ => {
             return Err(SignatureVerificationError(
@@ -549,7 +549,7 @@ fn parse_signed_data_v2(bytes: &[u8]) -> Result<ParsedSignedData<'_>, SignatureV
     certificates_reader.finish("v2 certificate sequence")?;
 
     Ok(ParsedSignedData {
-        digests: selected_digest.1,
+        digests: selected_digest,
         digest_algorithms,
         certificate,
     })
@@ -585,7 +585,7 @@ fn parse_signed_data_v3(
     attributes_reader.finish("v3 additional attributes")?;
 
     Ok(ParsedV3SignedData {
-        digests: selected_digest.0,
+        digests: selected_digest,
         digest_algorithms,
         certificate,
         min_sdk,
@@ -651,12 +651,13 @@ fn verify_content_digest(
     algorithm: DigestAlgorithm,
 ) -> Result<(), SignatureVerificationError> {
     let actual = compute_apk_content_digest(file, block, algorithm)?;
-    constant_time::verify_slices_are_equal(&actual, expected_digest).map_err(|_| {
-        SignatureVerificationError(format!(
+    if actual.as_slice().ct_eq(expected_digest).unwrap_u8() != 1 {
+        return Err(SignatureVerificationError(format!(
             "APK content digest mismatch for {:?}",
             algorithm
-        ))
-    })
+        )));
+    }
+    Ok(())
 }
 
 fn compute_apk_content_digest(
