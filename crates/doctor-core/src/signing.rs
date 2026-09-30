@@ -32,9 +32,7 @@ impl std::error::Error for SigningBlockError {}
 pub fn inspect_apk_signing_block<R: Read + Seek>(
     reader: &mut R,
 ) -> Result<Option<ApkSigningInfo>, SigningBlockError> {
-    let file_len = reader
-        .seek(SeekFrom::End(0))
-        .map_err(io_error)?;
+    let file_len = reader.seek(SeekFrom::End(0)).map_err(io_error)?;
 
     if file_len < EOCD_LEN {
         return Err(SigningBlockError(
@@ -65,9 +63,7 @@ pub fn inspect_apk_signing_block<R: Read + Seek>(
 
     let central_directory_offset = central_directory_offset as u64;
 
-    if central_directory_offset < SIGNING_BLOCK_FOOTER_LEN
-        || central_directory_offset > file_len
-    {
+    if central_directory_offset < SIGNING_BLOCK_FOOTER_LEN || central_directory_offset > file_len {
         return Err(SigningBlockError(
             "APK central-directory offset is outside the file".to_string(),
         ));
@@ -110,9 +106,7 @@ pub fn inspect_apk_signing_block<R: Read + Seek>(
         .map_err(io_error)?;
 
     let mut leading_size = [0_u8; 8];
-    reader
-        .read_exact(&mut leading_size)
-        .map_err(io_error)?;
+    reader.read_exact(&mut leading_size).map_err(io_error)?;
     let leading_size = u64::from_le_bytes(leading_size);
 
     if leading_size != block_size {
@@ -138,9 +132,7 @@ pub fn inspect_apk_signing_block<R: Read + Seek>(
 
         reader.seek(SeekFrom::Start(cursor)).map_err(io_error)?;
         let mut pair_size_bytes = [0_u8; 8];
-        reader
-            .read_exact(&mut pair_size_bytes)
-            .map_err(io_error)?;
+        reader.read_exact(&mut pair_size_bytes).map_err(io_error)?;
         let pair_size = u64::from_le_bytes(pair_size_bytes);
 
         if pair_size < 4 || pair_size > pairs_end - cursor - 8 {
@@ -193,7 +185,9 @@ fn find_eocd(tail: &[u8]) -> Option<usize> {
 }
 
 fn io_error(error: io::Error) -> SigningBlockError {
-    SigningBlockError(format!("I/O error while reading APK signing block: {error}"))
+    SigningBlockError(format!(
+        "I/O error while reading APK signing block: {error}"
+    ))
 }
 
 #[cfg(test)]
@@ -204,9 +198,12 @@ mod tests {
     fn synthetic_apk(with_v2: bool, with_v3: bool, malformed_size: bool) -> Vec<u8> {
         let mut pairs = Vec::new();
 
-        for id in [with_v2.then_some(V2_BLOCK_ID), with_v3.then_some(V3_BLOCK_ID)]
-            .into_iter()
-            .flatten()
+        for id in [
+            with_v2.then_some(V2_BLOCK_ID),
+            with_v3.then_some(V3_BLOCK_ID),
+        ]
+        .into_iter()
+        .flatten()
         {
             let pair_size = 4_u64;
             pairs.extend_from_slice(&pair_size.to_le_bytes());
@@ -221,9 +218,7 @@ mod tests {
         };
 
         let mut apk = vec![0x41; 128];
-        let central_directory_offset = apk.len() as u64
-            + 8
-            + block_size;
+        let central_directory_offset = apk.len() as u64 + 8 + block_size;
 
         apk.extend_from_slice(&stored_block_size.to_le_bytes());
         apk.extend_from_slice(&pairs);
@@ -286,10 +281,8 @@ mod tests {
         let error = inspect_apk_signing_block(&mut cursor)
             .expect_err("mismatched signing block sizes should fail");
 
-        assert!(
-            error
-                .to_string()
-                .contains("leading and trailing size fields differ")
-        );
+        assert!(error
+            .to_string()
+            .contains("leading and trailing size fields differ"));
     }
 }
