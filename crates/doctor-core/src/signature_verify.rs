@@ -1011,8 +1011,9 @@ mod tests {
         signed_data.extend_from_slice(&1_u32.to_le_bytes());
         signed_data.extend_from_slice(&encode_sequence(&[]));
 
-        let error =
-            parse_signed_data_v3(&signed_data).expect_err("reversed SDK range should fail");
+        let result = parse_signed_data_v3(&signed_data);
+        assert!(result.is_err());
+        let error = result.err().expect("reversed SDK range should produce an error");
         assert!(error.to_string().contains("minSDK 100 is greater than maxSDK 1"));
     }
 
