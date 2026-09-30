@@ -191,16 +191,18 @@ fn parses_kotlin_dsl_fixture() {
 
 #[test]
 fn target_sdk_mismatch_is_a_blocker() {
-    let path = std::env::temp_dir().join(format!(
-        "android-release-doctor-project-mismatch-{}-build.gradle",
+    let project_dir = std::env::temp_dir().join(format!(
+        "android-release-doctor-project-mismatch-{}",
         std::process::id()
     ));
+    let build_file = project_dir.join("build.gradle");
     let source = fs::read_to_string(project_fixture("project-release", "build.gradle"))
         .expect("project fixture should be readable");
     let source = source.replace("targetSdk 35", "targetSdk 36");
-    fs::write(&path, source).expect("temporary project build file should be written");
+    fs::create_dir_all(&project_dir).expect("temporary project directory should be created");
+    fs::write(&build_file, source).expect("temporary project build file should be written");
 
-    let report = audit_path_with_project(fixture("minimal-release.apk"), &path)
+    let report = audit_path_with_project(fixture("minimal-release.apk"), &project_dir)
         .expect("project/artifact audit should complete");
 
     assert_eq!(
@@ -212,7 +214,7 @@ fn target_sdk_mismatch_is_a_blocker() {
         Some(Severity::Blocker)
     );
 
-    fs::remove_file(path).expect("temporary project file should be removed");
+    fs::remove_dir_all(project_dir).expect("temporary project directory should be removed");
 }
 
 #[test]
