@@ -247,10 +247,8 @@ fn invalid_project_path_stays_inside_report() {
 
 #[test]
 fn play_mobile_profile_flags_existing_fixture_target_api() {
-    let report = audit_path_with_play(
-        fixture("minimal-release.apk"),
-        PlayPlatform::Mobile,
-    )
+    let report =
+        audit_path_with_play(fixture("minimal-release.apk"), PlayPlatform::Mobile)
     .expect("Play readiness audit should complete");
 
     assert_eq!(
