@@ -56,6 +56,17 @@ Required change:
 
 This block must not claim Android runtime trust semantics beyond what the artifact evidence proves.
 
+### AUDIT-026 — M0.6 Block 5 stacked PR validation is not yet wired for the Block 4 base
+
+The Block 5 source branch is not yet present in the Rust workflow push trigger.
+
+More importantly, the Block 5 PR will target `m06-block4-signer-error-isolation`, while the validated workflow on that base branch does not yet include the Block 4 branch in its `pull_request.branches` filter. As established during Block 4, pull-request branch filters select the PR target/base branch, so the base workflow must explicitly cover the Block 4 target.
+
+Required change:
+- add `m06-block5-verification-completeness` to push coverage;
+- update the validated Block 4 base workflow so `m06-block4-signer-error-isolation` is covered as a pull-request target;
+- do not redesign the CI job graph.
+
 ### AUDIT-025 — proof-of-rotation evidence is not exposed as structured signer evidence
 
 Even when a proof-of-rotation attribute is present, the current `CryptoSchemeInfo` contains only the generic `Unsupported` state and detail text.
@@ -103,7 +114,8 @@ Only these findings are in scope:
 4. expose minimal structured proof-of-rotation verification evidence;
 5. add focused regression fixtures/tests for valid and malformed/invalid rotation evidence;
 6. preserve existing signer isolation and severity semantics;
-7. update only the documentation necessary to describe the new evidence boundary.
+7. update only the documentation necessary to describe the new evidence boundary;
+8. wire the Block 5 source branch into push CI and validate the stacked PR target through the Block 4 base workflow.
 
 ## Out of scope
 
@@ -126,5 +138,6 @@ Only these findings are in scope:
 6. Existing v2/v3 single-signer and multi-signer verification remains green.
 7. Existing SDK-range, signer-count, certificate-fingerprint, and signer-isolation evidence is preserved.
 8. Focused tests cover valid lineage, malformed lineage, invalid lineage signature, and final-certificate mismatch.
-9. The incremental error ledger is updated only for newly discovered defects/corrections during the Block 5 cycle; historical ERR-001 through ERR-023 remain unchanged.
-10. No merge is performed as part of this block.
+9. The Block 5 source branch is covered by push CI and the stacked PR target is covered by the Block 4 base workflow.
+10. The incremental error ledger is updated only for newly discovered defects/corrections during the Block 5 cycle; historical ERR-001 through ERR-023 remain unchanged.
+11. No merge is performed as part of this block.
