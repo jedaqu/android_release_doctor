@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - m0-foundation
+      - m05-package-alignment
   pull_request:
     branches:
       - main
