@@ -1,0 +1,26 @@
+name: Temporary lockfile chunks
+
+on:
+  push:
+    branches:
+      - m05-crypto-signatures
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    strategy:
+      matrix:
+        start: [1, 101, 201, 301, 401, 501, 601, 701, 801, 901]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Emit chunk
+        run: |
+          start=${{ matrix.start }}
+          end=$((start + 99))
+          echo "---LOCK_CHUNK_BEGIN:${start}---"
+          sed -n "${start},${end}p" Cargo.lock
+          echo "---LOCK_CHUNK_END:${start}---"
