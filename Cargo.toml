@@ -12,5 +12,6 @@ version = "0.1.0"
 
 [workspace.dependencies]
 ring = "0.17.14"
+subtle = "2.6.1"
 x509-parser = "0.18.1"
 zip = "2.4"
