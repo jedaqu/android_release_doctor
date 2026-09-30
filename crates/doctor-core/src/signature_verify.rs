@@ -157,11 +157,7 @@ fn verify_v2_signer(
     let algorithms = parsed
         .digest_algorithms
         .clone();
-    if algorithms != selected.all_signature_algorithms {
-
-    let mut algorithms = parsed
-        .digest_algorithms
-        .clone();
+    let algorithms = parsed.digest_algorithms.clone();
     if algorithms != selected.all_signature_algorithms {
         return Err(SignatureVerificationError(
             "v2 digest and signature algorithm ID lists are not identical and ordered equally"
@@ -226,16 +222,6 @@ fn verify_v3_block(
         });
     }
 
-    if parsed.has_proof_of_rotation {
-        return Ok(CryptoSchemeInfo {
-            state: CryptoVerificationState::Unsupported,
-            signer_count: 1,
-            algorithms: parsed.digest_algorithms,
-            detail: "v3 cryptographic verification is available, but proof-of-rotation validation is not implemented yet"
-                .to_string(),
-        });
-    }
-
     let selected = parse_and_select_signature(signatures)?;
     verify_certificate_and_public_key(parsed.certificate, public_key)?;
     verify_signature_bytes(
@@ -258,8 +244,6 @@ fn verify_v3_block(
     verify_content_digest(file, block, expected_digest, selected.digest_algorithm)?;
 
     if parsed.digest_algorithms != selected.all_signature_algorithms {
-
-    if parsed.digest_algorithms != selected.all_signature_algorithms {
         return Ok(CryptoSchemeInfo {
             state: CryptoVerificationState::Invalid,
             signer_count: 1,
@@ -269,14 +253,28 @@ fn verify_v3_block(
         });
     }
 
-    Ok(CryptoSchemeInfo {
-        state: CryptoVerificationState::Verified,
-        signer_count: 1,
-        algorithms: parsed.digest_algorithms,
-        detail: format!(
+    let state = if parsed.has_proof_of_rotation {
+        CryptoVerificationState::Unsupported
+    } else {
+        CryptoVerificationState::Verified
+    };
+    let detail = if parsed.has_proof_of_rotation {
+        format!(
+            "v3 cryptographic signature, certificate/public-key binding, SDK range, and APK content digest verified; proof-of-rotation validation remains pending for SDK range {}..={}",
+            parsed.min_sdk, parsed.max_sdk
+        )
+    } else {
+        format!(
             "v3 signer signature, certificate/public-key binding, SDK range, and APK content digest verified for SDK range {}..={}",
             parsed.min_sdk, parsed.max_sdk
-        ),
+        )
+    };
+
+    Ok(CryptoSchemeInfo {
+        state,
+        signer_count: 1,
+        algorithms: parsed.digest_algorithms,
+        detail,
     })
 }
 
@@ -468,10 +466,7 @@ fn verify_signature_bytes(
     })
 }
 
-fn encode_rsa_public_key(
-    modulus: &[u8],
-    exponent: &[u8],
-) -> Result<Vec<u8>, SignatureVerificationError> {
+fn encode_rsa_public_key(modulus: &[u8], exponent: &[u8]) -> Vec<u8> {
     let modulus = der_integer(modulus);
     let exponent = der_integer(exponent);
 
@@ -481,7 +476,7 @@ fn encode_rsa_public_key(
     append_der_length(&mut result, body_len);
     result.extend_from_slice(&modulus);
     result.extend_from_slice(&exponent);
-    Ok(result)
+    result
 }
 
 fn der_integer(value: &[u8]) -> Vec<u8> {
@@ -554,7 +549,7 @@ fn parse_signed_data_v2(bytes: &[u8]) -> Result<ParsedSignedData<'_>, SignatureV
     certificates_reader.finish("v2 certificate sequence")?;
 
     Ok(ParsedSignedData {
-        digests: selected_digest.0,
+        digests: selected_digest.1,
         digest_algorithms,
         certificate,
     })
@@ -601,7 +596,7 @@ fn parse_signed_data_v3(
 
 fn parse_digest_sequence(
     bytes: &[u8],
-) -> Result<(Vec<u32>, (Vec<(u32, &[u8])>,)), SignatureVerificationError> {
+) -> Result<(Vec<u32>, Vec<(u32, &[u8])>), SignatureVerificationError> {
     let mut reader = LengthReader::new(bytes);
     let mut algorithms = Vec::new();
     let mut digests = Vec::new();
@@ -623,7 +618,7 @@ fn parse_digest_sequence(
         ));
     }
 
-    Ok((algorithms, (digests,)))
+    Ok((algorithms, digests))
 }
 
 fn verify_certificate_and_public_key(
