@@ -909,11 +909,11 @@ fn evaluate(
             "APK signing-block inspection is not applicable to an AAB.",
         )),
         ArtifactKind::Apk => match (&inventory.apk_signing, &inventory.apk_signing_error) {
-            (_, Some(error)) => findings.push(Finding::blocker(
+            (_, Some(error)) => findings.push(Finding::warning(
                 "SIGNING-002",
                 "APK signing block unreadable",
                 format!("The APK signing-block structure could not be validated: {error}"),
-                "Produce a valid APK with a structurally readable signing block, then rerun the audit.",
+                "Verify the APK with apksigner and rerun the audit before publication.",
             )),
             (Some(info), None) if info.v2 || info.v3 => findings.push(Finding::pass(
                 "SIGNING-002",
