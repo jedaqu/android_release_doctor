@@ -80,7 +80,7 @@ Evidencia de cierre:
 
 ## Etapa 3 — Definición de M0.7
 
-**Estado: EN CURSO**
+**Estado: FINALIZADA**
 
 Objetivo: convertir los resultados de la auditoría de transición en un alcance M0.7 pequeño, verificable y trazable.
 
@@ -106,8 +106,13 @@ Cierre requerido:
 - CI de la definición validado;
 - baseline/checkpoint de inicio registrado.
 
-Evidencia en curso:
-- `docs/M0.7-DEFINITION.md` — alcance y método definidos; pendiente de segunda auditoría y checkpoint.
+Evidencia de cierre:
+- `docs/M0.7-DEFINITION.md` — alcance y método definidos y corregidos tras la segunda auditoría;
+- `docs/SECOND-AUDIT-M0.7-DEFINITION.md` — segunda auditoría PASS;
+- Actions run #289 / 36766123681 — push validation SUCCESS;
+- Actions run #290 / 36766132670 — stacked PR-event validation SUCCESS;
+- `docs/CHECKPOINT-M0.7-DEFINITION-FINAL.md` — checkpoint formal de cierre;
+- M0.6 baseline SHA: `5979845936083475829f9b9cd797fb4969867362`.
 
 ## Regla de finalización
 
