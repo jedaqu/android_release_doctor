@@ -7,6 +7,9 @@ use std::{
 
 use zip::ZipArchive;
 
+pub mod axml;
+pub use axml::{ComponentInfo, ManifestInfo};
+
 pub const ENGINE_VERSION: &str = "0.1.0";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -107,6 +110,7 @@ pub struct AuditReport {
     pub artifact_kind: ArtifactKind,
     pub size_bytes: u64,
     pub inventory: ArtifactInventory,
+    pub manifest: Option<ManifestInfo>,
     pub findings: Vec<Finding>,
 }
 
@@ -125,39 +129,101 @@ impl AuditReport {
         let (passes, warnings, blockers) = self.counts();
         let mut out = String::new();
 
-        out.push_str("ANDROID RELEASE REPORT\n");
-        out.push_str("=======================\n\n");
+        out.push_str("ANDROID RELEASE REPORT
+");
+        out.push_str("=======================
+
+");
         out.push_str(&format!(
-            "Artifact\n  Type: {}\n  Path: {}\n  Size: {} bytes\n  Engine: {}\n\n",
+            "Artifact
+  Type: {}
+  Path: {}
+  Size: {} bytes
+  Engine: {}
+
+",
             self.artifact_kind.as_str(),
             self.artifact_path.display(),
             self.size_bytes,
             ENGINE_VERSION
         ));
 
-        out.push_str("Checks\n");
+        if let Some(manifest) = &self.manifest {
+            out.push_str("Application
+");
+            out.push_str(&format!(
+                "  Package: {}
+",
+                manifest.package_name.as_deref().unwrap_or("<missing>")
+            ));
+            out.push_str(&format!(
+                "  Version code: {}
+",
+                manifest
+                    .version_code
+                    .map_or_else(|| "<missing>".to_string(), |value| value.to_string())
+            ));
+            out.push_str(&format!(
+                "  Version name: {}
+",
+                manifest.version_name.as_deref().unwrap_or("<missing>")
+            ));
+            out.push_str(&format!(
+                "  minSdk: {}
+",
+                manifest
+                    .min_sdk
+                    .map_or_else(|| "<missing>".to_string(), |value| value.to_string())
+            ));
+            out.push_str(&format!(
+                "  targetSdk: {}
+",
+                manifest
+                    .target_sdk
+                    .map_or_else(|| "<missing>".to_string(), |value| value.to_string())
+            ));
+            out.push_str(&format!(
+                "  Debuggable: {}
+",
+                manifest
+                    .debuggable
+                    .map_or_else(|| "<missing>".to_string(), |value| value.to_string())
+            ));
+            out.push_str(&format!("  Permissions: {}
+", manifest.permissions.len()));
+            out.push_str(&format!("  Components: {}
+
+", manifest.components.len()));
+        }
+
+        out.push_str("Checks
+");
         for finding in &self.findings {
             out.push_str(&format!(
-                "  {:<7} {:<24} [{}]\n",
+                "  {:<7} {:<24} [{}]
+",
                 finding.severity.as_str(),
                 finding.title,
                 finding.rule_id
             ));
-            out.push_str(&format!("      {}\n", finding.summary));
+            out.push_str(&format!("      {}
+", finding.summary));
             if !finding.remediation.is_empty() {
-                out.push_str(&format!("      Fix: {}\n", finding.remediation));
+                out.push_str(&format!("      Fix: {}
+", finding.remediation));
             }
         }
 
-        out.push_str("\nSummary\n");
+        out.push_str("
+Summary
+");
         out.push_str(&format!(
-            "  BLOCKERS {}\n  WARNINGS {}\n  PASSED {}\n",
+            "  BLOCKERS {}
+  WARNINGS {}
+  PASSED {}
+",
             blockers, warnings, passes
         ));
-        out.push_str("\nCurrent coverage\n");
-        out.push_str(
-            "  Structural artifact inspection only. Manifest fields, SDK levels, debug/release flags and cryptographic signature verification are not yet evaluated.\n",
-        );
 
         out
     }
@@ -168,6 +234,7 @@ pub enum AuditError {
     Io(io::Error),
     InvalidArtifact(String),
     InvalidArchive(String),
+    ManifestParse(String),
 }
 
 impl fmt::Display for AuditError {
@@ -176,6 +243,7 @@ impl fmt::Display for AuditError {
             Self::Io(error) => write!(f, "I/O error: {error}"),
             Self::InvalidArtifact(message) => write!(f, "invalid Android artifact: {message}"),
             Self::InvalidArchive(message) => write!(f, "invalid ZIP archive: {message}"),
+            Self::ManifestParse(message) => write!(f, "manifest parse error: {message}"),
         }
     }
 }
@@ -185,6 +253,12 @@ impl std::error::Error for AuditError {}
 impl From<io::Error> for AuditError {
     fn from(value: io::Error) -> Self {
         Self::Io(value)
+    }
+}
+
+impl From<axml::AxmlError> for AuditError {
+    fn from(value: axml::AxmlError) -> Self {
+        Self::ManifestParse(value.to_string())
     }
 }
 
@@ -209,13 +283,26 @@ pub fn audit_path(path: impl AsRef<Path>) -> Result<AuditReport, AuditError> {
         ZipArchive::new(file).map_err(|error| AuditError::InvalidArchive(error.to_string()))?;
     let inventory = inspect_archive(&mut archive, kind)?;
 
-    let findings = evaluate(kind, &inventory);
+    let manifest = match inventory.manifest_path.as_deref() {
+        Some(path) => {
+            let mut entry = archive
+                .by_name(path)
+                .map_err(|error| AuditError::InvalidArchive(error.to_string()))?;
+            let mut bytes = Vec::new();
+            entry.read_to_end(&mut bytes)?;
+            Some(axml::parse_manifest(&bytes)?)
+        }
+        None => None,
+    };
+
+    let findings = evaluate(kind, &inventory, manifest.as_ref());
 
     Ok(AuditReport {
         artifact_path: path.to_path_buf(),
         artifact_kind: kind,
         size_bytes: metadata.len(),
         inventory,
+        manifest,
         findings,
     })
 }
@@ -285,7 +372,11 @@ fn inspect_archive<R: Read + io::Seek>(
     Ok(inventory)
 }
 
-fn evaluate(kind: ArtifactKind, inventory: &ArtifactInventory) -> Vec<Finding> {
+fn evaluate(
+    kind: ArtifactKind,
+    inventory: &ArtifactInventory,
+    manifest: Option<&ManifestInfo>,
+) -> Vec<Finding> {
     let mut findings = Vec::new();
 
     findings.push(Finding::pass(
@@ -300,17 +391,153 @@ fn evaluate(kind: ArtifactKind, inventory: &ArtifactInventory) -> Vec<Finding> {
     ));
 
     match inventory.manifest_path.as_deref() {
-        Some(path) => findings.push(Finding::pass(
-            "MANIFEST-001",
-            "Manifest present",
-            format!("Found AndroidManifest.xml at {path}."),
-        )),
         None => findings.push(Finding::blocker(
             "MANIFEST-001",
             "Manifest missing",
             "No AndroidManifest.xml was found in the expected location.",
             "Produce a complete APK/AAB and run the audit on the release artifact itself.",
         )),
+        Some(path) => {
+            findings.push(Finding::pass(
+                "MANIFEST-001",
+                "Manifest present",
+                format!("Found AndroidManifest.xml at {path}."),
+            ));
+
+            match manifest {
+                None => findings.push(Finding::blocker(
+                    "MANIFEST-002",
+                    "Manifest unreadable",
+                    "The manifest entry exists but could not be parsed.",
+                    "Verify that the artifact contains a valid compiled AndroidManifest.xml.",
+                )),
+                Some(manifest) => {
+                    if let Some(package_name) = &manifest.package_name {
+                        findings.push(Finding::pass(
+                            "MANIFEST-003",
+                            "Application ID",
+                            format!("Package name is {package_name}."),
+                        ));
+                    } else {
+                        findings.push(Finding::blocker(
+                            "MANIFEST-003",
+                            "Application ID missing",
+                            "The manifest does not expose a package name.",
+                            "Ensure the final manifest contains the application's package identity.",
+                        ));
+                    }
+
+                    if manifest.min_sdk.is_some() && manifest.target_sdk.is_some() {
+                        findings.push(Finding::pass(
+                            "SDK-001",
+                            "SDK levels",
+                            format!(
+                                "Manifest declares minSdk {} and targetSdk {}.",
+                                manifest.min_sdk.unwrap(),
+                                manifest.target_sdk.unwrap()
+                            ),
+                        ));
+                    } else {
+                        findings.push(Finding::warning(
+                            "SDK-001",
+                            "SDK levels incomplete",
+                            "The manifest does not contain both minSdkVersion and targetSdkVersion as integer values.",
+                            "Build the release with explicit Android SDK levels so the artifact can be audited precisely.",
+                        ));
+                    }
+
+                    if manifest.debuggable == Some(true) {
+                        findings.push(Finding::blocker(
+                            "BUILD-001",
+                            "Debuggable release",
+                            "The final manifest sets android:debuggable="true".",
+                            "Build a non-debuggable release artifact before publication.",
+                        ));
+                    } else if manifest.debuggable == Some(false) {
+                        findings.push(Finding::pass(
+                            "BUILD-001",
+                            "Debuggable flag",
+                            "The final manifest explicitly disables android:debuggable.",
+                        ));
+                    } else {
+                        findings.push(Finding::warning(
+                            "BUILD-001",
+                            "Debuggable flag unknown",
+                            "The manifest does not contain an explicit debuggable boolean.",
+                            "Confirm the release build is non-debuggable and make the build configuration explicit.",
+                        ));
+                    }
+
+                    if manifest.version_code.is_some() {
+                        findings.push(Finding::pass(
+                            "VERSION-001",
+                            "Version code",
+                            format!(
+                                "Artifact versionCode is {}.",
+                                manifest.version_code.unwrap()
+                            ),
+                        ));
+                    } else {
+                        findings.push(Finding::warning(
+                            "VERSION-001",
+                            "Version code missing",
+                            "The final manifest did not expose an integer versionCode.",
+                            "Ensure the release manifest contains an integer android:versionCode.",
+                        ));
+                    }
+
+                    if manifest.version_name.is_some() {
+                        findings.push(Finding::pass(
+                            "VERSION-002",
+                            "Version name",
+                            format!(
+                                "Artifact versionName is {}.",
+                                manifest.version_name.as_deref().unwrap()
+                            ),
+                        ));
+                    } else {
+                        findings.push(Finding::warning(
+                            "VERSION-002",
+                            "Version name missing",
+                            "The final manifest did not expose an android:versionName string.",
+                            "Ensure the release manifest contains a user-visible version name.",
+                        ));
+                    }
+
+                    findings.push(Finding::pass(
+                        "PERMISSION-001",
+                        "Permissions inventory",
+                        format!(
+                            "Detected {} declared permission(s). No permission-risk classification is applied yet.",
+                            manifest.permissions.len()
+                        ),
+                    ));
+
+                    for component in &manifest.components {
+                        if component.has_intent_filters && component.exported.is_none() {
+                            findings.push(Finding::blocker(
+                                "COMPONENT-001",
+                                "Exported component incomplete",
+                                format!(
+                                    "{} {} has an intent-filter but no explicit android:exported value.",
+                                    component.kind, component.name
+                                ),
+                                "Set android:exported explicitly for components that contain intent filters.",
+                            ));
+                        } else if component.has_intent_filters {
+                            findings.push(Finding::pass(
+                                "COMPONENT-001",
+                                "Exported component declared",
+                                format!(
+                                    "{} {} declares android:exported.",
+                                    component.kind, component.name
+                                ),
+                            ));
+                        }
+                    }
+                }
+            }
+        }
     }
 
     if inventory.dex_files.is_empty() {
@@ -376,7 +603,7 @@ mod tests {
             entries: vec!["classes.dex".to_string()],
             ..Default::default()
         };
-        let findings = evaluate(ArtifactKind::Apk, &inventory);
+        let findings = evaluate(ArtifactKind::Apk, &inventory, None);
         assert_eq!(
             findings
                 .iter()
@@ -394,7 +621,7 @@ mod tests {
             native_abis: vec!["arm64-v8a".to_string(), "armeabi-v7a".to_string()],
             ..Default::default()
         };
-        let findings = evaluate(ArtifactKind::Aab, &inventory);
+        let findings = evaluate(ArtifactKind::Aab, &inventory, None);
         assert_eq!(
             findings
                 .iter()

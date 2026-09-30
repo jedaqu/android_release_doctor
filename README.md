@@ -2,21 +2,32 @@
 
 Open-source, local-first tool for auditing Android APK and AAB releases before publication.
 
-> **Status:** early development — M0 foundation.
+> **Status:** early development — M0.1 manifest inspection.
 
-Android Release Doctor inspects the **artifact you are actually going to distribute**, rather than relying only on what a Gradle project declares. The long-term goal is actionable release-readiness diagnostics: what was found, why it matters, and what to fix.
+Android Release Doctor inspects the **artifact you are actually going to distribute**, rather than relying only on what a Gradle project declares. The goal is actionable release-readiness diagnostics: what was found, why it matters, and what to fix.
 
-## M0 scope
+## M0.1 scope
 
-The first engine structurally inspects APK/AAB archives and reports:
+The release artifact is now inspected deeply enough to extract:
 
-- artifact type and ZIP validity;
-- Android manifest presence;
-- DEX payload presence;
-- native library ABI inventory;
-- signing metadata presence.
+- application/package identity;
+- versionCode and versionName;
+- minSdkVersion and targetSdkVersion;
+- explicit `android:debuggable`;
+- declared permissions;
+- Android components and explicit `android:exported` when intent filters are present.
 
-This release does **not** yet validate target/min SDK, `debuggable`, exported components, cryptographic signatures, Play requirements, or project-vs-artifact consistency.
+The parser reads the compiled binary AndroidManifest.xml directly from the APK/AAB. It does not invoke the Android SDK or external shell tools.
+
+Still not implemented:
+
+- Gradle project parsing;
+- project-vs-artifact comparison;
+- cryptographic signature verification;
+- Android signing block inspection;
+- current Google Play policy rules;
+- permission risk classification;
+- HTML/SARIF output.
 
 ## Usage
 
@@ -30,6 +41,7 @@ The command exits with code `1` when a blocker is detected and `2` for invalid i
 ## Development
 
 ```bash
+cargo check --workspace
 cargo test --workspace
 cargo run -p doctor-cli -- tests/fixtures/minimal-release.apk
 ```
