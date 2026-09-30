@@ -82,12 +82,14 @@ The verifier follows the Android v2/v3 verification model:
 - the first certificate SHA-256 fingerprint is retained as signer evidence;
 - v3 proof-of-rotation is detected but not fully verified in this block;
 - v3.1 is detected structurally but not cryptographically verified in this block;
-- algorithms or key sizes outside the current Rust verifier's supported set remain manual-review evidence rather than being reported as verified.
+- v3.2 is detected structurally but not cryptographically verified in this block;
+- algorithms, key sizes, curves, or PQC signatures outside the current Rust verifier's supported set remain manual-review evidence rather than being reported as verified.
 
 Android documents the v2/v3 algorithm IDs, digest construction and verification sequence in the AOSP documentation:
 https://source.android.com/docs/security/features/apksigning/v2
 https://source.android.com/docs/security/features/apksigning/v3
 https://source.android.com/docs/security/features/apksigning/v3-1
+https://source.android.com/docs/security/features/apksigning/v3-2
 
 ### M0.5 Block 1 16 KB semantics
 
