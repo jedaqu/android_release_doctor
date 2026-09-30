@@ -5,7 +5,7 @@ use std::{
 };
 
 use p384::ecdsa::{
-    hazmat::PrehashVerifier,
+    signature::hazmat::PrehashVerifier,
     Signature as P384Signature,
     VerifyingKey as P384VerifyingKey,
 };
@@ -734,7 +734,7 @@ fn verify_signature_bytes(
         }
 
         let verifying_key = P384VerifyingKey::from_sec1_bytes(
-            cert.public_key().subject_public_key.data,
+            &cert.public_key().subject_public_key.data,
         )
         .map_err(|error| {
             SignatureVerificationError(format!(

@@ -408,3 +408,15 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Audit commit:** a016971b3052c29873b79111b2300307855e1071
 - **Validation:** Pre-change audit completed against Android v2/v3 specifications and AOSP apksig verification fixtures; production code not changed by the audit commit.
 - **Status:** OPEN — explicitly out of scope for the selected first increment
+
+## ERR-039 — M0.7 Block 1 ECDSA/SHA-512 backend compile errors
+
+- **Milestone:** M0.7 Block 1 / implementation validation
+- **Type:** Build failure
+- **Actions run:** #295 / 36779609901
+- **Problem:** The first ECDSA/SHA-512 implementation commit did not compile: the `PrehashVerifier` trait was imported from the wrong module path, and the X.509 EC public-key bytes were passed as `Cow<[u8]>` instead of a byte slice.
+- **Cause:** The initial integration used the underlying `ecdsa` module structure from documentation rather than the re-exported trait path exposed by `p384::ecdsa`, and omitted a borrow on the parsed SubjectPublicKey BIT STRING data.
+- **Correction:** Import `p384::ecdsa::signature::hazmat::PrehashVerifier` and pass `&cert.public_key().subject_public_key.data` to `P384VerifyingKey::from_sec1_bytes`.
+- **Correction pending validation:** 37139b0eda12765365a153854afd774a7b0bf29b1
+- **Validation:** Build failed before Test/Format/Clippy on Actions run #295 / 36779609901; the corrected commit must pass the full gate before this entry is resolved.
+- **Status:** OPEN
