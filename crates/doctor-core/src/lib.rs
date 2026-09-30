@@ -435,13 +435,12 @@ fn evaluate(
                                 "Manifest declares minSdk {min_sdk} and targetSdk {target_sdk}."
                             ),
                         )),
-                        _ => {
-                        findings.push(Finding::warning(
+                        _ => findings.push(Finding::warning(
                             "SDK-001",
                             "SDK levels incomplete",
                             "The manifest does not contain both minSdkVersion and targetSdkVersion as integer values.",
                             "Build the release with explicit Android SDK levels so the artifact can be audited precisely.",
-                        ));
+                        )),
                     }
 
                     if manifest.debuggable == Some(true) {
@@ -472,13 +471,12 @@ fn evaluate(
                             "Version code",
                             format!("Artifact versionCode is {version_code}."),
                         )),
-                        None => {
-                        findings.push(Finding::warning(
+                        None => findings.push(Finding::warning(
                             "VERSION-001",
                             "Version code missing",
                             "The final manifest did not expose an integer versionCode.",
                             "Ensure the release manifest contains an integer android:versionCode.",
-                        ));
+                        )),
                     }
 
                     match manifest.version_name.as_deref() {
@@ -487,13 +485,12 @@ fn evaluate(
                             "Version name",
                             format!("Artifact versionName is {version_name}."),
                         )),
-                        None => {
-                        findings.push(Finding::warning(
+                        None => findings.push(Finding::warning(
                             "VERSION-002",
                             "Version name missing",
                             "The final manifest did not expose an android:versionName string.",
                             "Ensure the release manifest contains a user-visible version name.",
-                        ));
+                        )),
                     }
 
                     findings.push(Finding::pass(
