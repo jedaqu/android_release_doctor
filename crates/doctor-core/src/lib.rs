@@ -8,8 +8,10 @@ use std::{
 use zip::ZipArchive;
 
 pub mod axml;
+pub mod play;
 pub mod project;
 pub use axml::{ComponentInfo, ManifestInfo};
+pub use play::{evaluate_play_policy, PlayPlatform, PLAY_POLICY_VERSION};
 pub use project::{parse_project, GradleSyntax, ProjectInfo};
 
 pub const ENGINE_VERSION: &str = "0.1.0";
@@ -435,6 +437,37 @@ pub fn audit_path(path: impl AsRef<Path>) -> Result<AuditReport, AuditError> {
         project_error: None,
         findings,
     })
+}
+
+pub fn audit_path_with_play(
+    artifact_path: impl AsRef<Path>,
+    platform: PlayPlatform,
+) -> Result<AuditReport, AuditError> {
+    let mut report = audit_path(artifact_path)?;
+    report
+        .findings
+        .extend(play::evaluate_play_policy(
+            report.manifest.as_ref(),
+            &report.inventory,
+            platform,
+        ));
+    Ok(report)
+}
+
+pub fn audit_path_with_project_and_play(
+    artifact_path: impl AsRef<Path>,
+    project_path: impl AsRef<Path>,
+    platform: PlayPlatform,
+) -> Result<AuditReport, AuditError> {
+    let mut report = audit_path_with_project(artifact_path, project_path)?;
+    report
+        .findings
+        .extend(play::evaluate_play_policy(
+            report.manifest.as_ref(),
+            &report.inventory,
+            platform,
+        ));
+    Ok(report)
 }
 
 pub fn audit_path_with_project(
