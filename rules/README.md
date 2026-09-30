@@ -108,9 +108,9 @@ The package-level evidence is intentionally narrower than a full bundle/package 
 - APK + stored `.so` + non-16 KB data offset: package misalignment;
 - APK + compressed `.so`: ZIP data-offset alignment is not applicable;
 - AAB + stored `.so`: raw AAB offset is not treated as final APK alignment evidence;
-- any unsupported/unverifiable packaging state: warning/manual review, never a guessed pass.
+- any unsupported/unverifiable packaging state: `MANUAL-REVIEW`, never a guessed pass.
 
-`PLAY-005` combines these package findings with M0.4 ELF PT_LOAD evidence. For API 35+ targets, confirmed native alignment failure is a blocker; missing evidence remains a warning/manual review.
+`PLAY-005` combines these package findings with M0.4 ELF PT_LOAD evidence. For API 35+ targets, confirmed native alignment failure is a blocker; missing evidence is `MANUAL-REVIEW`.
 
 ### M0.4 signing coverage
 
@@ -128,7 +128,7 @@ AABs do not use the APK signing block, so `SIGNING-002` is not applied to them. 
 `PLAY-005` uses the final artifact evidence collected by `NATIVE-002`:
 
 - no native `.so`: pass;
-- native ELF cannot be parsed: warning/manual review;
+- native ELF cannot be parsed: `MANUAL-REVIEW`;
 - API 35+ target with confirmed PT_LOAD alignment below 16 KB: blocker;
 - API 35+ target with all inspected PT_LOAD alignments at or above 16 KB: pass;
 - target below API 35 with a confirmed alignment below 16 KB: warning.
