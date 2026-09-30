@@ -407,7 +407,7 @@ mod tests {
                 path: "lib/arm64-v8a/libbad.so".to_string(),
                 abi: "arm64-v8a".to_string(),
                 compression: crate::NativeZipCompression::Stored,
-                data_offset: Some(4096),
+                data_offset: 4096,
                 alignment_16kb: Some(false),
                 error: None,
             }],
@@ -439,7 +439,7 @@ mod tests {
                 path: "base/lib/arm64-v8a/libnative.so".to_string(),
                 abi: "arm64-v8a".to_string(),
                 compression: crate::NativeZipCompression::Stored,
-                data_offset: Some(16384),
+                data_offset: 16384,
                 alignment_16kb: None,
                 error: Some(
                     "AAB entry offset does not establish the final APK ZIP alignment".to_string(),
