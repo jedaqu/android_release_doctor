@@ -8,6 +8,7 @@ const APK_SIG_BLOCK_MAGIC: [u8; 16] = *b"APK Sig Block 42";
 const V2_BLOCK_ID: u32 = 0x7109_871a;
 const V3_BLOCK_ID: u32 = 0xf053_68c0;
 const V31_BLOCK_ID: u32 = 0x1b93_ad61;
+const V32_BLOCK_ID: u32 = 0x70e1_c89f;
 const EOCD_LEN: u64 = 22;
 const MAX_EOCD_COMMENT: u64 = 65_535;
 const SIGNING_BLOCK_FOOTER_LEN: u64 = 24;
@@ -17,6 +18,7 @@ pub struct ApkSigningInfo {
     pub v2: bool,
     pub v3: bool,
     pub v31: bool,
+    pub v32: bool,
     pub block_size: u64,
 }
 
@@ -242,6 +244,7 @@ pub fn inspect_apk_signing_block<R: Read + Seek>(
             V2_BLOCK_ID => info.v2 = true,
             V3_BLOCK_ID => info.v3 = true,
             V31_BLOCK_ID => info.v31 = true,
+            V32_BLOCK_ID => info.v32 = true,
             _ => {}
         }
     }
@@ -285,6 +288,7 @@ mod tests {
         with_v2: bool,
         with_v3: bool,
         with_v31: bool,
+        with_v32: bool,
         malformed_size: bool,
     ) -> Vec<u8> {
         let mut pairs = Vec::new();
@@ -293,6 +297,7 @@ mod tests {
             with_v2.then_some(V2_BLOCK_ID),
             with_v3.then_some(V3_BLOCK_ID),
             with_v31.then_some(V31_BLOCK_ID),
+            with_v32.then_some(V32_BLOCK_ID),
         ]
         .into_iter()
         .flatten()
@@ -333,7 +338,7 @@ mod tests {
 
     #[test]
     fn detects_v2_and_v3_signing_blocks() {
-        let bytes = synthetic_apk(true, true, true, false);
+        let bytes = synthetic_apk(true, true, true, true, false);
         let mut cursor = Cursor::new(bytes);
 
         let info = inspect_apk_signing_block(&mut cursor)
@@ -343,6 +348,7 @@ mod tests {
         assert!(info.v2);
         assert!(info.v3);
         assert!(info.v31);
+        assert!(info.v32);
         assert_eq!(info.block_size, 8 + SIGNING_BLOCK_FOOTER_LEN + 8 + 8 + 8);
     }
 
@@ -368,7 +374,7 @@ mod tests {
 
     #[test]
     fn rejects_mismatched_signing_block_sizes() {
-        let bytes = synthetic_apk(true, false, false, true);
+        let bytes = synthetic_apk(true, false, true, false, true);
         let mut cursor = Cursor::new(bytes);
 
         let error = inspect_apk_signing_block(&mut cursor)
