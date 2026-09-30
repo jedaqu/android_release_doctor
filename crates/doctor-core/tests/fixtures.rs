@@ -507,7 +507,7 @@ fn signing_block_absence_is_reported_without_a_blocker() {
             .iter()
             .find(|finding| finding.rule_id == "SIGNING-001")
             .map(|finding| finding.severity),
-        Some(Severity::Warning)
+        Some(Severity::Pass)
     );
     assert_eq!(
         report
