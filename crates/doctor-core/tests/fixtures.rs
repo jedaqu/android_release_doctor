@@ -143,7 +143,10 @@ fn cross_checks_gradle_groovy_against_apk_artifact() {
     .expect("project and artifact should be audited together");
 
     let project = report.project.expect("project should be parsed");
-    assert_eq!(project.application_id.as_deref(), Some("com.example.doctorfixture"));
+    assert_eq!(
+        project.application_id.as_deref(),
+        Some("com.example.doctorfixture")
+    );
     assert_eq!(project.target_sdk, Some(35));
     assert_eq!(project.version_code, Some(7));
     assert_eq!(project.release_debuggable, Some(false));
