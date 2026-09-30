@@ -365,3 +365,24 @@ M0.6 Block 5 is validated and its final checkpoint documentation is now being re
 ## Maintenance rule
 
 Every future Actions failure or audit-discovered defect must append a new ERR-NNN entry rather than editing an older entry. Resolutions should reference the correction commit and the validating Actions run whenever available.
+
+
+## ERR-035 — M0.7 definition treated proof-of-rotation flags as inherently valid/invalid combinations
+
+- **Milestone:** M0.7 definition / second audit
+- **Type:** Definition defect
+- **Problem:** Block 2 required fixtures for “invalid flag combinations” without defining an Android semantic rule that makes arbitrary capability-bit combinations invalid.
+- **Cause:** The planning text treated the lineage capability flags as a closed set of mutually constrained states instead of independent capability bits.
+- **Correction:** Redefine Block 2 around explicit capability-bit modeling, known/unknown-bit evidence, and only deterministic semantic rules that Android exposes locally.
+- **Validation:** Corrected definition will be re-audited and validated through Actions before Etapa 3 closure.
+- **Status:** RESOLVED
+
+## ERR-036 — M0.7 v3.1 definition did not enumerate required v3/v3.1 cross-block constraints
+
+- **Milestone:** M0.7 definition / second audit
+- **Type:** Definition defect
+- **Problem:** Block 3 described the v3.1 signer/range relationship too generically and did not explicitly name the required v3/v3.1 rotation-target and stripping-protection consistency checks.
+- **Cause:** The scope text summarized v3.1 as an extension of v3 without listing the cross-block verification boundaries that distinguish v3.1 behavior.
+- **Correction:** Enumerate v3.1/v3 presence rules, rotation-min-SDK consistency, stripping-protection attribute linkage, targeted SDK coverage, and lineage/signer consistency as explicit acceptance boundaries.
+- **Validation:** Corrected definition will be re-audited and validated through Actions before Etapa 3 closure.
+- **Status:** RESOLVED
