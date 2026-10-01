@@ -1177,29 +1177,36 @@ fn evaluate(
                         format!("At least one detected APK signing scheme failed cryptographic verification: {details}"),
                         "Re-sign the release APK with a valid supported v2/v3/v3.1 signing configuration and rerun the audit.",
                     ));
-                } else if schemes
-                    .iter()
-                    .any(|scheme| scheme.state == CryptoVerificationState::Unsupported)
-                    || verification.v31_present
-                    || verification.v32_present
-                {
-                    let details = schemes
+                } else {
+                    let v31_requires_manual = verification.v31_present
+                        && !matches!(
+                            verification.v31.as_ref(),
+                            Some(scheme) if scheme.state == CryptoVerificationState::Verified
+                        );
+
+                    if schemes
                         .iter()
-                        .filter(|scheme| scheme.state == CryptoVerificationState::Unsupported)
-                        .map(|scheme| scheme.detail.as_str())
-                        .collect::<Vec<_>>()
-                        .join("; ");
-                    let mut suffix = String::new();
-                    if verification.v31_present {
-                        suffix.push_str(
-                            " A v3.1 signing block is also present and is not cryptographically verified in this block.",
-                        );
-                    }
-                    if verification.v32_present {
-                        suffix.push_str(
-                            " A v3.2 hybrid signing block is present and is not cryptographically verified in this block.",
-                        );
-                    }
+                        .any(|scheme| scheme.state == CryptoVerificationState::Unsupported)
+                        || v31_requires_manual
+                        || verification.v32_present
+                    {
+                        let details = schemes
+                            .iter()
+                            .filter(|scheme| scheme.state == CryptoVerificationState::Unsupported)
+                            .map(|scheme| scheme.detail.as_str())
+                            .collect::<Vec<_>>()
+                            .join("; ");
+                        let mut suffix = String::new();
+                        if v31_requires_manual {
+                            suffix.push_str(
+                                " A v3.1 signing block is present but did not produce a verified v3.1 scheme result.",
+                            );
+                        }
+                        if verification.v32_present {
+                            suffix.push_str(
+                                " A v3.2 hybrid signing block is present and is not cryptographically verified in this block.",
+                            );
+                        }
                     findings.push(Finding::manual_review(
                         "SIGNING-003",
                         "APK cryptographic verification requires manual review",
@@ -1523,6 +1530,119 @@ mod tests {
             apk_signature_verification_error: Some(
                 "cryptographic verification capability unavailable".to_string(),
             ),
+            ..Default::default()
+        };
+
+        let findings = evaluate(ArtifactKind::Apk, &inventory, None, None);
+
+        assert_eq!(
+            findings
+                .iter()
+                .find(|finding| finding.rule_id == "SIGNING-003")
+                .map(|finding| finding.severity),
+            Some(Severity::ManualReview)
+        );
+    }
+
+    fn test_crypto_scheme(state: CryptoVerificationState, detail: &str) -> CryptoSchemeInfo {
+        CryptoSchemeInfo {
+            state,
+            signer_count: 1,
+            algorithms: vec![0x0101],
+            certificate_sha256: vec!["a".repeat(64)],
+            sdk_ranges: vec![(28, 32)],
+            rotation_min_sdk: Some(32),
+            rotation_targets_dev_release: false,
+            proof_of_rotation: Vec::new(),
+            detail: detail.to_string(),
+        }
+    }
+
+    #[test]
+    fn verified_v31_is_accepted_by_signing_003() {
+        let inventory = ArtifactInventory {
+            apk_signature_verification: Some(ApkSignatureVerification {
+                v31: Some(test_crypto_scheme(
+                    CryptoVerificationState::Verified,
+                    "v3.1 verified",
+                )),
+                v31_present: true,
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        let findings = evaluate(ArtifactKind::Apk, &inventory, None, None);
+        let finding = findings
+            .iter()
+            .find(|finding| finding.rule_id == "SIGNING-003")
+            .expect("SIGNING-003 should be emitted");
+
+        assert_eq!(finding.severity, Severity::Pass);
+        assert!(finding.summary.contains("v3.1"));
+    }
+
+    #[test]
+    fn invalid_v31_remains_a_signing_003_blocker() {
+        let inventory = ArtifactInventory {
+            apk_signature_verification: Some(ApkSignatureVerification {
+                v31: Some(test_crypto_scheme(
+                    CryptoVerificationState::Invalid,
+                    "v3.1 verification failed",
+                )),
+                v31_present: true,
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        let findings = evaluate(ArtifactKind::Apk, &inventory, None, None);
+
+        assert_eq!(
+            findings
+                .iter()
+                .find(|finding| finding.rule_id == "SIGNING-003")
+                .map(|finding| finding.severity),
+            Some(Severity::Blocker)
+        );
+    }
+
+    #[test]
+    fn unsupported_v31_remains_manual_review() {
+        let inventory = ArtifactInventory {
+            apk_signature_verification: Some(ApkSignatureVerification {
+                v31: Some(test_crypto_scheme(
+                    CryptoVerificationState::Unsupported,
+                    "unsupported v3.1 algorithm",
+                )),
+                v31_present: true,
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        let findings = evaluate(ArtifactKind::Apk, &inventory, None, None);
+
+        assert_eq!(
+            findings
+                .iter()
+                .find(|finding| finding.rule_id == "SIGNING-003")
+                .map(|finding| finding.severity),
+            Some(Severity::ManualReview)
+        );
+    }
+
+    #[test]
+    fn v32_presence_remains_manual_review_boundary() {
+        let inventory = ArtifactInventory {
+            apk_signature_verification: Some(ApkSignatureVerification {
+                v2: Some(test_crypto_scheme(
+                    CryptoVerificationState::Verified,
+                    "v2 verified",
+                )),
+                v32_present: true,
+                ..Default::default()
+            }),
             ..Default::default()
         };
 
