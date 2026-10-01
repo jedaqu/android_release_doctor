@@ -1144,6 +1144,7 @@ fn validate_proof_of_rotation(bytes: &[u8], current_certificate: &[u8]) -> Proof
             return ProofOfRotationInfo {
                 state: CryptoVerificationState::Invalid,
                 level_count: 0,
+                lineage_certificate_sha256: Vec::new(),
                 capabilities: Vec::new(),
                 detail: format!("proof-of-rotation is malformed: {error}"),
             };
@@ -2298,6 +2299,7 @@ mod tests {
                     proof_of_rotation: vec![ProofOfRotationInfo {
                         state: CryptoVerificationState::Verified,
                         level_count: 2,
+                        lineage_certificate_sha256: Vec::new(),
                         capabilities: Vec::new(),
                         detail: "proof-of-rotation lineage verified across 2 certificate level(s)"
                             .to_string(),
