@@ -1037,4 +1037,4 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction:** Replace the broken public reference with a factual description of the second-audit result, explicitly keep the internal audit artifact outside the public repository, update README/CHANGELOG status wording, and document the public/private reconstruction boundary.
 - **Scope:** Documentation and traceability only. No product engine, CLI, Action, tests, or workflow behavior changed.
 - **Validation:** Second audit of the corrected public documentation; public/private separation review; terminal Rust CI required on the corrected commit.
-- **Status:** RESOLVED — corrected public documentation validated on the resulting commit.
+- **Status:** PENDING CI — second audit and public/private separation review passed; terminal Build/Test/Format/Clippy evidence on the corrected commit is required before closure.
