@@ -14,6 +14,7 @@ on:
       - m06-block5-verification-completeness
       - m07-block1-crypto-coverage
       - m07-block2-rotation-semantics
+      - m07-block3-v31-verification
   pull_request:
     branches:
       - main
@@ -25,6 +26,7 @@ on:
       - m06-block3-verification-hardening
       - m06-block4-signer-error-isolation
       - m07-block1-crypto-coverage
+      - m07-block2-rotation-semantics
 
 env:
   CARGO_TERM_COLOR: always
