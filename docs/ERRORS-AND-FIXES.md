@@ -698,3 +698,15 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction commit:** a6cb7b42acda17f5d9a11dc1ffce07bc418f7302
 - **Validation:** Required in new Actions execution.
 - **Status:** RESOLVED — pending new CI execution
+
+
+## ERR-064 — M0.7 Block 3 required v3 proof-of-rotation evidence when v3.1 already carried the lineage
+
+- **Milestone:** M0.7 Block 3 / Actions run #378
+- **Type:** Cross-block lineage semantic correction
+- **Actions run:** #378 / 36801940959
+- **Problem:** The cross-block validator required both v3 and v3.1 signers to expose structured proof-of-rotation evidence. The authoritative valid v3.1 fixture has the lineage evidence in the v3.1 signer while the v3 certificate identity is still sufficient as the cross-block bridge.
+- **Correction:** Require verified lineage evidence from v3.1; when v3 also exposes lineage, require prefix consistency. When v3 has no structured lineage, require every v3 signer certificate fingerprint to be represented in the verified v3.1 lineage.
+- **Correction commit:** 88ca7a5a8db12b71d17dd845ab53103e54abfdea
+- **Validation:** Required in new Actions execution.
+- **Status:** RESOLVED — pending new CI execution
