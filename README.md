@@ -2,7 +2,7 @@
 
 Open-source, local-first tool for auditing Android APK and AAB releases before publication.
 
-> **Status:** early development — M0.7 Block 2 validated (proof-of-rotation capability evidence for APK v3).
+> **Status:** early development — M0.7 Block 3 validated (APK Signature Scheme v3.1 verification and v3/v3.1 rotation semantics).
 
 Android Release Doctor inspects the **artifact you are actually going to distribute**, can compare it with the Android application Gradle configuration, and can apply a versioned Google Play submission-readiness profile.
 
@@ -237,6 +237,26 @@ The existing lineage checks remain unchanged:
 - signer-local evidence preservation.
 
 v3.1/v3.2 semantics, AAB signing verification, and runtime Android trust-state inference remain outside this block.
+
+## M0.7 Block 3 scope — APK Signature Scheme v3.1 verification
+
+M0.7 Block 3 extends the validated v3 verifier to APK Signature Scheme v3.1 for the supported cryptographic algorithms already present in Release Doctor.
+
+The audit can now verify:
+
+- the v3.1 signing-block presence separately from v3;
+- v3.1 signer signatures, certificate/public-key binding, digest and APK content digest;
+- v3.1 SDK-range evidence;
+- the v3 rotation-min-SDK stripping-protection attribute;
+- consistency between the v3 stripping-protection value and the v3.1 rotation target;
+- the required v3 base block;
+- v3/v3.1 targeted-range ordering and allowed development-era boundary behavior;
+- signer-count compatibility;
+- proof-of-rotation lineage evidence across v3/v3.1 signers.
+
+The implementation distinguishes malformed, cryptographically invalid, and unsupported cases and preserves the existing structured evidence model.
+
+v3.2/PQC, AAB cryptographic signing verification, runtime Android trust-state simulation, and unrelated algorithm expansion remain outside M0.7 Block 3.
 
 ## Still not implemented
 
