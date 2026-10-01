@@ -180,6 +180,117 @@ pub fn verify_apk_signatures(
     Ok(Some(result))
 }
 
+fn apply_v31_cross_block_semantics(result: &mut ApkSignatureVerification) {
+    if !result.v31_present {
+        return;
+    }
+
+    let Some(v31) = result.v31.as_mut() else {
+        return;
+    };
+
+    let Some(v3) = result.v3.as_ref() else {
+        v31.state = CryptoVerificationState::Invalid;
+        v31.detail = "v3.1 signing block found without a v3.0 base block".to_string();
+        return;
+    };
+
+    if v3.state != CryptoVerificationState::Verified
+        || v31.state != CryptoVerificationState::Verified
+    {
+        return;
+    }
+
+    if v3.signer_count != v31.signer_count {
+        v31.state = CryptoVerificationState::Invalid;
+        v31.detail = format!(
+            "v3/v3.1 signer count mismatch: v3={}, v3.1={}",
+            v3.signer_count, v31.signer_count
+        );
+        return;
+    }
+
+    let Some(v31_min_sdk) = v31.sdk_ranges.iter().map(|(min, _)| *min).min() else {
+        v31.state = CryptoVerificationState::Invalid;
+        v31.detail = "v3.1 verification produced no targeted SDK range".to_string();
+        return;
+    };
+
+    let Some(v3_max_sdk) = v3.sdk_ranges.iter().map(|(_, max)| *max).max() else {
+        v31.state = CryptoVerificationState::Invalid;
+        v31.detail = "v3 verification produced no base SDK range".to_string();
+        return;
+    };
+
+    if v31_min_sdk < V31_MIN_SDK {
+        v31.state = CryptoVerificationState::Invalid;
+        v31.detail = format!(
+            "v3.1 rotation target minimum SDK {v31_min_sdk} is below {V31_MIN_SDK}"
+        );
+        return;
+    }
+
+    if v3_max_sdk >= v31_min_sdk {
+        v31.state = CryptoVerificationState::Invalid;
+        v31.detail = format!(
+            "v3/v3.1 targeted SDK ranges overlap: v3 maxSDK={v3_max_sdk}, v3.1 minSDK={v31_min_sdk}"
+        );
+        return;
+    }
+
+    if v3_max_sdk.saturating_add(1) != v31_min_sdk {
+        v31.state = CryptoVerificationState::Invalid;
+        v31.detail = format!(
+            "v3/v3.1 targeted SDK ranges are not contiguous: v3 maxSDK={v3_max_sdk}, v3.1 minSDK={v31_min_sdk}"
+        );
+        return;
+    }
+
+    if v3.rotation_min_sdk != Some(v31_min_sdk) {
+        v31.state = CryptoVerificationState::Invalid;
+        v31.detail = format!(
+            "v3 stripping-protection rotation-min-sdk mismatch: v3 attribute={:?}, v3.1 target={v31_min_sdk}",
+            v3.rotation_min_sdk
+        );
+        return;
+    }
+
+    let v3_lineages = v3
+        .proof_of_rotation
+        .iter()
+        .filter(|proof| proof.state == CryptoVerificationState::Verified)
+        .collect::<Vec<_>>();
+    let v31_lineages = v31
+        .proof_of_rotation
+        .iter()
+        .filter(|proof| proof.state == CryptoVerificationState::Verified)
+        .collect::<Vec<_>>();
+
+    if v3_lineages.is_empty() || v31_lineages.is_empty() {
+        v31.state = CryptoVerificationState::Invalid;
+        v31.detail = "v3.1 verification requires verified proof-of-rotation lineage evidence in both v3 and v3.1 signers".to_string();
+        return;
+    }
+
+    let lineage_consistent = v3_lineages.iter().all(|v3_proof| {
+        v31_lineages.iter().any(|v31_proof| {
+            !v3_proof.lineage_certificate_sha256.is_empty()
+                && v3_proof.lineage_certificate_sha256.len()
+                    <= v31_proof.lineage_certificate_sha256.len()
+                && v3_proof
+                    .lineage_certificate_sha256
+                    .iter()
+                    .zip(v31_proof.lineage_certificate_sha256.iter())
+                    .all(|(left, right)| left == right)
+        })
+    });
+
+    if !lineage_consistent {
+        v31.state = CryptoVerificationState::Invalid;
+        v31.detail = "v3/v3.1 proof-of-rotation lineages are inconsistent".to_string();
+    }
+}
+
 fn error_to_scheme_info(error: SignatureVerificationError) -> CryptoSchemeInfo {
     error_to_scheme_info_with_evidence(error, 0, Vec::new(), Vec::new(), Vec::new())
 }
