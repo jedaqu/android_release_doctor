@@ -50,7 +50,7 @@ The GitHub Release and tag are intentionally NOT created as part of this checkpo
 
 ## Second implementation audit
 
-`docs/SECOND-AUDIT-M0.9-BLOCK1-IMPLEMENTATION.md`
+The second implementation audit was performed against the validated public-release onboarding diff and its requirements. The original internal audit artifact is not part of the public repository and is not treated as public evidence.
 
 Result: **PASS**
 
@@ -84,3 +84,10 @@ The publication step must not be confused with the M0.9 Block 1 implementation c
 Before any future M0.9 production block:
 
 **ledger review -> pre-audit -> frozen scope -> implementation -> focused validation -> second audit -> CI -> checkpoint**
+
+
+## Public reconstruction note
+
+This checkpoint was reconstructed from the private development repository into the public repository. Only public-safe product, validation, and user-facing documentation were transferred. Private conversations, internal prompts, commercial strategy, private roadmap material, and other non-public development artifacts remain outside this repository.
+
+The public repository is self-contained for its user-facing release surface; the private repository remains the historical development record.
