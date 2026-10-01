@@ -824,3 +824,15 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction commit:** `89753fc376e8fd4381d67c5b4c72b0ac5aff6324`
 - **Validation:** Actions run #428 / `36873605656` passed Build, Test, Format, and Clippy.
 - **Status:** RESOLVED
+
+
+## ERR-075 — M0.7 Block 4 stacked PR target missing from validated Block 3 base workflow
+
+- **Milestone:** M0.7 Block 4 / final stacked-CI audit
+- **Type:** CI configuration / validation gap
+- **Problem:** The validated m07-block3-v31-verification base workflow did not list m07-block3-v31-verification itself in pull_request.branches. Therefore PR #15, whose target is Block 3, could not exercise the required pull-request workflow from the base-branch configuration.
+- **Root cause:** The base workflow contained the future Block 4 branch as a pull-request target, but omitted the actual Block 3 target required by PR #15. The head workflow alone could not establish that event coverage.
+- **Correction:** Add m07-block3-v31-verification to the Block 3 base workflow pull-request targets while preserving the existing job graph and historical targets.
+- **Correction commit:** 2d506d98e7892e602f4f2c4a99cbcab0b1d190b9
+- **Validation:** Actions #430 / 36874487972 (push) and #431 / 36874495416 (pull_request) both passed Build, Test, Format, and Clippy.
+- **Status:** RESOLVED

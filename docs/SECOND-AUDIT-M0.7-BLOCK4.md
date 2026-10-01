@@ -241,3 +241,33 @@ The exact correction commit `89753fc376e8fd4381d67c5b4c72b0ac5aff6324` was valid
 **SECOND-AUDIT AFTER ERR-074: PASS**
 
 The next acceptance gate is the final checkpoint commit carrying this ledger/audit closure through GitHub Actions.
+
+
+## 12. ERR-075 re-audit and final checkpoint readiness
+
+The final stacked-CI audit identified one configuration gap in the validated Block 3 base workflow: the Block 3 branch itself was absent from the pull_request.branches filter.
+
+The correction commit 2d506d98e7892e602f4f2c4a99cbcab0b1d190b9 added the missing target without changing the Build → Test → Format → Clippy job graph.
+
+Validation evidence:
+
+- Actions #430 / 36874487972: push — PASS;
+- Actions #431 / 36874495416: pull_request — PASS.
+
+The existing Block 4 head workflow already targets m07-block3-v31-verification, so the head-side configuration remains aligned after the base-side correction.
+
+### Final pre-checkpoint audit result
+
+- production code: PASS;
+- ERR-074 correction: PASS;
+- ERR-075 correction: PASS;
+- v3.1 integration semantics: PASS;
+- focused regression coverage: PASS;
+- capability boundary: PASS;
+- stacked CI configuration: PASS;
+- documentation/ledger reconciliation: PASS;
+- PR #15 remains open, draft, and unmerged by design.
+
+**SECOND-AUDIT AFTER ERR-075: PASS TO FINAL CHECKPOINT**
+
+The only remaining gate is Actions validation of the formal Block 4 checkpoint commit itself.
