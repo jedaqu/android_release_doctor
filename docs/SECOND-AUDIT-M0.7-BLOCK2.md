@@ -104,7 +104,11 @@ The ledger records this as ERR-051. The workflow now covers:
 
 The CI correction is limited to the active M0.7 stack.
 
-## 9. Final second-audit conclusion
+## 9. Base-workflow PR-event correction
+
+The stacked PR also required the validated Block 1 base workflow to target `m07-block1-crypto-coverage` in its `pull_request.branches` filter. This was corrected on the base branch in commit `6395c5fbf65d0a40060998646cb62fe07bf9f6fd` and recorded as ERR-052.
+
+## 10. Final second-audit conclusion
 
 **SECOND AUDIT: PASS TO CI**
 
