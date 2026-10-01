@@ -6,7 +6,7 @@ Stage: AUDIT-002 — Public Information Boundary
 
 ## Status
 
-**FINAL CHECKPOINT — AUDIT-002 closure package prepared for terminal CI validation.**
+**FINAL CHECKPOINT — AUDIT-002 CLOSED.**
 
 ## Completed sequence
 
@@ -41,17 +41,17 @@ No changes were made to:
 
 Unrelated pull requests remain outside this stage.
 
-## Final closure condition
+## Final closure evidence
 
-AUDIT-002 becomes formally **CLOSED** only after this checkpoint commit itself has terminal successful Rust CI validation:
+The closure checkpoint commit was validated by terminal Rust CI run `36941646133` with:
 
 - Build: PASS
 - Test: PASS
 - Format: PASS
 - Clippy: PASS
 
-After terminal CI validation, the stage is closed and the repository is ready for the next explicitly authorized milestone.
+After that terminal validation, PR #6 was merged and the resulting `main` commit `29309fc1fa6ac3ca7cc72c4d629a8dbe10f60d07` received terminal Rust CI run `36941785804` with the same four gates PASS.
 
 ## Final verdict
 
-**AUDIT-002: CLOSED pending terminal CI on this closure checkpoint.**
+**AUDIT-002: CLOSED.**
