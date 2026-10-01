@@ -16,6 +16,8 @@ on:
       - m07-block2-rotation-semantics
       - m07-block3-v31-verification
       - m07-block4-integration-completeness
+      - m08-block1-report-contract
+      - m08-block2-cli-output-contract
   pull_request:
     branches:
       - main
@@ -30,6 +32,9 @@ on:
       - m07-block2-rotation-semantics
       - m07-block3-v31-verification
       - m07-block4-integration-completeness
+
+      - m08-block1-report-contract
+      - m08-block2-cli-output-contract
 
 env:
   CARGO_TERM_COLOR: always

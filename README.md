@@ -290,6 +290,51 @@ Explicit boundaries remain:
 The supported/unsupported distinction is evidence-first: parsing an algorithm ID does not make it cryptographically supported.
 
 
+## M0.8 Block 2 scope — CLI output contract
+
+M0.8 Block 2 adds stable command-line control around the Report v1 machine-readable contract while preserving the existing human-readable default.
+
+### Output formats
+
+The default remains text:
+
+```text
+android-release-doctor app-release.apk
+```
+
+Use Report v1 JSON for CI and tooling:
+
+```text
+android-release-doctor --format json app-release.apk
+```
+
+The report can be redirected to a file:
+
+```text
+android-release-doctor --format json --output report.json app-release.apk
+```
+
+Existing project and Play options can be combined with JSON output:
+
+```text
+android-release-doctor --project app/ --play --format json app-release.aab
+```
+
+### CLI controls
+
+``--help`` prints the complete usage and exits successfully.
+
+``--version`` prints the engine version and exits successfully.
+
+The CLI keeps a stable exit-code contract:
+
+- `0`: audit completed with no blockers;
+- `1`: audit completed with one or more blockers;
+- `2`: usage, input/audit, output-file, or internal serialization error.
+
+MANUAL-REVIEW findings do not produce exit code 1. In JSON mode, stdout contains only the Report v1 JSON; diagnostics remain on stderr.
+
+
 ## Still not implemented
 
 - full Gradle/variant evaluation;

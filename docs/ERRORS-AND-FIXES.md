@@ -874,3 +874,52 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction:** Apply exactly the formatter-indicated changes in `report.rs`; no behavioral or architectural change.
 - **Validation:** Corrected commit `2a0b42b911c185ca31eb265d1fc3a13b2c5ab165`; Actions #449 / run `36883817080` passed Build, Test, Format, and Clippy.
 - **Status:** RESOLVED
+
+
+## ERR-079 — M0.8 stacked PR had no Actions trigger on its base branch
+
+- **Milestone:** M0.8 Block 2 / CI validation infrastructure
+- **Type:** CI configuration / validation coverage gap
+- **Observed:** PR #18 target `m08-block1-report-contract` produced no associated Rust CI run for commit `9c0a5b2b436487677c69a905f8fdf6890c4d2f91`.
+- **Problem:** `.github/workflows/rust.yml` did not include the new M0.8 stacked branch in its `pull_request.branches` or `push.branches` trigger lists.
+- **Root cause:** The workflow branch matrix was frozen at the M0.7 branch set before the M0.8 stacked productization branches were created.
+- **Correction:** Add `m08-block1-report-contract` and `m08-block2-cli-output-contract` to the existing push/PR branch lists without changing the Build → Test → Format → Clippy job graph.
+- **Scope note:** This is validation infrastructure only; it adds no product behavior and does not alter the CLI/report contract.
+- **Validation:** Actions #466 / run 36885586680 on corrected commit c5411b59286617b83ccd8079dce4469c3c64a25a passed Build, Test, Format, and Clippy.
+- **Status:** RESOLVED
+
+
+## ERR-080 — CLI stored a validated artifact path as an optional field
+
+- **Milestone:** M0.8 Block 2 / CLI output contract
+- **Type:** Build failure / type mismatch
+- **Observed in:** Actions #457 / run 36885100911, Build step
+- **Commit:** 629e5a42cba7facf24c1df2449f861b863a238d9
+- **Problem:** `CliOptions::artifact_path` remained `Option<PathBuf>` even after argument parsing had guaranteed an artifact path, causing five compile errors when passing it to `doctor-core` functions requiring `AsRef<Path>` and when constructing `CliOptions`.
+- **Root cause:** The new parser retained the pre-existing optional storage shape after moving the missing-artifact validation to the parser result boundary.
+- **Correction:** Store the validated artifact path as `PathBuf` in `CliOptions`; no runtime behavior or contract semantics change.
+- **Validation:** Actions #466 / run 36885586680 on corrected commit c5411b59286617b83ccd8079dce4469c3c64a25a passed Build, Test, Format, and Clippy.
+- **Status:** RESOLVED
+
+
+## ERR-081 — CLI implementation failed rustfmt gate
+
+- **Milestone:** M0.8 Block 2 / CLI output contract
+- **Type:** CI formatting failure
+- **Observed in:** Actions #461 / run 36885388868, Format step
+- **Commit:** 39cf70a123155eedebcc06e7ef47fbd2c2f3aca8
+- **Problem:** `cargo fmt --all -- --check` reported formatter differences in `crates/doctor-cli/src/main.rs` and `crates/doctor-cli/tests/cli.rs`.
+- **Root cause:** The previous ERR-080 correction was applied without running the repository formatter.
+- **Correction:** Apply only the rustfmt-indicated import and match-arm formatting.
+- **Validation:** Actions #466 / run 36885586680 on corrected commit c5411b59286617b83ccd8079dce4469c3c64a25a passed Build, Test, Format, and Clippy.
+- **Status:** RESOLVED
+
+
+## Process Observation — recurrent stacked-CI trigger coverage gaps
+
+- **Scope:** M0.6–M0.8 historical correction chains
+- **Type:** Process observation / preventive improvement candidate
+- **Observation:** The ledger contains multiple independent CI trigger-coverage corrections for stacked branches (including ERR-079 in M0.8). These are not duplicate errors and must remain as separate historical records.
+- **Pattern:** A newly created stacked branch/PR can inherit a workflow whose push or pull-request branch filters do not yet cover the new branch/base target, preventing the expected validation run.
+- **Action:** Keep the historical ERR entries unchanged. Before future stacked-block implementation, explicitly verify push coverage on the head branch and pull-request target coverage on the validated base workflow during the pre-audit, before implementation.
+- **Status:** Recorded as a preventive process observation; no production or workflow change made by this observation.
