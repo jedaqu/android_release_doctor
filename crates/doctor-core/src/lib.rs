@@ -1145,16 +1145,20 @@ fn evaluate(
                     "Verify the APK with apksigner and review the signing scheme before publication.",
                 ));
             } else if let Some(verification) = &inventory.apk_signature_verification {
-                let schemes = [verification.v2.as_ref(), verification.v3.as_ref()]
-                    .into_iter()
-                    .flatten()
-                    .collect::<Vec<_>>();
+                let schemes = [
+                    verification.v2.as_ref(),
+                    verification.v3.as_ref(),
+                    verification.v31.as_ref(),
+                ]
+                .into_iter()
+                .flatten()
+                .collect::<Vec<_>>();
 
                 if schemes.is_empty() {
                     findings.push(Finding::manual_review(
                         "SIGNING-003",
                         "APK cryptographic signature unavailable",
-                        "An APK signing block was found, but no supported v2/v3 cryptographic scheme was available for verification.",
+                        "An APK signing block was found, but no supported v2/v3/v3.1 cryptographic scheme was available for verification.",
                         "Verify the intended signing scheme with apksigner before publication.",
                     ));
                 } else if schemes
@@ -1171,7 +1175,7 @@ fn evaluate(
                         "SIGNING-003",
                         "APK cryptographic signature invalid",
                         format!("At least one detected APK signing scheme failed cryptographic verification: {details}"),
-                        "Re-sign the release APK with a valid v2/v3 signing configuration and rerun the audit.",
+                        "Re-sign the release APK with a valid supported v2/v3/v3.1 signing configuration and rerun the audit.",
                     ));
                 } else if schemes
                     .iter()
@@ -1202,20 +1206,20 @@ fn evaluate(
                         format!(
                             "The current verifier confirmed the supported cryptographic parts, but complete verification is not available: {details}.{suffix}"
                         ),
-                        "Verify the APK with apksigner and review proof-of-rotation/v3.1 signing details before publication.",
+                        "Verify the APK with apksigner and review the reported signing scheme, proof-of-rotation, and any unsupported v3.2 evidence before publication.",
                     ));
                 } else {
                     findings.push(Finding::pass(
                         "SIGNING-003",
                         "APK cryptographic signature verified",
-                        "The supported v2/v3 APK signer data, certificate/public-key binding, cryptographic signature, and APK content digest were verified.",
+                        "The supported v2/v3/v3.1 APK signer data, certificate/public-key binding, cryptographic signatures, and APK content digests were verified.",
                     ));
                 }
             } else {
                 findings.push(Finding::warning(
                     "SIGNING-003",
                     "APK cryptographic signature unavailable",
-                    "No v2/v3 cryptographic verification result is available for this APK.",
+                    "No v2/v3/v3.1 cryptographic verification result is available for this APK.",
                     "Verify the release APK signing scheme with apksigner before publication.",
                 ));
             }
