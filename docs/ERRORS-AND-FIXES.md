@@ -527,3 +527,15 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Audit:** docs/AUDIT-M0.7-BLOCK2.md
 - **Validation:** Pre-change audit passed; production implementation has not yet been changed.
 - **Status:** OPEN — scoped for M0.7 Block 2 implementation
+
+
+## ERR-050 — M0.7 Block 2 fixture helper borrowed and mutated the same buffer
+
+- **Milestone:** M0.7 Block 2 / second audit
+- **Type:** Test compilation risk
+- **Problem:** The new proof-of-rotation fixture helper retained a slice borrowed from the output buffer and then attempted to mutate that same buffer to replace the node flags.
+- **Cause:** The helper used the borrowed `read_sequence()` result directly while calculating the mutation offset.
+- **Correction:** Copy the selected node into an owned `Vec<u8>` before mutating the original fixture buffer; no production verification behavior changes.
+- **Correction commit:** 766e190e2d90a677c4844c4fb65ce8a925a54128
+- **Validation:** Second-audit re-review required before Actions.
+- **Status:** RESOLVED — pending CI validation
