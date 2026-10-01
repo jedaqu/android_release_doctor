@@ -65,7 +65,7 @@ Closure evidence for the checkpoint commit includes terminal Rust CI Build/Test/
 
 No merge is part of this checkpoint.
 
-Terminal CI evidence for the current public state is provided by the CI run associated with the final corrected commit. Historical private-run identifiers are intentionally omitted from the public checkpoint.
+Terminal CI evidence for the corrected public documentation state: Rust CI run `36923956731` on commit `95e1a7bafe62eaa56bb9c94f77711021ed06152d` — Build PASS; Test PASS; Format PASS; Clippy PASS.
 
 ## Post-checkpoint publication boundary
 
@@ -91,3 +91,5 @@ Before any future M0.9 production block:
 This checkpoint was reconstructed from the private development repository into the public repository. Only public-safe product, validation, and user-facing documentation were transferred. Private conversations, internal prompts, commercial strategy, private roadmap material, and other non-public development artifacts remain outside this repository.
 
 The public repository is self-contained for its user-facing release surface; the private repository remains the historical development record.
+
+ERR-089 public documentation integrity correction: CLOSED after second audit and terminal CI validation.
