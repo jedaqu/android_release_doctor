@@ -551,3 +551,14 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction commit:** c93f52f01af86d7c6498fdf86e7a7a6ab9fd9cc6
 - **Validation:** Final workflow review and stacked PR-event validation required.
 - **Status:** RESOLVED — pending Actions validation
+
+
+## ERR-052 — Block 2 PR-event validation required base-branch workflow coverage
+
+- **Milestone:** M0.7 Block 2 / CI follow-up
+- **Type:** CI configuration / validation gap
+- **Problem:** The Block 2 PR targets `m07-block1-crypto-coverage`, but the workflow stored on that validated base branch did not yet include `m07-block1-crypto-coverage` in its `pull_request.branches` filter. The Block 2 branch workflow alone cannot establish PR-event coverage for a PR whose base is Block 1.
+- **Correction:** Add `m07-block1-crypto-coverage` to the pull-request target list on the validated Block 1 base workflow, without changing the job graph or production code.
+- **Correction commit on base branch:** 6395c5fbf65d0a40060998646cb62fe07bf9f6fd
+- **Validation:** New PR-event execution required.
+- **Status:** RESOLVED — pending Actions validation
