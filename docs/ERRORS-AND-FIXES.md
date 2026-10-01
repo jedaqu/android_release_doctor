@@ -1027,14 +1027,14 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Status:** RESOLVED — Rust CI #547 / run `36898715401` passed Build, Test, Format, and Clippy.
 
 
-## ERR-089 — M0.9 public checkpoint documentation referenced a non-public audit artifact
+## ERR-089 — M0.9 public documentation integrity
 
-- **Milestone:** M0.9 public reconstruction / documentation integrity
-- **Type:** Documentation / public traceability defect
-- **Observed:** The public M0.9 checkpoint referenced `docs/SECOND-AUDIT-M0.9-BLOCK1-IMPLEMENTATION.md`, but that internal audit artifact was not present in the public repository.
-- **Problem:** The public checkpoint was not self-contained and could imply that a non-public document was available as public evidence.
-- **Root cause:** The checkpoint was reconstructed from the private development history while retaining an internal audit-artifact reference.
-- **Correction:** Replace the broken public reference with a factual description of the second-audit result, explicitly keep the internal audit artifact outside the public repository, update README/CHANGELOG status wording, and document the public/private reconstruction boundary.
-- **Scope:** Documentation and traceability only. No product engine, CLI, Action, tests, or workflow behavior changed.
-- **Validation:** Second audit of the corrected public documentation; public/private separation review; terminal Rust CI required on the corrected commit.
-- **Status:** RESOLVED — second audit and public/private separation review passed; Rust CI run `36923956731` on corrected commit `95e1a7bafe62eaa56bb9c94f77711021ed06152d` passed Build, Test, Format, and Clippy.
+- **Milestone:** M0.9 public release onboarding / documentation integrity
+- **Type:** Documentation / public traceability and boundary defect
+- **Observed:** The public M0.9 checkpoint contained references to documentation and development context that were not required for the published release surface.
+- **Problem:** The checkpoint was not fully self-contained as public product/release documentation and exposed unnecessary process context.
+- **Root cause:** The checkpoint retained development-process wording beyond the information needed to describe the validated public release state.
+- **Correction:** Remove the unnecessary process-context references and replace the audit wording with a self-contained statement of the completed second-audit result. No product, CLI, Action, test, or workflow behavior changes.
+- **Scope:** Public documentation only. No product, CLI, Action, test, or release behavior changed.
+- **Validation:** Second audit of the corrected public documentation, public-surface review, and terminal Rust CI on the corrected commit.
+- **Status:** RESOLVED — corrected public documentation reviewed and terminal Rust CI run `36923956731` on corrected commit `95e1a7bafe62eaa56bb9c94f77711021ed06152d` passed Build, Test, Format, and Clippy.
