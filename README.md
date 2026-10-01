@@ -258,6 +258,38 @@ The implementation distinguishes malformed, cryptographically invalid, and unsup
 
 v3.2/PQC, AAB cryptographic signing verification, runtime Android trust-state simulation, and unrelated algorithm expansion remain outside M0.7 Block 3.
 
+## M0.7 milestone — APK cryptographic verification completeness
+
+M0.7 consolidates the validated cryptographic verification increments delivered by Blocks 1–3:
+
+- **Block 1:** ECDSA/SHA-512 with NIST P-384 (\x600x0202\x60) has real signature verification; unsupported curves remain explicit \x60Unsupported\x60 evidence.
+- **Block 2:** proof-of-rotation capability flags are decoded into structured known/unknown-bit evidence without guessing unusual combinations into cryptographic failure.
+- **Block 3:** APK Signature Scheme v3.1 is cryptographically verified through the existing supported v2/v3 verification path, with v3/v3.1 rotation-target, stripping-protection, SDK-range, signer-count and lineage consistency checks.
+- **Block 4:** integrates those capabilities into the top-level APK audit result and closes the milestone-wide documentation/CI boundary.
+
+### M0.7 supported cryptographic coverage
+
+| Algorithm ID | Algorithm | Current Release Doctor coverage |
+|---|---|---|
+| \x600x0101\x60 | RSA-PSS / SHA-256 | Supported for the current ring-backed RSA key range |
+| \x600x0102\x60 | RSA-PSS / SHA-512 | Supported for the current ring-backed RSA key range |
+| \x600x0103\x60 | RSA PKCS#1 v1.5 / SHA-256 | Supported for the current ring-backed RSA key range |
+| \x600x0104\x60 | RSA PKCS#1 v1.5 / SHA-512 | Supported for the current ring-backed RSA key range |
+| \x600x0201\x60 | ECDSA / SHA-256 | Supported for NIST P-256 and P-384 |
+| \x600x0202\x60 | ECDSA / SHA-512 | Supported for NIST P-384 only |
+
+Explicit boundaries remain:
+
+- DSA \x600x0301\x60 is parsed as an Android algorithm ID but remains \x60Unsupported\x60 by the current verifier.
+- RSA keys outside the current ring-backed 2048–8192-bit range remain \x60Unsupported\x60.
+- ECDSA/SHA-512 curves other than P-384 remain \x60Unsupported\x60.
+- v3.2/PQC remains outside M0.7.
+- AAB cryptographic signing verification remains outside M0.7.
+- Runtime PackageManager/SigningInfo behavior is not simulated.
+
+The supported/unsupported distinction is evidence-first: parsing an algorithm ID does not make it cryptographically supported.
+
+
 ## Still not implemented
 
 - full Gradle/variant evaluation;
