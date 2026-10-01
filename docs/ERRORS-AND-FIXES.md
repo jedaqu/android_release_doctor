@@ -757,3 +757,24 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Final validation run:** Actions #402 / 36802297492
 - **Result:** Build PASS; Test PASS; Format PASS; Clippy PASS.
 - **Status:** RESOLVED — Block 3 ready for checkpoint
+
+
+## ERR-069 — M0.7 Block 4 stale top-level SIGNING-003 integration
+
+- **Milestone:** M0.7 Block 4 / integration audit
+- **Type:** Production integration defect
+- **Problem:** Block 3 added verified v3.1 evidence to `ApkSignatureVerification`, but the top-level `SIGNING-003` audit path still evaluated only v2/v3 and unconditionally treated v3.1 presence as manual review with a stale “not cryptographically verified” message.
+- **Impact:** The core verifier and the user-facing release audit could disagree about a valid v3.1 APK's verification state.
+- **Correction:** Include v3.1 in the `SIGNING-003` scheme evaluation, preserve Invalid/Unsupported semantics, keep v3.2 as a manual-review boundary, and add focused regression tests for Verified/Invalid/Unsupported v3.1 plus v3.2 presence.
+- **Correction commit:** `8ec343a95798d59ec577a3612b151f430ddb6291` and `554e1c472222a3f5ca96b33bc1d7e1008b6f449b`.
+- **Validation:** Required in Block 4 Actions validation.
+- **Status:** RESOLVED — pending final Actions validation
+
+## ERR-070 — M0.7 Block 4 stacked CI trigger coverage
+
+- **Milestone:** M0.7 Block 4 / integration audit
+- **Type:** CI configuration / validation gap
+- **Problem:** The inherited Rust workflow did not yet include the Block 4 branch as a push target or Block 4 as a pull-request target from the Block 3 base.
+- **Correction:** Add `m07-block4-integration-completeness` to the active workflow push targets and add `m07-block3-v31-verification` as its PR target; then update the validated Block 3 base workflow to recognize the Block 4 PR target using the established stacked-branch pattern.
+- **Validation:** Required in Block 4 Actions validation.
+- **Status:** OPEN — correction in progress
