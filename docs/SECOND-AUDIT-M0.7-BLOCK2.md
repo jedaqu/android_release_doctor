@@ -62,6 +62,18 @@ This was identified during the second audit before CI execution.
 
 The ledger records this as ERR-050.
 
+### AUDIT-M0.7-B2-004 — missed struct field in duplicate-attribute error path
+
+The first Actions execution exposed one remaining compile-time initializer missed by the implementation audit: the duplicate proof-of-rotation attribute path did not initialize the new `capabilities` field.
+
+**Correction:** add an empty capability vector to that error evidence object only.
+
+**Actions run:** #324 / `36799430192`
+
+**Correction commit:** `751fdb4a4917316b276473478514d55374654b5b`
+
+The finding is recorded as ERR-053. No production verification behavior outside the intended evidence model was changed.
+
 ## 5. Scope review
 
 The diff against `m07-block1-crypto-coverage` contains:
@@ -108,7 +120,7 @@ The CI correction is limited to the active M0.7 stack.
 
 The stacked PR also required the validated Block 1 base workflow to target `m07-block1-crypto-coverage` in its `pull_request.branches` filter. This was corrected on the base branch in commit `6395c5fbf65d0a40060998646cb62fe07bf9f6fd` and recorded as ERR-052.
 
-## 10. Final second-audit conclusion
+## 11. Final second-audit conclusion
 
 **SECOND AUDIT: PASS TO CI**
 
