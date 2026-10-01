@@ -448,7 +448,7 @@ fn verify_v3_block(
     scheme_name: &str,
 ) -> Result<CryptoSchemeInfo, SignatureVerificationError> {
     let mut reader = LengthReader::new(value);
-    let signers = reader.read_sequence(format!("{scheme_name} signers"))?;
+    let signers = reader.read_sequence(if scheme_block_id == V31_BLOCK_ID { "v3.1 signers" } else { "v3 signers" })?;
     reader.finish("v3 signer sequence")?;
 
     let mut signers_reader = LengthReader::new(signers);
