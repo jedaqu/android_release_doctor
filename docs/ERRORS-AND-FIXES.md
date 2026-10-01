@@ -673,3 +673,16 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction commit:** 9ff5dbd80188eb4e08560075f524496bd06221c8
 - **Validation:** Required in new Actions execution.
 - **Status:** RESOLVED — pending new CI execution
+
+
+## ERR-062 — M0.7 Block 3 over-constrained v3.1 rotation minimum SDK
+
+- **Milestone:** M0.7 Block 3 / Actions run #364
+- **Type:** Semantic-specification correction
+- **Actions run:** #364 / 36801696008
+- **Problem:** The first Block 3 implementation rejected a v3.1 signer when its rotation-target minimum SDK was below 33. The authoritative AOSP verifier/test corpus contains valid v3.1 configurations targeting SDK 32, where SDK 32 is the finalized predecessor SDK used during platform development.
+- **Observed effect:** The valid v3.1 fixture `v31-rsa-2048_2-tgt-33-1-tgt-28.apk` exposed the overly strict condition; the fixture's v3.1 signer range is 32..MAX.
+- **Correction:** Remove the hard-coded `min_sdk >= 33` rejection and treat the v3.1 signer range as authoritative evidence. Keep the required cross-block checks for v3 base presence, range ordering/continuity, stripping-protection equality, and lineage consistency.
+- **Correction commit:** 039301636517d71c763502b0eb07dfb74b1c338e
+- **Validation:** Required in new Actions execution.
+- **Status:** RESOLVED — pending new CI execution
