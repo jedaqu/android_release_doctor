@@ -574,12 +574,31 @@ fn verify_v3_block(
             continue;
         }
 
-        let state = parsed
+        let mut state = parsed
             .proof_of_rotation
             .as_ref()
             .map(|proof| proof.state)
             .unwrap_or(CryptoVerificationState::Verified);
-        let detail = if let Some(proof) = &parsed.proof_of_rotation {
+
+        if scheme_block_id == V31_BLOCK_ID {
+            if parsed.min_sdk < V31_MIN_SDK || parsed.proof_of_rotation.is_none() {
+                state = CryptoVerificationState::Invalid;
+            }
+        }
+
+        let detail = if scheme_block_id == V31_BLOCK_ID {
+            if let Some(proof) = &parsed.proof_of_rotation {
+                format!(
+                    "v3.1 signer signature, certificate/public-key binding, SDK range, and APK content digest verified for rotation target SDK range {}..={}; {}",
+                    parsed.min_sdk, parsed.max_sdk, proof.detail
+                )
+            } else {
+                format!(
+                    "v3.1 signer signature, certificate/public-key binding, SDK range, and APK content digest verified for rotation target SDK range {}..={}",
+                    parsed.min_sdk, parsed.max_sdk
+                )
+            }
+        } else if let Some(proof) = &parsed.proof_of_rotation {
             format!(
                 "v3 signer signature, certificate/public-key binding, SDK range, and APK content digest verified for SDK range {}..={}; {}",
                 parsed.min_sdk, parsed.max_sdk, proof.detail
@@ -597,8 +616,8 @@ fn verify_v3_block(
             algorithms,
             certificate_sha256,
             sdk_ranges,
-            rotation_min_sdk: None,
-            rotation_targets_dev_release: false,
+            rotation_min_sdk: parsed.rotation_min_sdk,
+            rotation_targets_dev_release: parsed.rotation_targets_dev_release,
             proof_of_rotation: parsed.proof_of_rotation.clone().into_iter().collect(),
             detail,
         });
