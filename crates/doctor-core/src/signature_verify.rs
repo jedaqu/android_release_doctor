@@ -27,7 +27,6 @@ const V2_BLOCK_ID: u32 = 0x7109_871a;
 const V3_BLOCK_ID: u32 = 0xf053_68c0;
 const V31_BLOCK_ID: u32 = 0x1b93_ad61;
 const V32_BLOCK_ID: u32 = 0x70e1_c89f;
-const V31_MIN_SDK: u32 = 33;
 const PROOF_OF_ROTATION_ATTR_ID: u32 = 0x3ba0_6f8c;
 const ROTATION_MIN_SDK_VERSION_ATTR_ID: u32 = 0x559f_8b02;
 const ROTATION_ON_DEV_RELEASE_ATTR_ID: u32 = 0xc2a6_b3ba;
@@ -221,14 +220,6 @@ fn apply_v31_cross_block_semantics(result: &mut ApkSignatureVerification) {
         v31.detail = "v3 verification produced no base SDK range".to_string();
         return;
     };
-
-    if v31_min_sdk < V31_MIN_SDK {
-        v31.state = CryptoVerificationState::Invalid;
-        v31.detail = format!(
-            "v3.1 rotation target minimum SDK {v31_min_sdk} is below {V31_MIN_SDK}"
-        );
-        return;
-    }
 
     if v3_max_sdk >= v31_min_sdk {
         v31.state = CryptoVerificationState::Invalid;
@@ -691,10 +682,8 @@ fn verify_v3_block(
             .map(|proof| proof.state)
             .unwrap_or(CryptoVerificationState::Verified);
 
-        if scheme_block_id == V31_BLOCK_ID {
-            if parsed.min_sdk < V31_MIN_SDK || parsed.proof_of_rotation.is_none() {
-                state = CryptoVerificationState::Invalid;
-            }
+        if scheme_block_id == V31_BLOCK_ID && parsed.proof_of_rotation.is_none() {
+            state = CryptoVerificationState::Invalid;
         }
 
         let detail = if scheme_block_id == V31_BLOCK_ID {
@@ -1872,7 +1861,7 @@ mod tests {
         assert_eq!(v3.state, CryptoVerificationState::Verified, "{}", v3.detail);
         assert_eq!(v31.state, CryptoVerificationState::Verified, "{}", v31.detail);
         assert_eq!(v3.rotation_min_sdk, Some(33));
-        assert!(v31.sdk_ranges.iter().all(|(min, _)| *min >= V31_MIN_SDK));
+        assert_eq!(v31.sdk_ranges, vec![(32, u32::MAX)]);
         assert!(!v31.proof_of_rotation.is_empty());
     }
 
