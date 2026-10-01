@@ -562,3 +562,16 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction commit on base branch:** 6395c5fbf65d0a40060998646cb62fe07bf9f6fd
 - **Validation:** New PR-event execution required.
 - **Status:** RESOLVED — pending Actions validation
+
+
+## ERR-053 — M0.7 Block 2 missing capability field in duplicate proof-of-rotation initializer
+
+- **Milestone:** M0.7 Block 2 / Actions run #324
+- **Type:** Build failure
+- **Actions run:** #324 / 36799430192
+- **Problem:** After extending `ProofOfRotationInfo` with `capabilities`, the duplicate proof-of-rotation attribute error path in `parse_signed_data_v3()` still used the old struct initializer and omitted the new field.
+- **Cause:** The new evidence field was added to normal validation/fixtures but one existing error initializer was missed.
+- **Correction:** Add `capabilities: Vec::new()` to that duplicate-attribute error initializer. No verification behavior changes beyond restoring compilation.
+- **Correction commit:** 751fdb4a4917316b276473478514d55374654b5b
+- **Validation:** Required in new Actions execution.
+- **Status:** RESOLVED — pending new CI execution
