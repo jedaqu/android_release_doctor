@@ -28,7 +28,7 @@ The implementation now:
 2. reuses the existing v3 cryptographic verification path for v3.1 supported algorithms;
 3. preserves signer count, algorithms, certificate fingerprints, SDK ranges and proof-of-rotation evidence;
 4. records v3 rotation-min-SDK metadata and development-release rotation metadata;
-5. requires v3.1 signer minimum SDK to be at least Android 13 / SDK 33;
+5. preserves the v3.1 signer-target range as authoritative evidence, including valid SDK 32 development-era/test-corpus configurations;
 6. rejects a v3.1 block when the required v3 base block is absent;
 7. parses the v3 stripping-protection rotation-min-SDK attribute;
 8. requires that the v3 stripping-protection value match the v3.1 targeted minimum SDK;
