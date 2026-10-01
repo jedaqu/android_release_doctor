@@ -1028,6 +1028,7 @@ fn parse_signed_data_v3(
                 proof_of_rotation = Some(ProofOfRotationInfo {
                     state: CryptoVerificationState::Invalid,
                     level_count: 0,
+                    capabilities: Vec::new(),
                     detail: "v3 signed data contains multiple proof-of-rotation attributes"
                         .to_string(),
                 });
