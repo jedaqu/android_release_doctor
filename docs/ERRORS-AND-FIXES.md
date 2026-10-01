@@ -539,3 +539,15 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction commit:** 766e190e2d90a677c4844c4fb65ce8a925a54128
 - **Validation:** Second-audit re-review required before Actions.
 - **Status:** RESOLVED — pending CI validation
+
+
+## ERR-051 — M0.7 Block 2 stacked CI trigger coverage was missing
+
+- **Milestone:** M0.7 Block 2 / second-audit CI review
+- **Type:** CI configuration / validation gap
+- **Problem:** The Block 2 source branch was not included in the Rust workflow push trigger, and the inherited workflow did not include the validated Block 1 branch as a pull-request target for the stacked Block 2 PR.
+- **Cause:** The workflow had been updated for Block 1 but had not yet been extended to the next stacked block.
+- **Correction:** Add `m07-block2-rotation-semantics` to push coverage and `m07-block1-crypto-coverage` to pull-request target coverage without changing the job graph.
+- **Correction commit:** c93f52f01af86d7c6498fdf86e7a7a6ab9fd9cc6
+- **Validation:** Final workflow review and stacked PR-event validation required.
+- **Status:** RESOLVED — pending Actions validation
