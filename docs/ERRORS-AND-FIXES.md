@@ -1025,3 +1025,16 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Scope:** Validation infrastructure only; no product behavior, CLI behavior, Action behavior, or audit logic changes.
 - **Validation:** A new push from the corrected branch must produce terminal Rust CI Build/Test/Format/Clippy evidence before this entry is marked resolved.
 - **Status:** RESOLVED — Rust CI #547 / run `36898715401` passed Build, Test, Format, and Clippy.
+
+
+## ERR-089 — M0.9 public checkpoint documentation referenced a non-public audit artifact
+
+- **Milestone:** M0.9 public reconstruction / documentation integrity
+- **Type:** Documentation / public traceability defect
+- **Observed:** The public M0.9 checkpoint referenced `docs/SECOND-AUDIT-M0.9-BLOCK1-IMPLEMENTATION.md`, but that internal audit artifact was not present in the public repository.
+- **Problem:** The public checkpoint was not self-contained and could imply that a non-public document was available as public evidence.
+- **Root cause:** The checkpoint was reconstructed from the private development history while retaining an internal audit-artifact reference.
+- **Correction:** Replace the broken public reference with a factual description of the second-audit result, explicitly keep the internal audit artifact outside the public repository, update README/CHANGELOG status wording, and document the public/private reconstruction boundary.
+- **Scope:** Documentation and traceability only. No product engine, CLI, Action, tests, or workflow behavior changed.
+- **Validation:** Second audit of the corrected public documentation; public/private separation review; terminal Rust CI required on the corrected commit.
+- **Status:** RESOLVED — corrected public documentation validated on the resulting commit.
