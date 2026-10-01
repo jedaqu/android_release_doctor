@@ -589,3 +589,16 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction commit:** fd6dfa1e275c75a4bc5d28fa1c42b6e969119497
 - **Validation:** Required in new Actions execution.
 - **Status:** RESOLVED — pending new CI execution
+
+
+## ERR-055 — M0.7 Block 2 rustfmt failure in capability regression tests
+
+- **Milestone:** M0.7 Block 2 / Actions run #333
+- **Type:** CI formatting failure
+- **Actions run:** #333 / 36799797451
+- **Problem:** `cargo fmt --all -- --check` reported three deterministic layout differences in the newly added proof-of-rotation fixture helper/tests.
+- **Cause:** The implementation was logically valid, but three new lines had not yet been formatted according to repository rustfmt output.
+- **Correction:** Apply only the three rustfmt-indicated line-wrap/layout changes. No logic, fixture data, or production behavior changed.
+- **Correction commit:** f0bcd2652dab80507cf62b5d51ebaaba848f2539
+- **Validation:** Required in new Actions execution.
+- **Status:** RESOLVED — pending new CI execution
