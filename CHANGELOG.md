@@ -4,7 +4,7 @@ All notable user-facing changes to Android Release Doctor are documented here.
 
 ## [0.1.0] — First public release
 
-Status: release candidate; GitHub Release publication is pending the M0.9 Block 1 checkpoint and tag-driven publication gate.
+Status: M0.9 Block 1 onboarding checkpoint closed; GitHub Release publication remains a separate tag-driven operation.
 
 ### Highlights
 
