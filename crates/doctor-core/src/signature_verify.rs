@@ -2066,7 +2066,7 @@ mod tests {
         signed_data.extend_from_slice(&2_u32.to_le_bytes());
         signed_data.extend_from_slice(&encode_sequence(&[]));
 
-        let parsed = parse_signed_data_v3(&signed_data).expect("certificate chain should parse");
+        let parsed = parse_signed_data_v3(&signed_data, V3_BLOCK_ID).expect("certificate chain should parse");
         assert_eq!(parsed.certificate, b"signer");
     }
 
@@ -2194,7 +2194,7 @@ mod tests {
         signed_data.extend_from_slice(&1_u32.to_le_bytes());
         signed_data.extend_from_slice(&encode_sequence(&[]));
 
-        let result = parse_signed_data_v3(&signed_data);
+        let result = parse_signed_data_v3(&signed_data, V3_BLOCK_ID);
         assert!(result.is_err());
         let error = result
             .err()
@@ -2479,7 +2479,7 @@ mod tests {
         signed_data.extend_from_slice(&35_u32.to_le_bytes());
         signed_data.extend_from_slice(&attributes);
 
-        let parsed = parse_signed_data_v3(&signed_data).expect("v3 signed data should parse");
+        let parsed = parse_signed_data_v3(&signed_data, V3_BLOCK_ID).expect("v3 signed data should parse");
         let proof_info = parsed
             .proof_of_rotation
             .expect("proof-of-rotation evidence should be present");
