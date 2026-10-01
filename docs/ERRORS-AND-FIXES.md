@@ -768,7 +768,7 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction:** Include v3.1 in the `SIGNING-003` scheme evaluation, preserve Invalid/Unsupported semantics, keep v3.2 as a manual-review boundary, and add focused regression tests for Verified/Invalid/Unsupported v3.1 plus v3.2 presence.
 - **Correction commit:** `8ec343a95798d59ec577a3612b151f430ddb6291` and `554e1c472222a3f5ca96b33bc1d7e1008b6f449b`.
 - **Validation:** Required in Block 4 Actions validation.
-- **Status:** RESOLVED — pending final Actions validation
+- **Status:** CORRECTION APPLIED — pending final Actions validation
 
 ## ERR-070 — M0.7 Block 4 stacked CI trigger coverage
 
@@ -799,4 +799,14 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction:** Rebind the manual-review/pass `else` directly to the `schemes.iter().any(Unsupported) || v31_requires_manual || verification.v32_present` condition and remove the extra outer `else`.
 - **Correction commit:** `e3ae2c9be9c4a1a5431a53b6a2948ab6c512eac3`
 - **Validation:** Corrected source must pass Build, Test, Format, and Clippy before this entry can be marked resolved.
-- **Status:** OPEN — correction applied, pre-Actions audit required.
+- **Status:** CORRECTION APPLIED — pre-Actions second audit PASS; pending Actions validation.
+
+
+## ERR-073 — M0.7 Block 4 second-audit terminology clarification
+
+- **Milestone:** M0.7 Block 4 / second audit after ERR-072 correction
+- **Type:** Audit clarification
+- **Problem:** The corrected Block 4 source still contains a conditional v3.1 manual-review detail stating that a present v3.1 block without a verified scheme result requires manual review. That text could be mistaken for the obsolete Block 3 behavior that unconditionally treated every v3.1 block as unverified.
+- **Clarification:** The current path first evaluates the distinct verified v3.1 scheme result. Only a present v3.1 block without a Verified result takes the manual-review fallback; a verified v3.1 scheme can contribute to PASS and an invalid v3.1 scheme remains a BLOCKER.
+- **Validation:** Confirmed by source-level second audit and focused SIGNING-003 regression coverage.
+- **Status:** RESOLVED — audit clarification; no production behavior change.
