@@ -778,3 +778,25 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction:** Add `m07-block4-integration-completeness` to the active workflow push targets and add `m07-block3-v31-verification` as its PR target; then update the validated Block 3 base workflow to recognize the Block 4 PR target using the established stacked-branch pattern.
 - **Validation:** Required in Block 4 Actions validation.
 - **Status:** OPEN — correction in progress
+## ERR-071 — M0.7 Block 4 first SIGNING-003 branch-structure failure
+
+- **Milestone:** M0.7 Block 4 / Actions run #36868550017
+- **Type:** Build failure
+- **Actions job:** 110390082400
+- **Problem:** The first Block 4 integration correction left the nested `SIGNING-003` manual-review/pass branches structurally unbalanced, producing a Rust parser error in `crates/doctor-core/src/lib.rs`.
+- **Cause:** The scoped integration edit introduced an incorrect brace/`else` relationship around the new v3.1 manual-review path.
+- **Initial correction:** Commit `b81d2710a23763cb573060906d26ac30feb1870b` attempted to close the branch structure locally.
+- **Validation:** Follow-up Actions run #36868916143 still failed at the same area, showing that the structural correction was incomplete.
+- **Status:** SUPERSEDED BY ERR-072 — retained as the first observed failure in the correction chain.
+
+## ERR-072 — M0.7 Block 4 residual extra `else` after SIGNING-003 correction
+
+- **Milestone:** M0.7 Block 4 / Actions run #36868916143
+- **Type:** Build failure
+- **Actions job:** 110391334448
+- **Problem:** Build failed with `expected expression, found keyword else` at `crates/doctor-core/src/lib.rs:1219`.
+- **Root cause:** The previous local brace edit removed one unmatched delimiter but left an additional outer `} else {`; the `else` belonged to the inner unsupported/manual-review condition.
+- **Correction:** Rebind the manual-review/pass `else` directly to the `schemes.iter().any(Unsupported) || v31_requires_manual || verification.v32_present` condition and remove the extra outer `else`.
+- **Correction commit:** `e3ae2c9be9c4a1a5431a53b6a2948ab6c512eac3`
+- **Validation:** Corrected source must pass Build, Test, Format, and Clippy before this entry can be marked resolved.
+- **Status:** OPEN — correction applied, pre-Actions audit required.
