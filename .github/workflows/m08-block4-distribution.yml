@@ -1,6 +1,8 @@
 name: M0.8 Block 4 Distribution
 
 on:
+  workflow_dispatch:
+
   push:
     branches:
       - m08-block4-distribution-release
