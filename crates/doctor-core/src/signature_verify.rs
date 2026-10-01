@@ -2027,9 +2027,10 @@ mod tests {
         for index in 0..=level_index {
             let node = reader
                 .read_sequence("fixture proof-of-rotation node")
-                .expect("fixture node should be well formed");
+                .expect("fixture node should be well formed")
+                .to_vec();
             if index == level_index {
-                let mut node_reader = LengthReader::new(node);
+                let mut node_reader = LengthReader::new(&node);
                 let signed_data = node_reader
                     .read_sequence("fixture signed data")
                     .expect("fixture node should contain signed data");
