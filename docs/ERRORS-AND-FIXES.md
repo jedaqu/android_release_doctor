@@ -686,3 +686,15 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction commit:** 039301636517d71c763502b0eb07dfb74b1c338e
 - **Validation:** Required in new Actions execution.
 - **Status:** RESOLVED — pending new CI execution
+
+
+## ERR-063 — M0.7 Block 3 rejected an allowed v3/v3.1 SDK boundary overlap
+
+- **Milestone:** M0.7 Block 3 / Actions run #370
+- **Type:** Cross-block semantic correction
+- **Actions run:** #370 / 36801841509
+- **Problem:** The cross-block validator rejected any case where v3 maxSDK equaled v3.1 minSDK. The authoritative v3.1 corpus includes a valid development-era configuration with both values at SDK 32.
+- **Correction:** Permit equality at SDK 32 and permit equality for later SDK versions only when the v3.1 signer explicitly carries the development-release rotation attribute. Unjustified overlap above that boundary remains invalid; ordinary gaps remain invalid.
+- **Correction commit:** a6cb7b42acda17f5d9a11dc1ffce07bc418f7302
+- **Validation:** Required in new Actions execution.
+- **Status:** RESOLVED — pending new CI execution
