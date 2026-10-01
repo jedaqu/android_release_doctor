@@ -575,3 +575,17 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction commit:** 751fdb4a4917316b276473478514d55374654b5b
 - **Validation:** Required in new Actions execution.
 - **Status:** RESOLVED — pending new CI execution
+
+
+## ERR-054 — M0.7 Block 2 fixture helper wrote flags at the wrong offset
+
+- **Milestone:** M0.7 Block 2 / Actions run #326
+- **Type:** Test-fixture correctness defect
+- **Actions run:** #326 / 36799721854
+- **Problem:** The new fixture helper intended to mutate a lineage node's capability flags, but its calculated offset was four bytes too far into the node. The tests therefore overwrote the node's signature algorithm field instead of the flags field.
+- **Observed effects:** Four capability-evidence tests failed with `Unsupported`, `Invalid`, or unchanged flags evidence while the remaining 67 unit tests passed.
+- **Cause:** The node layout contains a four-byte length prefix followed by the signed-data payload; the flags field begins immediately after that payload. The helper added an unnecessary second four-byte offset.
+- **Correction:** Change the fixture mutation offset from `4 + signed_data.len() + 4` to `4 + signed_data.len()`. Test-only correction; no production verification behavior changed.
+- **Correction commit:** fd6dfa1e275c75a4bc5d28fa1c42b6e969119497
+- **Validation:** Required in new Actions execution.
+- **Status:** RESOLVED — pending new CI execution
