@@ -221,15 +221,21 @@ fn apply_v31_cross_block_semantics(result: &mut ApkSignatureVerification) {
         return;
     };
 
-    if v3_max_sdk >= v31_min_sdk {
+    if v3_max_sdk > v31_min_sdk
+        || (v3_max_sdk == v31_min_sdk
+            && v31_min_sdk > 32
+            && !v31.rotation_targets_dev_release)
+    {
         v31.state = CryptoVerificationState::Invalid;
         v31.detail = format!(
-            "v3/v3.1 targeted SDK ranges overlap: v3 maxSDK={v3_max_sdk}, v3.1 minSDK={v31_min_sdk}"
+            "v3/v3.1 targeted SDK ranges overlap without an allowed development-release boundary: v3 maxSDK={v3_max_sdk}, v3.1 minSDK={v31_min_sdk}"
         );
         return;
     }
 
-    if v3_max_sdk.saturating_add(1) != v31_min_sdk {
+    if v3_max_sdk < v31_min_sdk
+        && v3_max_sdk.saturating_add(1) != v31_min_sdk
+    {
         v31.state = CryptoVerificationState::Invalid;
         v31.detail = format!(
             "v3/v3.1 targeted SDK ranges are not contiguous: v3 maxSDK={v3_max_sdk}, v3.1 minSDK={v31_min_sdk}"
