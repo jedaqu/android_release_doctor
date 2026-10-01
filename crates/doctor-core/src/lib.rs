@@ -1215,6 +1215,7 @@ fn evaluate(
                         ),
                         "Verify the APK with apksigner and review the reported signing scheme, proof-of-rotation, and any unsupported v3.2 evidence before publication.",
                     ));
+                    }
                 } else {
                     findings.push(Finding::pass(
                         "SIGNING-003",
