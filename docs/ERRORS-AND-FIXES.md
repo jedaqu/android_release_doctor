@@ -923,3 +923,32 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Pattern:** A newly created stacked branch/PR can inherit a workflow whose push or pull-request branch filters do not yet cover the new branch/base target, preventing the expected validation run.
 - **Action:** Keep the historical ERR entries unchanged. Before future stacked-block implementation, explicitly verify push coverage on the head branch and pull-request target coverage on the validated base workflow during the pre-audit, before implementation.
 - **Status:** Recorded as a preventive process observation; no production or workflow change made by this observation.
+
+
+## ERR-082 — M0.8 Block 3 action metadata syntax failure
+
+- **Milestone:** M0.8 Block 3 / GitHub Action
+- **Type:** CI validation / action metadata parse failure
+- **Observed in:** Actions #10 / run 36887334695, job `action`
+- **Head:** `38713f931de66e8848358e913fb0bd3055fa1827`
+- **Problem:** GitHub failed during action metadata loading before job setup. `.github/actions/android-release-doctor/action.yml` was rejected with `While scanning a simple key, could not find expected ':'` at line 134.
+- **Root cause:** The bounded CR/LF validation insertion was malformed during file generation and introduced a literal fragment into the YAML/run block, making the action manifest syntactically invalid.
+- **Correction:** Replaced only `.github/actions/android-release-doctor/action.yml` with the intended composite-action metadata and Bash validation, preserving the existing input/output contract and repository Cargo path.
+- **Correction commit:** `38f33f261bc5300f4d1b05afde627b1f54f49030`
+- **Validation:** A fresh Actions run is required. No product/audit/CLI behavior was changed by the correction.
+- **Validation:** Actions #18 / run `36887625607` passed the Block 3 action self-test, including success, blocker, and operational-error paths. Rust CI run #489 / `36887626517` passed Build, Test, Format, and Clippy on the corrected branch.
+- **Status:** RESOLVED
+
+
+## ERR-083 — M0.8 Block 3 action command expression malformed after ERR-082 correction
+
+- **Milestone:** M0.8 Block 3 / GitHub Action correction chain
+- **Type:** CI validation / action manifest expression parse failure
+- **Observed in:** Actions #12 / run 36887450382, job `action`
+- **Head:** `38f33f261bc5300f4d1b05afde627b1f54f49030`
+- **Problem:** GitHub rejected `.github/actions/android-release-doctor/action.yml` because the Bash command invocation contained an accidental unclosed GitHub expression: `"${{CMDVAR${{"`.
+- **Root cause:** The corrective file-generation substitution converted the internal Bash array expansion `"${cmd[@]}"` into a malformed GitHub expression.
+- **Correction:** Replace only the malformed command invocation with the intended Bash array expansion `"${cmd[@]}"`.
+- **Correction commit:** `f56eb1448264ef3ce09ccb07b436bceed02388a0`
+- **Validation:** Actions #18 / run `36887625607` passed the Block 3 action self-test, including success, blocker, and operational-error paths. Rust CI run #489 / `36887626517` passed Build, Test, Format, and Clippy on the corrected branch.
+- **Status:** RESOLVED

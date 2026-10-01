@@ -1,0 +1,92 @@
+name: M0.8 Block 3 Action
+
+on:
+  push:
+    branches:
+      - m08-block3-github-action
+  pull_request:
+    branches:
+      - m08-block2-cli-output-contract
+
+jobs:
+  action:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Verify Rust toolchain
+        run: |
+          cargo --version
+          rustc --version
+
+      - name: Success path
+        id: success
+        uses: $/.github/actions/android-release-doctor
+        with:
+          artifact: tests/fixtures/minimal-release.apk
+          format: json
+          output: ${{ runner.temp }}/android-release-doctor-success.json
+
+      - name: Validate success report
+        env:
+          REPORT_PATH: ${{ steps.success.outputs.report-path }}
+        run: |
+          test -n "$REPORT_PATH"
+          test -s "$REPORT_PATH"
+          python3 - "$REPORT_PATH" <<'PY'
+          import json
+          import sys
+
+          with open(sys.argv[1], "r", encoding="utf-8") as handle:
+              report = json.load(handle)
+
+          assert report["schema_version"] == "1.0"
+          assert "findings" in report
+          assert "summary" in report
+          PY
+
+      - name: Blocker path
+        id: blocker
+        continue-on-error: true
+        uses: $/.github/actions/android-release-doctor
+        with:
+          artifact: tests/fixtures/minimal-release.apk
+          play: "true"
+          play-platform: mobile
+          format: json
+          output: ${{ runner.temp }}/android-release-doctor-blocker.json
+
+      - name: Validate blocker result
+        env:
+          EXIT_CODE: ${{ steps.blocker.outputs.exit-code }}
+          REPORT_PATH: ${{ steps.blocker.outputs.report-path }}
+        run: |
+          test "$EXIT_CODE" = "1"
+          test -s "$REPORT_PATH"
+
+          python3 - "$REPORT_PATH" <<'PY'
+          import json
+          import sys
+
+          with open(sys.argv[1], "r", encoding="utf-8") as handle:
+              report = json.load(handle)
+
+          assert report["schema_version"] == "1.0"
+          assert report["summary"]["blockers"] > 0
+          PY
+
+      - name: Operational error path
+        id: error
+        continue-on-error: true
+        uses: $/.github/actions/android-release-doctor
+        with:
+          artifact: tests/fixtures/does-not-exist.apk
+          format: json
+          output: ${{ runner.temp }}/android-release-doctor-error.json
+
+      - name: Validate operational error
+        env:
+          EXIT_CODE: ${{ steps.error.outputs.exit-code }}
+        run: test "$EXIT_CODE" = "2"

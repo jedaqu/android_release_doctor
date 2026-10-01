@@ -335,6 +335,51 @@ The CLI keeps a stable exit-code contract:
 MANUAL-REVIEW findings do not produce exit code 1. In JSON mode, stdout contains only the Report v1 JSON; diagnostics remain on stderr.
 
 
+## M0.8 Block 3 scope — GitHub Action
+
+M0.8 Block 3 exposes the existing CLI as a reusable GitHub composite action without changing the audit engine or Report v1.
+
+Action path:
+
+`.github/actions/android-release-doctor/action.yml`
+
+Example:
+
+```yaml
+steps:
+  - uses: actions/checkout@v6
+
+  - name: Audit release
+    id: release-doctor
+    uses: jedaqu/android-release-doctor/.github/actions/android-release-doctor@<ref>
+    with:
+      artifact: app/build/outputs/apk/release/app-release.apk
+      format: json
+      output: android-release-doctor-report.json
+```
+
+Inputs:
+- `artifact`: required APK/AAB path;
+- `project`: optional Android application module path;
+- `play`: optional `true|false`, default `false`;
+- `play-platform`: optional Play platform, default `mobile`;
+- `format`: `text|json`, default `text`;
+- `output`: optional report output path.
+
+Outputs:
+- `exit-code`: the CLI exit code;
+- `report-path`: the requested output path, when one was supplied.
+
+The action preserves the CLI exit semantics:
+- `0`: no blockers;
+- `1`: one or more blockers;
+- `2`: usage, input/audit, output, serialization, or internal error.
+
+When `output` is supplied, the report is written by the existing CLI. A blocking audit therefore still leaves the generated report available for later workflow steps, for example with `continue-on-error: true` and a subsequent upload/inspection step.
+
+The Block 3 action currently executes the repository CLI through Cargo. The runner therefore needs a usable Rust/Cargo toolchain. Prebuilt binary distribution is intentionally deferred to the later distribution/release-packaging block.
+
+
 ## Still not implemented
 
 - full Gradle/variant evaluation;

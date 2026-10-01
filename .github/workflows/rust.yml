@@ -18,6 +18,7 @@ on:
       - m07-block4-integration-completeness
       - m08-block1-report-contract
       - m08-block2-cli-output-contract
+      - m08-block3-github-action
   pull_request:
     branches:
       - main
