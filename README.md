@@ -2,7 +2,7 @@
 
 Open-source, local-first tool for auditing Android APK and AAB releases before publication.
 
-> **Status:** early development — M0.7 Block 4 validated; integration/completeness checkpoint complete (Blocks 1–3 capabilities integrated).
+> **Status:** M0.8 productization validated; first public release onboarding is being prepared in M0.9 Block 1.
 
 Android Release Doctor inspects the **artifact you are actually going to distribute**, can compare it with the Android application Gradle configuration, and can apply a versioned Google Play submission-readiness profile.
 
@@ -452,3 +452,147 @@ cargo run -p doctor-cli -- --play tests/fixtures/minimal-release.apk
 ## License
 
 Apache License 2.0.
+
+
+## Getting started
+
+Android Release Doctor is distributed as native x86_64 packages for Linux, Windows, and Intel macOS. The first public release is prepared as **v0.1.0**. Publication is tag-driven: the release tag must match the workspace version exactly.
+
+### Supported downloads
+
+The first release package names are:
+
+| Platform | Package |
+|---|---|
+| Linux x86_64 | `android-release-doctor-v0.1.0-linux-x86_64.tar.gz` |
+| Windows x86_64 | `android-release-doctor-v0.1.0-windows-x86_64.zip` |
+| macOS Intel x86_64 | `android-release-doctor-v0.1.0-macos-x86_64.tar.gz` |
+
+The published release also includes `SHA256SUMS`.
+
+ARM64 packages, installers, package-manager integrations, and OS signing/notarization are not part of this release boundary.
+
+### Installation and first check
+
+Download the package for your host from the GitHub Release and extract it.
+
+Linux/macOS:
+
+```bash
+./android-release-doctor --version
+./android-release-doctor --help
+```
+
+Windows PowerShell:
+
+```powershell
+.\android-release-doctor.exe --version
+.\android-release-doctor.exe --help
+```
+
+The version command should report:
+
+```text
+android-release-doctor 0.1.0
+```
+
+To verify the downloaded archive with SHA-256:
+
+Linux:
+
+```bash
+sha256sum -c SHA256SUMS
+```
+
+macOS:
+
+```bash
+shasum -a 256 -c SHA256SUMS
+```
+
+Windows PowerShell:
+
+```powershell
+Get-FileHash .\android-release-doctor-v0.1.0-windows-x86_64.zip -Algorithm SHA256
+```
+
+Compare the calculated hash with the corresponding entry in `SHA256SUMS`.
+
+### First APK/AAB audit
+
+Audit the artifact you are actually going to distribute:
+
+```bash
+android-release-doctor app-release.apk
+```
+
+For an APK/AAB release-readiness check:
+
+```bash
+android-release-doctor --play app-release.aab
+```
+
+To compare the final artifact with the Android application module's static Gradle configuration:
+
+```bash
+android-release-doctor --project app/ app-release.apk
+```
+
+The default output is human-readable text.
+
+### JSON report for CI and tooling
+
+Report v1 is the stable machine-readable contract:
+
+```bash
+android-release-doctor --format json --output report.json app-release.apk
+```
+
+The report can be consumed by CI or other tooling without changing the audit engine.
+
+### Exit codes
+
+The process exit code is part of the CLI contract:
+
+| Exit code | Meaning |
+|---:|---|
+| `0` | Audit completed without blockers |
+| `1` | One or more blockers were found |
+| `2` | Usage, input/audit, output-file, or internal error |
+
+A MANUAL-REVIEW finding does not by itself produce exit code `1`.
+
+### GitHub Action
+
+The reusable action is available from:
+
+```yaml
+- uses: actions/checkout@v6
+
+- name: Audit Android release
+  id: release-doctor
+  uses: jedaqu/android-release-doctor/.github/actions/android-release-doctor@v0.1.0
+  with:
+    artifact: app/build/outputs/apk/release/app-release.apk
+    format: json
+    output: android-release-doctor-report.json
+```
+
+The first-release example is intended for the `v0.1.0` release tag after publication.
+
+The current action executes the validated CLI through Cargo on the runner, so the runner must provide a usable Rust/Cargo toolchain. Its inputs are `artifact`, `project`, `play`, `play-platform`, `format`, and `output`; its outputs are `exit-code` and `report-path`.
+
+A future binary-backed Action distribution is a separate M0.9 scope and is not implied by this release.
+
+### What the tool does not claim
+
+Android Release Doctor reports evidence it can actually establish from the artifact and supplied project configuration. It does not pretend to verify information that only exists in external release systems.
+
+Current explicit boundaries include:
+
+- Play Console declarations remain manual review items;
+- Gradle is parsed statically and is not executed;
+- AAB signing is not treated as equivalent to final generated APK signing verification;
+- unsupported cryptographic algorithms remain explicit unsupported/manual-review evidence.
+
+See `CHANGELOG.md` for the first public-release capability summary and known boundaries.

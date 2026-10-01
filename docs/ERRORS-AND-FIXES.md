@@ -1000,3 +1000,15 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction commit:** `e440b1e1e00d9f163e5373a331e35ad89448b183`
 - **Validation:** Block 4 distribution run #34 / `36890483899`: validate PASS; Linux x86_64 package PASS; Windows x86_64 package PASS; macOS x86_64 package PASS. Rust CI #533 / `36890483719`: Build PASS; Test PASS; Format PASS; Clippy PASS.
 - **Status:** RESOLVED
+
+
+## ERR-087 — M0.9 Block 1 macOS checksum command was not portable
+
+- **Milestone:** M0.9 Block 1 / Public Release & Onboarding
+- **Type:** Documentation defect
+- **Observed during:** second implementation audit of the public-release onboarding changes
+- **Problem:** `README.md` initially documented `sha256sum -c SHA256SUMS` for both Linux and macOS. Stock macOS provides `shasum` rather than the GNU `sha256sum` command by default.
+- **Root cause:** The onboarding checksum instructions were written from the Linux verification path used by the release workflow without accounting for the native macOS command surface.
+- **Correction:** Separate the verification instructions by host and use `shasum -a 256 -c SHA256SUMS` for macOS.
+- **Validation:** Re-read the corrected onboarding section and verify the command against the documented x86_64 macOS distribution path; full repository CI remains required for the implementation checkpoint.
+- **Status:** CORRECTION APPLIED — pending CI validation
