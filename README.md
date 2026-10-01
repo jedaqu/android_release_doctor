@@ -2,7 +2,7 @@
 
 Open-source, local-first tool for auditing Android APK and AAB releases before publication.
 
-> **Status:** early development — M0.7 Block 1 validated (ECDSA/SHA-512 P-384 coverage for APK v2/v3).
+> **Status:** early development — M0.7 Block 2 validated (proof-of-rotation capability evidence for APK v3).
 
 Android Release Doctor inspects the **artifact you are actually going to distribute**, can compare it with the Android application Gradle configuration, and can apply a versioned Google Play submission-readiness profile.
 
@@ -213,6 +213,30 @@ android-release-doctor --play app-release.apk
 ```
 
 The native ELF and APK signing evidence is collected automatically as part of the artifact audit.
+
+## M0.7 Block 2 scope — proof-of-rotation semantic evidence
+
+M0.7 Block 2 extends the validated v3 proof-of-rotation verifier with structured capability evidence for each lineage node.
+
+The audit records:
+
+- the raw lineage capability flags;
+- the documented Android capability bits;
+- the known-bit mask;
+- unknown/reserved bits;
+- the decoded capability state for each lineage node.
+
+The verifier does not reject unusual combinations of independent capability bits merely because they are unusual. Unknown/reserved bits remain explicit evidence rather than being guessed into a cryptographic failure.
+
+The existing lineage checks remain unchanged:
+
+- certificate DER validation and uniqueness;
+- parent-to-child signature verification;
+- lineage algorithm linkage;
+- final lineage certificate binding to the current v3 signer;
+- signer-local evidence preservation.
+
+v3.1/v3.2 semantics, AAB signing verification, and runtime Android trust-state inference remain outside this block.
 
 ## Still not implemented
 
