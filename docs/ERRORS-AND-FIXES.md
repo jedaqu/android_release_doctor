@@ -821,6 +821,6 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Problem:** `crates/doctor-core/src/lib.rs` failed to compile with `this file contains an unclosed delimiter`. The compiler traced the unmatched structure to the `SIGNING-003` branch beginning at line 696 and the nested conditional around line 1218.
 - **Root cause:** The previous bounded branch repair closed the inner manual-review conditional but left the surrounding `else` branch open before the final `else` that handles unavailable verification.
 - **Correction:** Restore the missing closing delimiter for the surrounding `else` branch and normalize indentation only within that affected `SIGNING-003` block.
-- **Correction commit:** pending
-- **Validation:** pending GitHub Actions validation of the correction commit.
-- **Status:** OPEN — awaiting validation
+- **Correction commit:** `89753fc376e8fd4381d67c5b4c72b0ac5aff6324`
+- **Validation:** Actions run #428 / `36873605656` passed Build, Test, Format, and Clippy.
+- **Status:** RESOLVED

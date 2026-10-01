@@ -236,4 +236,8 @@ ERR-074 records Actions run 36869780405 and job 110394269323 as a distinct build
 
 **SECOND-AUDIT AFTER ERR-074: PASS TO PROCEED TO ACTIONS**
 
-The next gate is the exact correction commit through GitHub Actions.
+The exact correction commit `89753fc376e8fd4381d67c5b4c72b0ac5aff6324` was validated by Actions run #428 / `36873605656` with Build, Test, Format, and Clippy all PASS.
+
+**SECOND-AUDIT AFTER ERR-074: PASS**
+
+The next acceptance gate is the final checkpoint commit carrying this ledger/audit closure through GitHub Actions.
