@@ -263,24 +263,37 @@ fn apply_v31_cross_block_semantics(result: &mut ApkSignatureVerification) {
         .filter(|proof| proof.state == CryptoVerificationState::Verified)
         .collect::<Vec<_>>();
 
-    if v3_lineages.is_empty() || v31_lineages.is_empty() {
+    if v31_lineages.is_empty() {
         v31.state = CryptoVerificationState::Invalid;
-        v31.detail = "v3.1 verification requires verified proof-of-rotation lineage evidence in both v3 and v3.1 signers".to_string();
+        v31.detail =
+            "v3.1 verification requires proof-of-rotation lineage evidence in the v3.1 signer"
+                .to_string();
         return;
     }
 
-    let lineage_consistent = v3_lineages.iter().all(|v3_proof| {
-        v31_lineages.iter().any(|v31_proof| {
-            !v3_proof.lineage_certificate_sha256.is_empty()
-                && v3_proof.lineage_certificate_sha256.len()
-                    <= v31_proof.lineage_certificate_sha256.len()
-                && v3_proof
+    let lineage_consistent = if v3_lineages.is_empty() {
+        v3.certificate_sha256.iter().all(|certificate| {
+            v31_lineages.iter().any(|proof| {
+                proof
                     .lineage_certificate_sha256
                     .iter()
-                    .zip(v31_proof.lineage_certificate_sha256.iter())
-                    .all(|(left, right)| left == right)
+                    .any(|lineage_certificate| lineage_certificate == certificate)
+            })
         })
-    });
+    } else {
+        v3_lineages.iter().all(|v3_proof| {
+            v31_lineages.iter().any(|v31_proof| {
+                !v3_proof.lineage_certificate_sha256.is_empty()
+                    && v3_proof.lineage_certificate_sha256.len()
+                        <= v31_proof.lineage_certificate_sha256.len()
+                    && v3_proof
+                        .lineage_certificate_sha256
+                        .iter()
+                        .zip(v31_proof.lineage_certificate_sha256.iter())
+                        .all(|(left, right)| left == right)
+            })
+        })
+    };
 
     if !lineage_consistent {
         v31.state = CryptoVerificationState::Invalid;
