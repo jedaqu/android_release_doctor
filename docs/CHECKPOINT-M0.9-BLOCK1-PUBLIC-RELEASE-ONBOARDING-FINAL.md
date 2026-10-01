@@ -65,7 +65,7 @@ Closure evidence for the checkpoint commit includes terminal Rust CI Build/Test/
 
 No merge is part of this checkpoint.
 
-Terminal checkpoint evidence for the implementation state: Rust CI #547 / run `36898923317` — Build, Test, Format, Clippy all PASS.
+Terminal CI evidence for the current public state is provided by the CI run associated with the final corrected commit. Historical private-run identifiers are intentionally omitted from the public checkpoint.
 
 ## Post-checkpoint publication boundary
 
