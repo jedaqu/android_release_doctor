@@ -1853,6 +1853,75 @@ mod tests {
         assert!(!result.v31_present);
     }
 
+    fn v31_fixture(name: &str) -> std::path::PathBuf {
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures")
+            .join(name)
+    }
+
+    #[test]
+    fn verifies_real_v31_rotation_fixture_and_cross_block_semantics() {
+        let result = verify_apk_signatures(v31_fixture("crypto-v31-release.apk"))
+            .expect("v3.1 fixture should be structurally readable")
+            .expect("v3.1 fixture should contain an APK signing block");
+
+        assert!(result.v31_present);
+        let v3 = result.v3.expect("v3 base block should be detected");
+        let v31 = result.v31.expect("v3.1 block should be detected");
+
+        assert_eq!(v3.state, CryptoVerificationState::Verified, "{}", v3.detail);
+        assert_eq!(v31.state, CryptoVerificationState::Verified, "{}", v31.detail);
+        assert_eq!(v3.rotation_min_sdk, Some(33));
+        assert!(v31.sdk_ranges.iter().all(|(min, _)| *min >= V31_MIN_SDK));
+        assert!(!v31.proof_of_rotation.is_empty());
+    }
+
+    #[test]
+    fn rejects_v31_without_v3_base_block() {
+        let result = verify_apk_signatures(v31_fixture("crypto-v31-no-v3.apk"))
+            .expect("v3.1 no-v3 fixture should be structurally readable")
+            .expect("v3.1 no-v3 fixture should contain an APK signing block");
+
+        assert!(result.v31_present);
+        assert!(result.v3.is_none());
+        let v31 = result.v31.expect("v3.1 block should be detected");
+        assert_eq!(v31.state, CryptoVerificationState::Invalid);
+        assert!(v31.detail.contains("without a v3.0 base block"));
+    }
+
+    #[test]
+    fn rejects_v31_when_v3_rotation_protection_attribute_is_missing() {
+        let result = verify_apk_signatures(v31_fixture("crypto-v31-no-v3-attr.apk"))
+            .expect("v3.1 no-attribute fixture should be structurally readable")
+            .expect("v3.1 no-attribute fixture should contain an APK signing block");
+
+        let v31 = result.v31.expect("v3.1 block should be detected");
+        assert_eq!(v31.state, CryptoVerificationState::Invalid);
+        assert!(v31.detail.contains("rotation-min-sdk"));
+    }
+
+    #[test]
+    fn rejects_v31_when_rotation_min_sdk_does_not_match_target() {
+        let result = verify_apk_signatures(v31_fixture("crypto-v31-wrong-rotation-min-sdk.apk"))
+            .expect("v3.1 mismatch fixture should be structurally readable")
+            .expect("v3.1 mismatch fixture should contain an APK signing block");
+
+        let v31 = result.v31.expect("v3.1 block should be detected");
+        assert_eq!(v31.state, CryptoVerificationState::Invalid);
+        assert!(v31.detail.contains("mismatch"));
+    }
+
+    #[test]
+    fn rejects_v31_when_lineage_is_inconsistent_with_v3() {
+        let result = verify_apk_signatures(v31_fixture("crypto-v31-lineage-mismatch.apk"))
+            .expect("v3.1 lineage-mismatch fixture should be structurally readable")
+            .expect("v3.1 lineage-mismatch fixture should contain an APK signing block");
+
+        let v31 = result.v31.expect("v3.1 block should be detected");
+        assert_eq!(v31.state, CryptoVerificationState::Invalid);
+        assert!(v31.detail.contains("lineages are inconsistent"));
+    }
+
     #[test]
     fn detects_tampered_apk_content_as_invalid_v3_signature() {
         let path = tampered_fixture("crypto-v3-release.apk", "v3-tampered");
