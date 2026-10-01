@@ -650,6 +650,10 @@ fn merge_scheme_results(
     let mut invalid = false;
     let mut details = Vec::new();
     let mut proof_of_rotation = Vec::new();
+    let mut rotation_min_sdk = None;
+    let mut rotation_targets_dev_release = false;
+    let mut first_rotation_value_seen = false;
+    let mut rotation_metadata_consistent = true;
 
     for result in &results {
         algorithms.extend_from_slice(&result.algorithms);
@@ -661,6 +665,21 @@ fn merge_scheme_results(
         }
         proof_of_rotation.extend(result.proof_of_rotation.iter().cloned());
         details.push(result.detail.clone());
+
+        if !first_rotation_value_seen {
+            rotation_min_sdk = result.rotation_min_sdk;
+            first_rotation_value_seen = true;
+        } else if rotation_min_sdk != result.rotation_min_sdk {
+            rotation_metadata_consistent = false;
+        }
+        rotation_targets_dev_release |= result.rotation_targets_dev_release;
+    }
+
+    if !rotation_metadata_consistent {
+        invalid = true;
+        details.push(format!(
+            "{scheme} signers disagree on rotation-min-sdk metadata"
+        ));
     }
 
     let state = if invalid {
@@ -680,6 +699,8 @@ fn merge_scheme_results(
             .iter()
             .flat_map(|result| result.sdk_ranges.iter().copied())
             .collect(),
+        rotation_min_sdk,
+        rotation_targets_dev_release,
         proof_of_rotation,
         detail: details.join("; "),
     })
