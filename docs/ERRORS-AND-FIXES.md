@@ -1038,3 +1038,16 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Scope:** Public documentation only. No product, CLI, Action, test, or release behavior changed.
 - **Validation:** Second audit of the corrected public documentation, public-surface review, and terminal Rust CI on the corrected commit.
 - **Status:** RESOLVED — corrected public documentation reviewed and terminal Rust CI run `36923956731` on corrected commit `95e1a7bafe62eaa56bb9c94f77711021ed06152d` passed Build, Test, Format, and Clippy.
+
+
+## ERR-091 — AUDIT-002 public documentation boundary
+
+- **Milestone:** AUDIT-002 / public information boundary
+- **Type:** Documentation / public-boundary defect
+- **Observed:** Two public documentation surfaces contained development-process references that were not required for the public product and release surface.
+- **Problem:** The published documentation exposed unnecessary internal process context.
+- **Root cause:** Historical checkpoint/ledger wording exceeded the information required to describe the validated public state.
+- **Correction:** Remove the unnecessary references and retain only self-contained public release and validation information.
+- **Scope:** Public documentation only. No product, CLI, Action, test, workflow, or release behavior changed.
+- **Validation:** Exact correction diff reviewed; public-boundary second audit completed; terminal Rust CI passed Build, Test, Format, and Clippy on the correction commit.
+- **Status:** RESOLVED — correction commit `e140d7242e8fadc003774c0e7425ee75e4a66bfb` merged to `main` by PR #5 as `b22616a92c406448a146876292f6bfa1fc3cfca3`. CI run `36941326086` completed successfully.
