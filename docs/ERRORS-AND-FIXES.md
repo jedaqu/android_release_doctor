@@ -747,3 +747,13 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction commit:** e41dc1e378b15ad65bf404c3e7381985178934cf
 - **Validation:** Required in new Actions execution.
 - **Status:** RESOLVED — pending new CI execution
+
+
+## ERR-068 — M0.7 Block 3 correction-chain validation closure
+
+- **Milestone:** M0.7 Block 3 / final Actions validation
+- **Type:** Validation closure
+- **Scope:** ERR-060 through ERR-067, including build, test, semantic, fixture, and formatting corrections.
+- **Final validation run:** Actions #402 / 36802297492
+- **Result:** Build PASS; Test PASS; Format PASS; Clippy PASS.
+- **Status:** RESOLVED — Block 3 ready for checkpoint
