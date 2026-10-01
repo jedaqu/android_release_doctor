@@ -20,6 +20,7 @@ on:
       - m08-block2-cli-output-contract
       - m08-block3-github-action
       - m08-block4-distribution-release
+      - m09-block1-public-release-onboarding
   pull_request:
     branches:
       - main
