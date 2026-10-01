@@ -198,3 +198,42 @@ ERR-073 records the terminology clarification so the remaining conditional manua
 **SECOND-AUDIT AFTER ERR-072: PASS TO PROCEED TO ACTIONS**
 
 The remaining gate is GitHub Actions validation of the exact branch head.
+
+
+## 11. Re-audit after ERR-074 correction
+
+The exact production correction for ERR-074 was reviewed before the next Actions execution.
+
+### Structural check
+
+The `SIGNING-003` control flow now has the complete intended nesting:
+
+- APK verification-unavailable remains the outer manual-review path;
+- an available verification result builds the unified v2/v3/v3.1 scheme set;
+- empty schemes remain manual review;
+- any Invalid scheme remains a blocker;
+- the remaining branch evaluates Unsupported, present-but-unverified v3.1, or v3.2 as manual review;
+- the verified path reaches PASS;
+- the surrounding scheme-evaluation branch is explicitly closed before the final unavailable-verification `else`.
+
+The previous unclosed-delimiter condition is therefore structurally corrected without changing the intended finding semantics.
+
+### Scope check
+
+The correction changes no cryptographic algorithm support, v3.1 semantics, v3.2/PQC boundary, AAB behavior, workflow architecture, or CLI behavior. Only the affected `SIGNING-003` branch structure and its formatting were corrected.
+
+### Ledger reconciliation
+
+ERR-074 records Actions run 36869780405 and job 110394269323 as a distinct build failure after the ERR-071/ERR-072 branch repair sequence. It is not merged into the historical ERR-071/ERR-072 entries.
+
+### Pre-Actions result
+
+- production-code structural repair: PASS;
+- intended SIGNING-003 semantics: PASS by source review;
+- scope integrity: PASS;
+- ledger reconciliation: PASS;
+- empirical CI validation: PENDING.
+
+**SECOND-AUDIT AFTER ERR-074: PASS TO PROCEED TO ACTIONS**
+
+The next gate is the exact correction commit through GitHub Actions.

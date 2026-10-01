@@ -1207,20 +1207,21 @@ fn evaluate(
                                 " A v3.2 hybrid signing block is present and is not cryptographically verified in this block.",
                             );
                         }
-                    findings.push(Finding::manual_review(
-                        "SIGNING-003",
-                        "APK cryptographic verification requires manual review",
-                        format!(
-                            "The current verifier confirmed the supported cryptographic parts, but complete verification is not available: {details}.{suffix}"
-                        ),
-                        "Verify the APK with apksigner and review the reported signing scheme, proof-of-rotation, and any unsupported v3.2 evidence before publication.",
-                    ));
+                        findings.push(Finding::manual_review(
+                            "SIGNING-003",
+                            "APK cryptographic verification requires manual review",
+                            format!(
+                                "The current verifier confirmed the supported cryptographic parts, but complete verification is not available: {details}.{suffix}"
+                            ),
+                            "Verify the APK with apksigner and review the reported signing scheme, proof-of-rotation, and any unsupported v3.2 evidence before publication.",
+                        ));
                     } else {
                         findings.push(Finding::pass(
                             "SIGNING-003",
                             "APK cryptographic signature verified",
-                        "The supported v2/v3/v3.1 APK signer data, certificate/public-key binding, cryptographic signatures, and APK content digests were verified.",
-                    ));
+                            "The supported v2/v3/v3.1 APK signer data, certificate/public-key binding, cryptographic signatures, and APK content digests were verified.",
+                        ));
+                    }
                 }
             } else {
                 findings.push(Finding::warning(

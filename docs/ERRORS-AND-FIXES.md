@@ -810,3 +810,17 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Clarification:** The current path first evaluates the distinct verified v3.1 scheme result. Only a present v3.1 block without a Verified result takes the manual-review fallback; a verified v3.1 scheme can contribute to PASS and an invalid v3.1 scheme remains a BLOCKER.
 - **Validation:** Confirmed by source-level second audit and focused SIGNING-003 regression coverage.
 - **Status:** RESOLVED — audit clarification; no production behavior change.
+
+
+## ERR-074 — SIGNING-003 unclosed delimiter after Block 4 branch repair
+
+- **Milestone:** M0.7 Block 4
+- **Type:** Build failure
+- **Actions run:** #36869780405 / 36869780405
+- **Job:** `test` / 110394269323
+- **Problem:** `crates/doctor-core/src/lib.rs` failed to compile with `this file contains an unclosed delimiter`. The compiler traced the unmatched structure to the `SIGNING-003` branch beginning at line 696 and the nested conditional around line 1218.
+- **Root cause:** The previous bounded branch repair closed the inner manual-review conditional but left the surrounding `else` branch open before the final `else` that handles unavailable verification.
+- **Correction:** Restore the missing closing delimiter for the surrounding `else` branch and normalize indentation only within that affected `SIGNING-003` block.
+- **Correction commit:** pending
+- **Validation:** pending GitHub Actions validation of the correction commit.
+- **Status:** OPEN — awaiting validation
