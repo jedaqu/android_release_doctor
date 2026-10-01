@@ -2038,8 +2038,7 @@ mod tests {
                 let flags_offset = 4 + signed_data.len();
                 let node_start = reader.cursor - node.len();
                 let absolute_offset = node_start + flags_offset;
-                output[absolute_offset..absolute_offset + 4]
-                    .copy_from_slice(&flags.to_le_bytes());
+                output[absolute_offset..absolute_offset + 4].copy_from_slice(&flags.to_le_bytes());
                 break;
             }
         }
@@ -2086,10 +2085,7 @@ mod tests {
         assert_eq!(result.capabilities.len(), 2);
         let second = &result.capabilities[1];
         assert_eq!(second.flags, flags);
-        assert_eq!(
-            second.known_flags,
-            PROOF_OF_ROTATION_FLAG_PERMISSION
-        );
+        assert_eq!(second.known_flags, PROOF_OF_ROTATION_FLAG_PERMISSION);
         assert_eq!(second.unknown_flags, 0x8000_0000);
         assert!(second.permission);
         assert!(!second.installed_data);
@@ -2110,8 +2106,7 @@ mod tests {
         assert_eq!(zero_result.capabilities[0].unknown_flags, 0);
 
         let unknown_flags = proof_rotation_with_flags(&proof, 0, 0x4000_0000);
-        let unknown_result =
-            validate_proof_of_rotation(&unknown_flags, &current_certificate);
+        let unknown_result = validate_proof_of_rotation(&unknown_flags, &current_certificate);
         assert_eq!(unknown_result.state, CryptoVerificationState::Verified);
         assert_eq!(unknown_result.capabilities[0].known_flags, 0);
         assert_eq!(unknown_result.capabilities[0].unknown_flags, 0x4000_0000);
