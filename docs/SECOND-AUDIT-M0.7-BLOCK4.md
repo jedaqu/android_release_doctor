@@ -301,7 +301,7 @@ Evidence:
 
 The workflow target sets are now compatible across the stacked branches, so the previous workflow-file merge conflict is removed.
 
-The available Actions listing did not expose a separate pull_request run for PR #15 after the conflict was resolved. That observation is recorded explicitly and is not represented as a PASS. The base target correction itself was empirically exercised by pull_request run #431 / 36874495416 on PR #14, which passed all four gates.
+Actions #434 / 36875368536 executed with event pull_request for PR #15 and passed Build, Test, Format, and Clippy. This completes the empirical stacked pull-request validation. The earlier limitation described in the preceding audit section was superseded by this observed run.
 
 ### Final checkpoint readiness
 
@@ -311,8 +311,8 @@ The available Actions listing did not expose a separate pull_request run for PR 
 - stacked workflow configuration: PASS;
 - PR #15 mergeability: PASS;
 - empirical push CI: PASS;
-- separate PR #15 workflow-run observation: NOT OBSERVED.
+- PR #15 pull_request CI: PASS.
 
-**FINAL CHECKPOINT READY: PASS WITH EXPLICIT PR-RUN OBSERVATION LIMITATION**
+**FINAL CHECKPOINT READY: PASS — PUSH AND PR VALIDATION COMPLETE**
 
 The formal checkpoint commit below is the final documentation closure. Its associated Actions run remains the last empirical gate.

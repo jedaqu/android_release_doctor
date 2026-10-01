@@ -1,6 +1,6 @@
 # CHECKPOINT M0.7 Block 4 — Integration and completeness
 
-**Status:** FINAL CHECKPOINT — documentation closure; associated Actions run is the final empirical gate  
+**Status:** FINAL CHECKPOINT — validated by push and pull-request CI  
 **Branch:** m07-block4-integration-completeness  
 **Base checkpoint:** 834e86503311f346e7d5b764286687be83aa0b5f  
 **PR:** #15 — open, draft, unmerged

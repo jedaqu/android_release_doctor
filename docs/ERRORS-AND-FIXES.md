@@ -845,5 +845,5 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Root cause:** ERR-075 corrected the validated Block 3 base workflow by adding m07-block3-v31-verification, while the Block 4 head retained its own scoped target list without the future Block 4 target present on the base side.
 - **Correction:** Synchronize the Block 4 head workflow with the validated base target list by retaining the existing Block 4 push trigger and including both m07-block3-v31-verification and m07-block4-integration-completeness in pull_request.branches. The Build → Test → Format → Clippy graph is unchanged.
 - **Correction commit:** 50c3735d04d9c7532ffad13a8946bfaadcecf9c9
-- **Validation:** Actions #433 / 36875170256 passed Build, Test, Format, and Clippy; PR #15 returned mergeable=true and mergeable_state=clean. No separate pull_request run for PR #15 was observed through the available Actions run listing.
-- **Status:** RESOLVED — stacked configuration corrected; PR-event observation remains explicitly unclaimed.
+- **Validation:** Actions #433 / 36875170256 passed Build, Test, Format, and Clippy; PR #15 returned mergeable=true and mergeable_state=clean. Actions #434 / 36875368536 then executed with event pull_request for PR #15 and passed Build, Test, Format, and Clippy.
+- **Status:** RESOLVED
