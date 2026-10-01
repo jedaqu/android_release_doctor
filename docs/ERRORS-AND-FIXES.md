@@ -952,3 +952,51 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction commit:** `f56eb1448264ef3ce09ccb07b436bceed02388a0`
 - **Validation:** Actions #18 / run `36887625607` passed the Block 3 action self-test, including success, blocker, and operational-error paths. Rust CI run #489 / `36887626517` passed Build, Test, Format, and Clippy on the corrected branch.
 - **Status:** RESOLVED
+
+
+## ERR-084 — M0.8 Block 4 `--locked` rejected stale Cargo.lock
+
+- **Milestone:** M0.8 Block 4 / Distribution and Release Packaging
+- **Type:** CI validation / reproducibility gate
+- **Observed in:** Block 4 validation runs `36888781506` and `36888775173`, job `validate`
+- **Head:** `2bc955d5a11ca7e15d3cecf05793af7ab8da31a5`
+- **Problem:** `cargo test --workspace --locked` attempted to update `Cargo.lock` and exited with code 101 before the package matrix could start.
+- **Evidence:** CI reported that `Cargo.lock` was not synchronized with the workspace dependency graph.
+- **Root cause:** `crates/doctor-core/Cargo.toml` declares direct dependencies on `serde` and `serde_json`, but the historical lockfile did not include those dependencies in the `doctor-core` package entry or their registry package records. Earlier CI did not expose this because the Rust workflow did not use `--locked`.
+- **Correction:** Updated only `Cargo.lock`:
+  - added `serde` and `serde_json` to `doctor-core` lock dependencies;
+  - added registry records for `itoa 1.0.15`, `serde_json 1.0.151`, and `zmij 1.0.23` with their verified registry checksums;
+  - left `Cargo.toml` and product code unchanged.
+- **Correction commit:** `56dcf8e7ab978288e535585aacf9c852b5109d2c`
+- **Further correction:** The resolver diagnosis showed the historical lockfile also required `itoa 1.0.18`, `lazy_static 1.5.1`, and the `serde_derive` edge. The exact lockfile reconciliation was applied in the later corrected branch state.
+- **Validation:** Block 4 distribution run #34 / `36890483899`: validate PASS; Linux x86_64 package PASS; Windows x86_64 package PASS; macOS x86_64 package PASS. Rust CI #533 / `36890483719`: Build PASS; Test PASS; Format PASS; Clippy PASS.
+- **Status:** RESOLVED
+
+
+## ERR-085 — M0.8 Block 4 macOS archive verification was locale-dependent
+
+- **Milestone:** M0.8 Block 4 / Distribution and Release Packaging
+- **Type:** CI validation / cross-platform packaging verification
+- **Observed in:** Block 4 run `36889294750`, job `package (macos-x86_64, macos-15-intel, tar.gz)`
+- **Head:** `c2170b3bb6a96286bc7621cd9575ad932b25a2f7`
+- **Problem:** The macOS package was built successfully and its binary passed `--version` and `--help`, but the exact archive-content comparison exited with code 1.
+- **Evidence:** The failing step was the non-Windows verification command using `tar -tzf "$archive" | sort`. Linux passed the identical check; the failure was isolated to macOS verification.
+- **Root cause:** The archive-content comparison relied on the runner's locale-dependent `sort` ordering. The package contract is platform-independent, so verification must use a deterministic byte ordering.
+- **Correction:** Change the archive verification pipeline to `LC_ALL=C sort`. This affects only deterministic verification ordering; archive contents and package structure remain unchanged.
+- **Correction commit:** `28c82e3c1b6c022548da0747ae1e85176b06f16a`
+- **Validation:** Block 4 distribution run #34 / `36890483899`: validate PASS; Linux x86_64 package PASS; Windows x86_64 package PASS; macOS x86_64 package PASS. Rust CI #533 / `36890483719`: Build PASS; Test PASS; Format PASS; Clippy PASS.
+- **Status:** RESOLVED
+
+
+## ERR-086 — M0.8 Block 4 Windows ZIP verification was order-dependent
+
+- **Milestone:** M0.8 Block 4 / Distribution and Release Packaging
+- **Type:** CI validation / cross-platform packaging verification
+- **Observed in:** Block 4 corrected run `36889890808`, job `package (windows-x86_64, windows-2025, zip)`
+- **Head:** `d4a4bb26cbd6f5eaae013a7133eff84ae1e8a95f`
+- **Problem:** Windows built the release binary and created the ZIP successfully, but the archive-content verification failed on the ordered string comparison.
+- **Root cause:** The verification depended on `Sort-Object` ordering for filenames. Package correctness does not depend on filename order, and locale-aware ordering can vary across environments.
+- **Correction:** Replace ordered string comparison with an order-independent, case-sensitive set comparison using PowerShell arrays and `-cnotcontains`. The expected payload remains exactly `LICENSE`, `README.md`, and `android-release-doctor.exe`.
+- **Correction commit:** `e440b1e1e00d9f163e5373a331e35ad89448b183`
+- **Validation:** Block 4 distribution run #34 / `36890483899`: validate PASS; Linux x86_64 package PASS; Windows x86_64 package PASS; macOS x86_64 package PASS. Rust CI #533 / `36890483719`: Build PASS; Test PASS; Format PASS; Clippy PASS.
+- **Status:** RESOLVED

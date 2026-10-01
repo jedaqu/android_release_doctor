@@ -380,6 +380,26 @@ When `output` is supplied, the report is written by the existing CLI. A blocking
 The Block 3 action currently executes the repository CLI through Cargo. The runner therefore needs a usable Rust/Cargo toolchain. Prebuilt binary distribution is intentionally deferred to the later distribution/release-packaging block.
 
 
+## M0.8 Block 4 scope — Distribution / Release Packaging
+
+The current distribution workflow packages the validated CLI for three x86_64 hosts:
+
+- Linux;
+- Windows;
+- macOS Intel.
+
+The release build uses:
+
+```text
+cargo build --locked --release -p doctor-cli
+```
+
+Each archive contains the CLI binary, `LICENSE`, and `README.md`. Every packaged binary is checked with `--version` and `--help`, and release archives are accompanied by `SHA256SUMS`.
+
+Release publication is tag-driven. A tag such as `v0.1.0` must match the workspace package version exactly. Branch and pull-request runs validate packaging but do not publish a GitHub Release.
+
+The initial distribution matrix intentionally excludes ARM64, package-manager integrations, installers, OS code signing/notarization, binary signatures, provenance/attestations, and automatic version bumping.
+
 ## Still not implemented
 
 - full Gradle/variant evaluation;

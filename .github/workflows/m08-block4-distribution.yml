@@ -1,0 +1,207 @@
+name: M0.8 Block 4 Distribution
+
+on:
+  push:
+    branches:
+      - m08-block4-distribution-release
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - m08-block3-github-action
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Read workspace version
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(grep '^version = "' Cargo.toml | head -1 | cut -d '"' -f2)"
+          test -n "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            tag_version="$(printf "%s" "$GITHUB_REF_NAME" | sed 's/^v//')"
+            test "$tag_version" = "$version"
+          fi
+
+      - name: Test
+        run: cargo test --workspace --locked
+
+      - name: Format
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+  package:
+    needs: validate
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: linux-x86_64
+            os: ubuntu-24.04
+            archive: tar.gz
+          - id: windows-x86_64
+            os: windows-2025
+            archive: zip
+          - id: macos-x86_64
+            os: macos-15-intel
+            archive: tar.gz
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Build release binary
+        run: cargo build --locked --release -p doctor-cli
+
+      - name: Package Linux/macOS
+        if: runner.os != 'Windows'
+        shell: bash
+        env:
+          VERSION: ${{ needs.validate.outputs.version }}
+          PACKAGE_ID: ${{ matrix.id }}
+        run: |
+          set -euo pipefail
+          package_root="$RUNNER_TEMP/android-release-doctor-package"
+          rm -rf "$package_root"
+          mkdir -p "$package_root"
+          cp target/release/android-release-doctor "$package_root/android-release-doctor"
+          cp LICENSE "$package_root/LICENSE"
+          cp README.md "$package_root/README.md"
+          test -x "$package_root/android-release-doctor"
+          "$package_root/android-release-doctor" --version | grep -F "android-release-doctor $VERSION"
+          "$package_root/android-release-doctor" --help >/dev/null
+          test -f "$package_root/LICENSE"
+          test -f "$package_root/README.md"
+          test "$(find "$package_root" -maxdepth 1 -type f | wc -l | tr -d " ")" = "3"
+          archive="$GITHUB_WORKSPACE/android-release-doctor-v$VERSION-$PACKAGE_ID.tar.gz"
+          tar -czf "$archive" -C "$package_root" android-release-doctor LICENSE README.md
+          test -s "$archive"
+
+      - name: Package Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          VERSION: ${{ needs.validate.outputs.version }}
+          PACKAGE_ID: ${{ matrix.id }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $packageRoot = Join-Path $env:RUNNER_TEMP "android-release-doctor-package"
+          if (Test-Path $packageRoot) { Remove-Item -Recurse -Force $packageRoot }
+          New-Item -ItemType Directory -Path $packageRoot | Out-Null
+          Copy-Item "target/release/android-release-doctor.exe" (Join-Path $packageRoot "android-release-doctor.exe")
+          Copy-Item "LICENSE" (Join-Path $packageRoot "LICENSE")
+          Copy-Item "README.md" (Join-Path $packageRoot "README.md")
+          if (-not (Test-Path (Join-Path $packageRoot "android-release-doctor.exe"))) { throw "Binary missing" }
+          if (-not (Test-Path (Join-Path $packageRoot "LICENSE"))) { throw "LICENSE missing" }
+          if (-not (Test-Path (Join-Path $packageRoot "README.md"))) { throw "README missing" }
+          if ((Get-ChildItem -File $packageRoot).Count -ne 3) { throw "Unexpected package file count" }
+          $versionOutput = & (Join-Path $packageRoot "android-release-doctor.exe") --version
+          if ($LASTEXITCODE -ne 0) { throw "Binary --version failed" }
+          if ($versionOutput -notmatch [regex]::Escape("android-release-doctor $env:VERSION")) { throw "Binary version mismatch" }
+          & (Join-Path $packageRoot "android-release-doctor.exe") --help | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw "Binary --help failed" }
+          $archive = Join-Path $env:GITHUB_WORKSPACE "android-release-doctor-v$env:VERSION-$env:PACKAGE_ID.zip"
+          Compress-Archive -Path (Join-Path $packageRoot "*") -DestinationPath $archive -Force
+          if (-not (Test-Path $archive)) { throw "Archive missing" }
+
+      - name: Verify archive contents
+        if: runner.os != 'Windows'
+        shell: bash
+        env:
+          VERSION: ${{ needs.validate.outputs.version }}
+          PACKAGE_ID: ${{ matrix.id }}
+        run: |
+          set -euo pipefail
+          archive="$GITHUB_WORKSPACE/android-release-doctor-v$VERSION-$PACKAGE_ID.tar.gz"
+          tar -tzf "$archive" | LC_ALL=C sort > "$RUNNER_TEMP/archive-contents.txt"
+          expected=$'LICENSE\nREADME.md\nandroid-release-doctor'
+          test "$(cat "$RUNNER_TEMP/archive-contents.txt")" = "$expected"
+
+      - name: Verify archive contents
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          VERSION: ${{ needs.validate.outputs.version }}
+          PACKAGE_ID: ${{ matrix.id }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $archive = Join-Path $env:GITHUB_WORKSPACE "android-release-doctor-v$env:VERSION-$env:PACKAGE_ID.zip"
+          $inspectRoot = Join-Path $env:RUNNER_TEMP "zip-inspect"
+          if (Test-Path $inspectRoot) { Remove-Item -Recurse -Force $inspectRoot }
+          Expand-Archive -Path $archive -DestinationPath $inspectRoot -Force
+          $files = @(Get-ChildItem -File $inspectRoot | ForEach-Object { $_.Name })
+          $expected = @("LICENSE", "README.md", "android-release-doctor.exe")
+          $missing = @($expected | Where-Object { $files -cnotcontains $_ })
+          $unexpected = @($files | Where-Object { $expected -cnotcontains $_ })
+          if ($missing.Count -ne 0 -or $unexpected.Count -ne 0) {
+            throw "Unexpected ZIP contents"
+          }
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-package-${{ matrix.id }}
+          path: android-release-doctor-v${{ needs.validate.outputs.version }}-${{ matrix.id }}.${{ matrix.archive }}
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs:
+      - validate
+      - package
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-package-*
+          merge-multiple: true
+          path: dist
+
+      - name: Generate and verify checksums
+        shell: bash
+        env:
+          VERSION: ${{ needs.validate.outputs.version }}
+        run: |
+          set -euo pipefail
+          cd dist
+          test "$(find . -maxdepth 1 -type f | wc -l | tr -d " ")" = "3"
+          find . -maxdepth 1 -type f -print | sed 's#^./##' | sort | xargs sha256sum > SHA256SUMS
+          sha256sum -c SHA256SUMS
+          grep -F "android-release-doctor-v$VERSION-linux-x86_64.tar.gz" SHA256SUMS
+          grep -F "android-release-doctor-v$VERSION-windows-x86_64.zip" SHA256SUMS
+          grep -F "android-release-doctor-v$VERSION-macos-x86_64.tar.gz" SHA256SUMS
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            dist/android-release-doctor-v${{ needs.validate.outputs.version }}-linux-x86_64.tar.gz \
+            dist/android-release-doctor-v${{ needs.validate.outputs.version }}-windows-x86_64.zip \
+            dist/android-release-doctor-v${{ needs.validate.outputs.version }}-macos-x86_64.tar.gz \
+            dist/SHA256SUMS \
+            --verify-tag \
+            --generate-notes

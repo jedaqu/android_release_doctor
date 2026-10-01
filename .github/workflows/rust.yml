@@ -19,6 +19,7 @@ on:
       - m08-block1-report-contract
       - m08-block2-cli-output-contract
       - m08-block3-github-action
+      - m08-block4-distribution-release
   pull_request:
     branches:
       - main
@@ -36,6 +37,7 @@ on:
 
       - m08-block1-report-contract
       - m08-block2-cli-output-contract
+      - m08-block3-github-action
 
 env:
   CARGO_TERM_COLOR: always
