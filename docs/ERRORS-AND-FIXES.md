@@ -613,3 +613,15 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Result:** Build PASS; Test PASS; Format PASS; Clippy PASS.
 - **Additional validation:** The final capability model and regression suite remain green, including all existing M0.6 proof-of-rotation tests and the new known/unknown capability-flag cases.
 - **Status:** RESOLVED — Block 2 ready for checkpoint
+
+
+## ERR-057 — M0.7 Block 3 v3.1 verification and cross-block semantics are not implemented
+
+- **Milestone:** M0.7 Block 3 / pre-change audit
+- **Type:** Verification capability gap
+- **Problem:** The verifier detects the v3.1 signing-block ID but does not cryptographically verify the v3.1 block or enforce the required v3/v3.1 rotation-target semantics.
+- **Cause:** M0.6 and M0.7 Blocks 1–2 deliberately stopped at the v2/v3 and proof-of-rotation boundaries and retained v3.1 as an explicit unsupported/manual-review boundary.
+- **Required correction:** Add v3.1 verification for the existing supported crypto subset plus deterministic cross-block checks for the v3 base block, rotation-min-SDK stripping protection, targeted SDK ranges, and lineage consistency.
+- **Audit:** docs/AUDIT-M0.7-BLOCK3.md
+- **Validation:** Pre-change audit passed; production implementation is now authorized on `m07-block3-v31-verification`.
+- **Status:** OPEN — scoped for M0.7 Block 3 implementation
