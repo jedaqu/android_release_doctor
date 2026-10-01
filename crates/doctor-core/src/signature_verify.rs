@@ -57,6 +57,8 @@ pub struct CryptoSchemeInfo {
     pub algorithms: Vec<u32>,
     pub certificate_sha256: Vec<String>,
     pub sdk_ranges: Vec<(u32, u32)>,
+    pub rotation_min_sdk: Option<u32>,
+    pub rotation_targets_dev_release: bool,
     pub proof_of_rotation: Vec<ProofOfRotationInfo>,
     pub detail: String,
 }
@@ -77,6 +79,7 @@ pub struct ProofOfRotationCapabilities {
 pub struct ProofOfRotationInfo {
     pub state: CryptoVerificationState,
     pub level_count: usize,
+    pub lineage_certificate_sha256: Vec<String>,
     pub capabilities: Vec<ProofOfRotationCapabilities>,
     pub detail: String,
 }
@@ -313,6 +316,8 @@ fn verify_v2_signer(
         algorithms,
         certificate_sha256: vec![certificate_sha256(parsed.certificate)?],
         sdk_ranges: Vec::new(),
+        rotation_min_sdk: None,
+        rotation_targets_dev_release: false,
         proof_of_rotation: Vec::new(),
         detail:
             "v2 signer signature, certificate/public-key binding, and APK content digest verified"
@@ -1109,6 +1114,7 @@ fn validate_proof_of_rotation(bytes: &[u8], current_certificate: &[u8]) -> Proof
         return ProofOfRotationInfo {
             state: CryptoVerificationState::Invalid,
             level_count: 0,
+            lineage_certificate_sha256: Vec::new(),
             capabilities: Vec::new(),
             detail: format!("unsupported proof-of-rotation version {version}"),
         };
@@ -1978,6 +1984,7 @@ mod tests {
         let proof = ProofOfRotationInfo {
             state: CryptoVerificationState::Verified,
             level_count: 2,
+            lineage_certificate_sha256: Vec::new(),
             capabilities: Vec::new(),
             detail: "proof-of-rotation lineage verified across 2 certificate level(s)".to_string(),
         };
