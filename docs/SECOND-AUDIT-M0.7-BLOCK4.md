@@ -287,3 +287,32 @@ GitHub's documented pull_request behavior does not run the workflow while the pu
 - job graph preserved: PASS;
 - ERR-075 correction remains valid: PASS;
 - PR-event empirical validation: PENDING.
+
+## 14. Final re-audit after ERR-076
+
+ERR-076 was rechecked after the Block 4 head workflow was synchronized with the validated Block 3 base workflow.
+
+Evidence:
+
+- correction commit: 50c3735d04d9c7532ffad13a8946bfaadcecf9c9;
+- Actions #433 / 36875170256: Build PASS; Test PASS; Format PASS; Clippy PASS;
+- PR #15 mergeability: true;
+- PR #15 mergeable_state: clean.
+
+The workflow target sets are now compatible across the stacked branches, so the previous workflow-file merge conflict is removed.
+
+The available Actions listing did not expose a separate pull_request run for PR #15 after the conflict was resolved. That observation is recorded explicitly and is not represented as a PASS. The base target correction itself was empirically exercised by pull_request run #431 / 36874495416 on PR #14, which passed all four gates.
+
+### Final checkpoint readiness
+
+- production scope: PASS;
+- cryptographic integration: PASS;
+- correction ledger: PASS;
+- stacked workflow configuration: PASS;
+- PR #15 mergeability: PASS;
+- empirical push CI: PASS;
+- separate PR #15 workflow-run observation: NOT OBSERVED.
+
+**FINAL CHECKPOINT READY: PASS WITH EXPLICIT PR-RUN OBSERVATION LIMITATION**
+
+The formal checkpoint commit below is the final documentation closure. Its associated Actions run remains the last empirical gate.

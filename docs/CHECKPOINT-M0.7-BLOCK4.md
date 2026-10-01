@@ -1,6 +1,6 @@
 # CHECKPOINT M0.7 Block 4 — Integration and completeness
 
-**Status:** FINAL CHECKPOINT — pending CI result for this exact commit  
+**Status:** FINAL CHECKPOINT — documentation closure; associated Actions run is the final empirical gate  
 **Branch:** m07-block4-integration-completeness  
 **Base checkpoint:** 834e86503311f346e7d5b764286687be83aa0b5f  
 **PR:** #15 — open, draft, unmerged
@@ -66,4 +66,4 @@ This checkpoint does not claim:
 
 ## 7. Closure rule
 
-**M0.7 Block 4 is formally closed only after the Actions run associated with this exact checkpoint commit passes all four gates.**
+M0.7 Block 4 is formally closed only after the Actions run associated with this exact checkpoint commit passes Build, Test, Format, and Clippy. The PR #15 workflow-event observation is documented separately and is not inferred from the push run.
