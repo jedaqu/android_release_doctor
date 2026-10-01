@@ -13,6 +13,7 @@ on:
       - m06-block4-signer-error-isolation
       - m06-block5-verification-completeness
       - m07-block1-crypto-coverage
+      - m07-block2-rotation-semantics
   pull_request:
     branches:
       - main
@@ -23,6 +24,7 @@ on:
       - m06-block2-signing-evidence
       - m06-block3-verification-hardening
       - m06-block4-signer-error-isolation
+      - m07-block1-crypto-coverage
 
 env:
   CARGO_TERM_COLOR: always
