@@ -146,12 +146,23 @@ The stacked PR also required the validated Block 1 base workflow to target `m07-
 
 ## 11. Final second-audit conclusion
 
-**SECOND AUDIT: PASS TO CI**
+**SECOND AUDIT: PASS**
 
-The scoped Block 2 implementation satisfies the declared semantic-evidence boundary after the identified test-helper correction.
+The scoped Block 2 implementation satisfies the declared semantic-evidence boundary.
 
-The next movement is the established Actions validation gate:
+Final validation confirms:
 
-**Build → Test → Format → Clippy**
+- Build: PASS
+- Test: PASS
+- Format: PASS
+- Clippy: PASS
 
-After Actions, any failure will be handled individually, appended to the ledger, corrected without unrelated changes, and revalidated in a new execution.
+**Final validating run:** Actions #342 / `36799881789`
+
+The validation run covers the current Block 2 branch state, including the documentation synchronization and all individual corrections recorded during this block.
+
+No unresolved Block 2 production-code finding remains.
+
+No merge is performed as part of the checkpoint cycle.
+
+The next authorized movement is the **M0.7 Block 2 checkpoint**.
