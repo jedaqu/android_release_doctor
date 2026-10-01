@@ -515,3 +515,15 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction commit:** a65d613fbd28cc133fa09d891c3213bfbe386f24
 - **Validation:** Actions run #313 / 36782863855 passed Build, Test, Format, and Clippy with the synchronized documentation state.
 - **Status:** RESOLVED
+
+
+## ERR-049 — M0.7 Block 2 proof-of-rotation capability flags are parsed but discarded
+
+- **Milestone:** M0.7 Block 2 / AUDIT-M0.7-B2-001
+- **Type:** Evidence-model defect
+- **Problem:** The existing proof-of-rotation verifier parses each lineage node's flags field but stores it as a discarded value. The structured proof-of-rotation evidence therefore cannot report the capabilities declared for historical signing certificates.
+- **Cause:** M0.6 Block 5 correctly focused on lineage structure, certificate uniqueness, parent-to-child signatures, algorithm linkage, and final-certificate binding, but did not model the independent self-trust capability bits.
+- **Required correction:** Represent the Android-defined capability bits explicitly per lineage node and preserve unknown/reserved bits as evidence without treating unusual combinations as inherently invalid.
+- **Audit:** docs/AUDIT-M0.7-BLOCK2.md
+- **Validation:** Pre-change audit passed; production implementation has not yet been changed.
+- **Status:** OPEN — scoped for M0.7 Block 2 implementation
