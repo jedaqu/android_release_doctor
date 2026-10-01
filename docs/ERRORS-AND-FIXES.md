@@ -637,3 +637,14 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction:** Restore all affected v3 labels, repair the helper signature, complete the evidence-model initializers, and continue with smaller targeted edits.
 - **Validation:** Detected during implementation review before Actions; no corrupted intermediate state was used for CI.
 - **Status:** RESOLVED — pre-CI correction
+
+
+## ERR-059 — M0.7 Block 3 stacked CI trigger coverage was missing
+
+- **Milestone:** M0.7 Block 3 / second-audit CI review
+- **Type:** CI configuration / validation gap
+- **Problem:** The Block 3 source branch was not present in the Rust workflow push trigger, and the active Block 2 workflow did not yet target the Block 3 branch for the stacked pull request.
+- **Correction:** Add `m07-block3-v31-verification` to the Block 3 push workflow, `m07-block2-rotation-semantics` to the Block 3 PR target list, and add `m07-block3-v31-verification` to the validated Block 2 base workflow.
+- **Correction commits:** `e1d87aab495ed152c6dc3c2aa247175d6e51a8fc` on Block 3; `c747e02aefb506700b1d5c7ce45661fd33b14e7d` on Block 2.
+- **Validation:** PR-event Actions validation required before checkpoint.
+- **Status:** RESOLVED — pending Actions validation
