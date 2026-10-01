@@ -625,3 +625,15 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Audit:** docs/AUDIT-M0.7-BLOCK3.md
 - **Validation:** Pre-change audit passed; production implementation is now authorized on `m07-block3-v31-verification`.
 - **Status:** OPEN — scoped for M0.7 Block 3 implementation
+
+
+## ERR-058 — M0.7 Block 3 implementation substitution corruption caught before validation
+
+- **Milestone:** M0.7 Block 3 / implementation audit
+- **Type:** Implementation correction before CI
+- **Problem:** An automated source transformation temporarily replaced v3 parser/error labels with literal `${scheme_name}` text and also inserted v3.1 evidence defaults into one helper's parameter list instead of only into struct initializers.
+- **Cause:** A broad text substitution was used while parameterizing the shared v3/v3.1 verification path.
+- **Impact:** The intermediate source was not suitable for compilation and could have changed unrelated diagnostic text.
+- **Correction:** Restore all affected v3 labels, repair the helper signature, complete the evidence-model initializers, and continue with smaller targeted edits.
+- **Validation:** Detected during implementation review before Actions; no corrupted intermediate state was used for CI.
+- **Status:** RESOLVED — pre-CI correction
