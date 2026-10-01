@@ -735,3 +735,15 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction commit:** 390ed764d3bbdce14e402b28c52cb192cb41b3fa
 - **Validation:** Required in new Actions execution.
 - **Status:** RESOLVED — pending new CI execution
+
+
+## ERR-067 — M0.7 Block 3 rustfmt corrections after functional tests passed
+
+- **Milestone:** M0.7 Block 3 / Actions run #396
+- **Type:** CI formatting failure
+- **Actions run:** #396 / 36802218920
+- **Problem:** Build and Test passed, but `cargo fmt --all -- --check` reported eight deterministic formatting differences in `signature_verify.rs`.
+- **Correction:** Apply the exact rustfmt line wrapping at v3/v3.1 dispatch, cross-block conditions, signer-label parsing, and two test assertions/calls.
+- **Correction commit:** e41dc1e378b15ad65bf404c3e7381985178934cf
+- **Validation:** Required in new Actions execution.
+- **Status:** RESOLVED — pending new CI execution
