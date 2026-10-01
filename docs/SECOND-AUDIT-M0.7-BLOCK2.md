@@ -74,6 +74,18 @@ The first Actions execution exposed one remaining compile-time initializer misse
 
 The finding is recorded as ERR-053. No production verification behavior outside the intended evidence model was changed.
 
+### AUDIT-M0.7-B2-005 — fixture flags mutation used the wrong node offset
+
+Actions run #326 compiled successfully but four new capability-evidence tests failed because the fixture helper wrote the requested flags four bytes too far into the node, overwriting `signature_algorithm` instead of `flags`.
+
+**Correction:** change the fixture offset to `4 + signed_data.len()` so the mutation targets the flags field exactly.
+
+**Actions run:** #326 / `36799721854`
+
+**Correction commit:** `fd6dfa1e275c75a4bc5d28fa1c42b6e969119497`
+
+The finding is recorded as ERR-054. No production verification behavior changed.
+
 ## 5. Scope review
 
 The diff against `m07-block1-crypto-coverage` contains:
