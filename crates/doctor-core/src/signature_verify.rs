@@ -1880,7 +1880,7 @@ mod tests {
         assert_eq!(v3.state, CryptoVerificationState::Verified, "{}", v3.detail);
         assert_eq!(v31.state, CryptoVerificationState::Verified, "{}", v31.detail);
         assert_eq!(v3.rotation_min_sdk, Some(32));
-        assert_eq!(v31.sdk_ranges, vec![(32, u32::MAX)]);
+        assert_eq!(v31.sdk_ranges, vec![(32, i32::MAX as u32)]);
         assert!(!v31.proof_of_rotation.is_empty());
     }
 
