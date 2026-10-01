@@ -158,3 +158,43 @@ All Block 4 findings have a bounded correction.
 **SECOND AUDIT: PASS TO PROCEED TO ACTIONS**
 
 The remaining acceptance gate is empirical CI validation of the exact Block 4 branch and its stacked pull-request path.
+
+
+## 10. Re-audit after ERR-071/ERR-072 correction
+
+The exact Block 4 head was re-reviewed after the correction commit and before Actions.
+
+### Structural check
+
+The SIGNING-003 nested branches now have the intended structure:
+
+- verified/invalid/unsupported v3.1 evidence is evaluated through the unified scheme list;
+- the manual-review condition owns the explicit else branch for the verified-pass case;
+- the extra outer else that caused Actions run 36868916143 to fail is no longer present.
+
+The focused regression tests remain present:
+
+- verified_v31_is_accepted_by_signing_003;
+- invalid_v31_remains_a_signing_003_blocker;
+- unsupported_v31_remains_manual_review;
+- v32_presence_remains_manual_review_boundary.
+
+### Ledger reconciliation
+
+ERR-071 records the first observed branch-structure failure from Actions run 36868550017.
+ERR-072 records the residual failure from Actions run 36868916143 and the precise correction now applied.
+ERR-073 records the terminology clarification so the remaining conditional manual-review text is not confused with the removed unconditional Block 3 behavior.
+
+### Final pre-Actions audit result
+
+- production scope: PASS;
+- v3.1 integration semantics: PASS;
+- focused regression coverage: PASS;
+- cryptographic capability boundary: PASS;
+- stacked CI triggers: PASS;
+- documentation/ledger reconciliation: PASS;
+- no unresolved production-code finding identified by source review.
+
+**SECOND-AUDIT AFTER ERR-072: PASS TO PROCEED TO ACTIONS**
+
+The remaining gate is GitHub Actions validation of the exact branch head.
