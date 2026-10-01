@@ -25,7 +25,7 @@ jobs:
 
       - name: Success path
         id: success
-        uses: $/.github/actions/android-release-doctor
+        uses: ./.github/actions/android-release-doctor
         with:
           artifact: tests/fixtures/minimal-release.apk
           format: json
@@ -52,7 +52,7 @@ jobs:
       - name: Blocker path
         id: blocker
         continue-on-error: true
-        uses: $/.github/actions/android-release-doctor
+        uses: ./.github/actions/android-release-doctor
         with:
           artifact: tests/fixtures/minimal-release.apk
           play: "true"
@@ -82,7 +82,7 @@ jobs:
       - name: Operational error path
         id: error
         continue-on-error: true
-        uses: $/.github/actions/android-release-doctor
+        uses: ./.github/actions/android-release-doctor
         with:
           artifact: tests/fixtures/does-not-exist.apk
           format: json
