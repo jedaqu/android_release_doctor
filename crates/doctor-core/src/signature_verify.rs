@@ -155,23 +155,21 @@ pub fn verify_apk_signatures(
     }
 
     if let Some(value) = v3_block {
-        result.v3 = Some(match verify_v3_block(&mut file, &block, value, V3_BLOCK_ID, "v3") {
-            Ok(info) => info,
-            Err(error) => error_to_scheme_info(error),
-        });
+        result.v3 = Some(
+            match verify_v3_block(&mut file, &block, value, V3_BLOCK_ID, "v3") {
+                Ok(info) => info,
+                Err(error) => error_to_scheme_info(error),
+            },
+        );
     }
 
     if let Some(value) = v31_block {
-        result.v31 = Some(match verify_v3_block(
-            &mut file,
-            &block,
-            value,
-            V31_BLOCK_ID,
-            "v3.1",
-        ) {
-            Ok(info) => info,
-            Err(error) => error_to_scheme_info(error),
-        });
+        result.v31 = Some(
+            match verify_v3_block(&mut file, &block, value, V31_BLOCK_ID, "v3.1") {
+                Ok(info) => info,
+                Err(error) => error_to_scheme_info(error),
+            },
+        );
     }
 
     apply_v31_cross_block_semantics(&mut result);
@@ -222,9 +220,7 @@ fn apply_v31_cross_block_semantics(result: &mut ApkSignatureVerification) {
     };
 
     if v3_max_sdk > v31_min_sdk
-        || (v3_max_sdk == v31_min_sdk
-            && v31_min_sdk > 32
-            && !v31.rotation_targets_dev_release)
+        || (v3_max_sdk == v31_min_sdk && v31_min_sdk > 32 && !v31.rotation_targets_dev_release)
     {
         v31.state = CryptoVerificationState::Invalid;
         v31.detail = format!(
@@ -233,9 +229,7 @@ fn apply_v31_cross_block_semantics(result: &mut ApkSignatureVerification) {
         return;
     }
 
-    if v3_max_sdk < v31_min_sdk
-        && v3_max_sdk.saturating_add(1) != v31_min_sdk
-    {
+    if v3_max_sdk < v31_min_sdk && v3_max_sdk.saturating_add(1) != v31_min_sdk {
         v31.state = CryptoVerificationState::Invalid;
         v31.detail = format!(
             "v3/v3.1 targeted SDK ranges are not contiguous: v3 maxSDK={v3_max_sdk}, v3.1 minSDK={v31_min_sdk}"
@@ -458,7 +452,11 @@ fn verify_v3_block(
     scheme_name: &str,
 ) -> Result<CryptoSchemeInfo, SignatureVerificationError> {
     let mut reader = LengthReader::new(value);
-    let signers = reader.read_sequence(if scheme_block_id == V31_BLOCK_ID { "v3.1 signers" } else { "v3 signers" })?;
+    let signers = reader.read_sequence(if scheme_block_id == V31_BLOCK_ID {
+        "v3.1 signers"
+    } else {
+        "v3 signers"
+    })?;
     reader.finish("v3 signer sequence")?;
 
     let mut signers_reader = LengthReader::new(signers);
@@ -1878,7 +1876,12 @@ mod tests {
         let v31 = result.v31.expect("v3.1 block should be detected");
 
         assert_eq!(v3.state, CryptoVerificationState::Verified, "{}", v3.detail);
-        assert_eq!(v31.state, CryptoVerificationState::Verified, "{}", v31.detail);
+        assert_eq!(
+            v31.state,
+            CryptoVerificationState::Verified,
+            "{}",
+            v31.detail
+        );
         assert_eq!(v3.rotation_min_sdk, Some(32));
         assert_eq!(v31.sdk_ranges, vec![(32, i32::MAX as u32)]);
         assert!(!v31.proof_of_rotation.is_empty());
@@ -2125,7 +2128,8 @@ mod tests {
         signed_data.extend_from_slice(&2_u32.to_le_bytes());
         signed_data.extend_from_slice(&encode_sequence(&[]));
 
-        let parsed = parse_signed_data_v3(&signed_data, V3_BLOCK_ID).expect("certificate chain should parse");
+        let parsed = parse_signed_data_v3(&signed_data, V3_BLOCK_ID)
+            .expect("certificate chain should parse");
         assert_eq!(parsed.certificate, b"signer");
     }
 
@@ -2538,7 +2542,8 @@ mod tests {
         signed_data.extend_from_slice(&35_u32.to_le_bytes());
         signed_data.extend_from_slice(&attributes);
 
-        let parsed = parse_signed_data_v3(&signed_data, V3_BLOCK_ID).expect("v3 signed data should parse");
+        let parsed =
+            parse_signed_data_v3(&signed_data, V3_BLOCK_ID).expect("v3 signed data should parse");
         let proof_info = parsed
             .proof_of_rotation
             .expect("proof-of-rotation evidence should be present");
