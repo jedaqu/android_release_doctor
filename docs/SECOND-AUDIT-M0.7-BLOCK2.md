@@ -91,6 +91,21 @@ No unrelated production subsystem, CI graph, cryptographic algorithm support, v3
 
 ## 7. Second-audit conclusion
 
+## 8. CI trigger correction before validation
+
+The inherited workflow initially did not include the Block 2 source branch in push coverage or the Block 1 branch as the stacked pull-request target. This was corrected without changing the job graph.
+
+**Correction commit:** `c93f52f01af86d7c6498fdf86e7a7a6ab9fd9cc6`
+
+The ledger records this as ERR-051. The workflow now covers:
+
+- push: `m07-block2-rotation-semantics`;
+- pull request target: `m07-block1-crypto-coverage`.
+
+The CI correction is limited to the active M0.7 stack.
+
+## 9. Final second-audit conclusion
+
 **SECOND AUDIT: PASS TO CI**
 
 The scoped Block 2 implementation satisfies the declared semantic-evidence boundary after the identified test-helper correction.
