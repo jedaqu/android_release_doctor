@@ -15,7 +15,6 @@ on:
       - m07-block1-crypto-coverage
       - m07-block2-rotation-semantics
       - m07-block3-v31-verification
-      - m07-block3-v31-verification
       - m07-block4-integration-completeness
   pull_request:
     branches:
@@ -29,6 +28,7 @@ on:
       - m06-block4-signer-error-isolation
       - m07-block1-crypto-coverage
       - m07-block2-rotation-semantics
+      - m07-block3-v31-verification
 
 env:
   CARGO_TERM_COLOR: always
