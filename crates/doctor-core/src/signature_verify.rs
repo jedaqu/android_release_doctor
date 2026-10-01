@@ -28,6 +28,16 @@ const V3_BLOCK_ID: u32 = 0xf053_68c0;
 const V31_BLOCK_ID: u32 = 0x1b93_ad61;
 const V32_BLOCK_ID: u32 = 0x70e1_c89f;
 const PROOF_OF_ROTATION_ATTR_ID: u32 = 0x3ba0_6f8c;
+const PROOF_OF_ROTATION_FLAG_INSTALLED_DATA: u32 = 0x0000_0001;
+const PROOF_OF_ROTATION_FLAG_SHARED_USER_ID: u32 = 0x0000_0002;
+const PROOF_OF_ROTATION_FLAG_PERMISSION: u32 = 0x0000_0004;
+const PROOF_OF_ROTATION_FLAG_ROLLBACK: u32 = 0x0000_0008;
+const PROOF_OF_ROTATION_FLAG_AUTH: u32 = 0x0000_0010;
+const PROOF_OF_ROTATION_KNOWN_FLAGS: u32 = PROOF_OF_ROTATION_FLAG_INSTALLED_DATA
+    | PROOF_OF_ROTATION_FLAG_SHARED_USER_ID
+    | PROOF_OF_ROTATION_FLAG_PERMISSION
+    | PROOF_OF_ROTATION_FLAG_ROLLBACK
+    | PROOF_OF_ROTATION_FLAG_AUTH;
 const CHUNK_SIZE: usize = 1024 * 1024;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -49,9 +59,22 @@ pub struct CryptoSchemeInfo {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProofOfRotationCapabilities {
+    pub flags: u32,
+    pub known_flags: u32,
+    pub unknown_flags: u32,
+    pub installed_data: bool,
+    pub shared_user_id: bool,
+    pub permission: bool,
+    pub rollback: bool,
+    pub auth: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProofOfRotationInfo {
     pub state: CryptoVerificationState,
     pub level_count: usize,
+    pub capabilities: Vec<ProofOfRotationCapabilities>,
     pub detail: String,
 }
 
@@ -1027,6 +1050,20 @@ fn parse_signed_data_v3(
     })
 }
 
+fn decode_proof_of_rotation_capabilities(flags: u32) -> ProofOfRotationCapabilities {
+    let known_flags = flags & PROOF_OF_ROTATION_KNOWN_FLAGS;
+    ProofOfRotationCapabilities {
+        flags,
+        known_flags,
+        unknown_flags: flags & !PROOF_OF_ROTATION_KNOWN_FLAGS,
+        installed_data: known_flags & PROOF_OF_ROTATION_FLAG_INSTALLED_DATA != 0,
+        shared_user_id: known_flags & PROOF_OF_ROTATION_FLAG_SHARED_USER_ID != 0,
+        permission: known_flags & PROOF_OF_ROTATION_FLAG_PERMISSION != 0,
+        rollback: known_flags & PROOF_OF_ROTATION_FLAG_ROLLBACK != 0,
+        auth: known_flags & PROOF_OF_ROTATION_FLAG_AUTH != 0,
+    }
+}
+
 fn validate_proof_of_rotation(bytes: &[u8], current_certificate: &[u8]) -> ProofOfRotationInfo {
     let mut reader = LengthReader::new(bytes);
     let version = match reader.read_u32("v3 proof-of-rotation version") {
@@ -1035,6 +1072,7 @@ fn validate_proof_of_rotation(bytes: &[u8], current_certificate: &[u8]) -> Proof
             return ProofOfRotationInfo {
                 state: CryptoVerificationState::Invalid,
                 level_count: 0,
+                capabilities: Vec::new(),
                 detail: format!("proof-of-rotation is malformed: {error}"),
             };
         }
@@ -1043,6 +1081,7 @@ fn validate_proof_of_rotation(bytes: &[u8], current_certificate: &[u8]) -> Proof
         return ProofOfRotationInfo {
             state: CryptoVerificationState::Invalid,
             level_count: 0,
+            capabilities: Vec::new(),
             detail: format!("unsupported proof-of-rotation version {version}"),
         };
     }
@@ -1051,67 +1090,75 @@ fn validate_proof_of_rotation(bytes: &[u8], current_certificate: &[u8]) -> Proof
     let mut last_certificate: Option<Vec<u8>> = None;
     let mut last_signature_algorithm = 0_u32;
     let mut level_count = 0_usize;
+    let mut capabilities = Vec::<ProofOfRotationCapabilities>::new();
+
+    macro_rules! return_info {
+        ($state:expr, $detail:expr) => {
+            return ProofOfRotationInfo {
+                state: $state,
+                level_count,
+                capabilities: capabilities.clone(),
+                detail: $detail,
+            };
+        };
+    }
 
     while !reader.is_empty() {
         level_count += 1;
         let node = match reader.read_sequence("v3 proof-of-rotation node") {
             Ok(value) => value,
             Err(error) => {
-                return ProofOfRotationInfo {
-                    state: CryptoVerificationState::Invalid,
-                    level_count,
-                    detail: format!("proof-of-rotation is malformed: {error}"),
-                };
+                return_info!(
+                    CryptoVerificationState::Invalid,
+                    format!("proof-of-rotation is malformed: {error}")
+                );
             }
         };
         let mut node_reader = LengthReader::new(node);
         let signed_data = match node_reader.read_sequence("v3 proof-of-rotation signed data") {
             Ok(value) => value,
             Err(error) => {
-                return ProofOfRotationInfo {
-                    state: CryptoVerificationState::Invalid,
-                    level_count,
-                    detail: format!("proof-of-rotation is malformed: {error}"),
-                };
+                return_info!(
+                    CryptoVerificationState::Invalid,
+                    format!("proof-of-rotation is malformed: {error}")
+                );
             }
         };
-        let _flags = match node_reader.read_u32("v3 proof-of-rotation flags") {
+        let flags = match node_reader.read_u32("v3 proof-of-rotation flags") {
             Ok(value) => value,
             Err(error) => {
-                return ProofOfRotationInfo {
-                    state: CryptoVerificationState::Invalid,
-                    level_count,
-                    detail: format!("proof-of-rotation is malformed: {error}"),
-                };
+                return_info!(
+                    CryptoVerificationState::Invalid,
+                    format!("proof-of-rotation is malformed: {error}")
+                );
             }
         };
+        capabilities.push(decode_proof_of_rotation_capabilities(flags));
+
         let signature_algorithm =
             match node_reader.read_u32("v3 proof-of-rotation signature algorithm") {
                 Ok(value) => value,
                 Err(error) => {
-                    return ProofOfRotationInfo {
-                        state: CryptoVerificationState::Invalid,
-                        level_count,
-                        detail: format!("proof-of-rotation is malformed: {error}"),
-                    };
+                    return_info!(
+                        CryptoVerificationState::Invalid,
+                        format!("proof-of-rotation is malformed: {error}")
+                    );
                 }
             };
         let signature = match node_reader.read_length_prefixed("v3 proof-of-rotation signature") {
             Ok(value) => value,
             Err(error) => {
-                return ProofOfRotationInfo {
-                    state: CryptoVerificationState::Invalid,
-                    level_count,
-                    detail: format!("proof-of-rotation is malformed: {error}"),
-                };
+                return_info!(
+                    CryptoVerificationState::Invalid,
+                    format!("proof-of-rotation is malformed: {error}")
+                );
             }
         };
         if let Err(error) = node_reader.finish("v3 proof-of-rotation node") {
-            return ProofOfRotationInfo {
-                state: CryptoVerificationState::Invalid,
-                level_count,
-                detail: format!("proof-of-rotation is malformed: {error}"),
-            };
+            return_info!(
+                CryptoVerificationState::Invalid,
+                format!("proof-of-rotation is malformed: {error}")
+            );
         }
 
         let mut signed_reader = LengthReader::new(signed_data);
@@ -1119,47 +1166,42 @@ fn validate_proof_of_rotation(bytes: &[u8], current_certificate: &[u8]) -> Proof
             match signed_reader.read_length_prefixed("v3 proof-of-rotation certificate") {
                 Ok(value) => value,
                 Err(error) => {
-                    return ProofOfRotationInfo {
-                        state: CryptoVerificationState::Invalid,
-                        level_count,
-                        detail: format!("proof-of-rotation is malformed: {error}"),
-                    };
+                    return_info!(
+                        CryptoVerificationState::Invalid,
+                        format!("proof-of-rotation is malformed: {error}")
+                    );
                 }
             };
         let parent_signature_algorithm =
             match signed_reader.read_u32("v3 proof-of-rotation parent signature algorithm") {
                 Ok(value) => value,
                 Err(error) => {
-                    return ProofOfRotationInfo {
-                        state: CryptoVerificationState::Invalid,
-                        level_count,
-                        detail: format!("proof-of-rotation is malformed: {error}"),
-                    };
+                    return_info!(
+                        CryptoVerificationState::Invalid,
+                        format!("proof-of-rotation is malformed: {error}")
+                    );
                 }
             };
         if let Err(error) = signed_reader.finish("v3 proof-of-rotation signed data") {
-            return ProofOfRotationInfo {
-                state: CryptoVerificationState::Invalid,
-                level_count,
-                detail: format!("proof-of-rotation is malformed: {error}"),
-            };
+            return_info!(
+                CryptoVerificationState::Invalid,
+                format!("proof-of-rotation is malformed: {error}")
+            );
         }
 
         match X509Certificate::from_der(certificate) {
             Ok(([], _)) => {}
             Ok(_) => {
-                return ProofOfRotationInfo {
-                    state: CryptoVerificationState::Invalid,
-                    level_count,
-                    detail: "proof-of-rotation certificate contains trailing DER data".to_string(),
-                };
+                return_info!(
+                    CryptoVerificationState::Invalid,
+                    "proof-of-rotation certificate contains trailing DER data".to_string()
+                );
             }
             Err(error) => {
-                return ProofOfRotationInfo {
-                    state: CryptoVerificationState::Invalid,
-                    level_count,
-                    detail: format!("proof-of-rotation certificate is not valid DER: {error}"),
-                };
+                return_info!(
+                    CryptoVerificationState::Invalid,
+                    format!("proof-of-rotation certificate is not valid DER: {error}")
+                );
             }
         }
 
@@ -1167,32 +1209,28 @@ fn validate_proof_of_rotation(bytes: &[u8], current_certificate: &[u8]) -> Proof
             .iter()
             .any(|item| item.as_slice() == certificate)
         {
-            return ProofOfRotationInfo {
-                state: CryptoVerificationState::Invalid,
-                level_count,
-                detail: format!("duplicate proof-of-rotation certificate at level {level_count}"),
-            };
+            return_info!(
+                CryptoVerificationState::Invalid,
+                format!("duplicate proof-of-rotation certificate at level {level_count}")
+            );
         }
         certificates.push(certificate.to_vec());
 
         if level_count == 1 {
             if parent_signature_algorithm != 0 || !signature.is_empty() {
-                return ProofOfRotationInfo {
-                    state: CryptoVerificationState::Invalid,
-                    level_count,
-                    detail: "first proof-of-rotation level must not contain a parent signature"
-                        .to_string(),
-                };
+                return_info!(
+                    CryptoVerificationState::Invalid,
+                    "first proof-of-rotation level must not contain a parent signature".to_string()
+                );
             }
         } else {
             if parent_signature_algorithm != last_signature_algorithm {
-                return ProofOfRotationInfo {
-                    state: CryptoVerificationState::Invalid,
-                    level_count,
-                    detail: format!(
+                return_info!(
+                    CryptoVerificationState::Invalid,
+                    format!(
                         "proof-of-rotation parent signature algorithm 0x{parent_signature_algorithm:08x} does not match previous level algorithm 0x{last_signature_algorithm:08x}"
-                    ),
-                };
+                    )
+                );
             }
 
             if let Err(error) = verify_signature_bytes(
@@ -1208,22 +1246,20 @@ fn validate_proof_of_rotation(bytes: &[u8], current_certificate: &[u8]) -> Proof
                 } else {
                     CryptoVerificationState::Invalid
                 };
-                return ProofOfRotationInfo {
+                return_info!(
                     state,
-                    level_count,
-                    detail: format!("proof-of-rotation validation failed: {}", error.0),
-                };
+                    format!("proof-of-rotation validation failed: {}", error.0)
+                );
             }
         }
 
         if !reader.is_empty() && supported_signature_algorithm(signature_algorithm).is_none() {
-            return ProofOfRotationInfo {
-                state: CryptoVerificationState::Unsupported,
-                level_count,
-                detail: format!(
+            return_info!(
+                CryptoVerificationState::Unsupported,
+                format!(
                     "proof-of-rotation uses unsupported lineage signing algorithm 0x{signature_algorithm:08x}"
-                ),
-            };
+                )
+            );
         }
 
         last_signature_algorithm = signature_algorithm;
@@ -1234,6 +1270,7 @@ fn validate_proof_of_rotation(bytes: &[u8], current_certificate: &[u8]) -> Proof
         return ProofOfRotationInfo {
             state: CryptoVerificationState::Invalid,
             level_count: 0,
+            capabilities,
             detail: "proof-of-rotation contains no lineage levels".to_string(),
         };
     }
@@ -1241,6 +1278,7 @@ fn validate_proof_of_rotation(bytes: &[u8], current_certificate: &[u8]) -> Proof
         return ProofOfRotationInfo {
             state: CryptoVerificationState::Invalid,
             level_count,
+            capabilities,
             detail: "final proof-of-rotation level must not specify a next-level signing algorithm"
                 .to_string(),
         };
@@ -1249,6 +1287,7 @@ fn validate_proof_of_rotation(bytes: &[u8], current_certificate: &[u8]) -> Proof
         return ProofOfRotationInfo {
             state: CryptoVerificationState::Invalid,
             level_count,
+            capabilities,
             detail:
                 "final proof-of-rotation certificate does not match the current v3 signer certificate"
                     .to_string(),
@@ -1258,6 +1297,7 @@ fn validate_proof_of_rotation(bytes: &[u8], current_certificate: &[u8]) -> Proof
     ProofOfRotationInfo {
         state: CryptoVerificationState::Verified,
         level_count,
+        capabilities,
         detail: format!(
             "proof-of-rotation lineage verified across {level_count} certificate level(s)"
         ),
@@ -1910,6 +1950,7 @@ mod tests {
         let proof = ProofOfRotationInfo {
             state: CryptoVerificationState::Verified,
             level_count: 2,
+            capabilities: Vec::new(),
             detail: "proof-of-rotation lineage verified across 2 certificate level(s)".to_string(),
         };
 
@@ -1974,6 +2015,122 @@ mod tests {
             .to_vec();
 
         (first_certificate, second_certificate)
+    }
+
+    fn proof_rotation_with_flags(bytes: &[u8], level_index: usize, flags: u32) -> Vec<u8> {
+        let mut output = bytes.to_vec();
+        let mut reader = LengthReader::new(&output);
+        reader
+            .read_u32("fixture version")
+            .expect("fixture should contain a version");
+
+        for index in 0..=level_index {
+            let node = reader
+                .read_sequence("fixture proof-of-rotation node")
+                .expect("fixture node should be well formed");
+            if index == level_index {
+                let mut node_reader = LengthReader::new(node);
+                let signed_data = node_reader
+                    .read_sequence("fixture signed data")
+                    .expect("fixture node should contain signed data");
+                let flags_offset = 4
+                    + signed_data.len()
+                    + 4;
+                let node_start = reader.cursor - node.len();
+                let absolute_offset = node_start + flags_offset;
+                output[absolute_offset..absolute_offset + 4]
+                    .copy_from_slice(&flags.to_le_bytes());
+                break;
+            }
+        }
+
+        output
+    }
+
+    #[test]
+    fn proof_of_rotation_flags_are_decoded_as_independent_capabilities() {
+        let proof = proof_rotation_fixture();
+        let (_, current_certificate) = proof_rotation_certificates(&proof);
+        let flags = PROOF_OF_ROTATION_FLAG_INSTALLED_DATA
+            | PROOF_OF_ROTATION_FLAG_SHARED_USER_ID
+            | PROOF_OF_ROTATION_FLAG_PERMISSION
+            | PROOF_OF_ROTATION_FLAG_ROLLBACK
+            | PROOF_OF_ROTATION_FLAG_AUTH;
+
+        let proof = proof_rotation_with_flags(&proof, 0, flags);
+        let result = validate_proof_of_rotation(&proof, &current_certificate);
+
+        assert_eq!(result.state, CryptoVerificationState::Verified);
+        assert_eq!(result.capabilities.len(), 2);
+        let first = &result.capabilities[0];
+        assert_eq!(first.flags, flags);
+        assert_eq!(first.known_flags, flags);
+        assert_eq!(first.unknown_flags, 0);
+        assert!(first.installed_data);
+        assert!(first.shared_user_id);
+        assert!(first.permission);
+        assert!(first.rollback);
+        assert!(first.auth);
+    }
+
+    #[test]
+    fn proof_of_rotation_unknown_flags_are_preserved_without_invalidating_lineage() {
+        let proof = proof_rotation_fixture();
+        let (_, current_certificate) = proof_rotation_certificates(&proof);
+        let flags = PROOF_OF_ROTATION_FLAG_PERMISSION | 0x8000_0000;
+
+        let proof = proof_rotation_with_flags(&proof, 1, flags);
+        let result = validate_proof_of_rotation(&proof, &current_certificate);
+
+        assert_eq!(result.state, CryptoVerificationState::Verified);
+        assert_eq!(result.capabilities.len(), 2);
+        let second = &result.capabilities[1];
+        assert_eq!(second.flags, flags);
+        assert_eq!(
+            second.known_flags,
+            PROOF_OF_ROTATION_FLAG_PERMISSION
+        );
+        assert_eq!(second.unknown_flags, 0x8000_0000);
+        assert!(second.permission);
+        assert!(!second.installed_data);
+        assert!(!second.shared_user_id);
+        assert!(!second.rollback);
+        assert!(!second.auth);
+    }
+
+    #[test]
+    fn proof_of_rotation_zero_flags_are_distinct_from_unknown_flags() {
+        let proof = proof_rotation_fixture();
+        let (_, current_certificate) = proof_rotation_certificates(&proof);
+
+        let zero_flags = proof_rotation_with_flags(&proof, 0, 0);
+        let zero_result = validate_proof_of_rotation(&zero_flags, &current_certificate);
+        assert_eq!(zero_result.state, CryptoVerificationState::Verified);
+        assert_eq!(zero_result.capabilities[0].known_flags, 0);
+        assert_eq!(zero_result.capabilities[0].unknown_flags, 0);
+
+        let unknown_flags = proof_rotation_with_flags(&proof, 0, 0x4000_0000);
+        let unknown_result =
+            validate_proof_of_rotation(&unknown_flags, &current_certificate);
+        assert_eq!(unknown_result.state, CryptoVerificationState::Verified);
+        assert_eq!(unknown_result.capabilities[0].known_flags, 0);
+        assert_eq!(unknown_result.capabilities[0].unknown_flags, 0x4000_0000);
+    }
+
+    #[test]
+    fn proof_of_rotation_capability_evidence_survives_lineage_signature_failure() {
+        let proof = proof_rotation_fixture();
+        let (_, current_certificate) = proof_rotation_certificates(&proof);
+        let flags = PROOF_OF_ROTATION_FLAG_ROLLBACK | 0x2000_0000;
+        let mut proof = proof_rotation_with_flags(&proof, 1, flags);
+        *proof.last_mut().expect("fixture must not be empty") ^= 1;
+
+        let result = validate_proof_of_rotation(&proof, &current_certificate);
+
+        assert_eq!(result.state, CryptoVerificationState::Invalid);
+        assert_eq!(result.capabilities.len(), 2);
+        assert_eq!(result.capabilities[1].flags, flags);
+        assert_eq!(result.capabilities[1].unknown_flags, 0x2000_0000);
     }
 
     #[test]
@@ -2073,6 +2230,7 @@ mod tests {
                     proof_of_rotation: vec![ProofOfRotationInfo {
                         state: CryptoVerificationState::Verified,
                         level_count: 2,
+                        capabilities: Vec::new(),
                         detail: "proof-of-rotation lineage verified across 2 certificate level(s)"
                             .to_string(),
                     }],
