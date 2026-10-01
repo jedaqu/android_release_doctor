@@ -344,6 +344,8 @@ fn error_to_scheme_info_with_rotation(
         algorithms,
         certificate_sha256,
         sdk_ranges,
+        rotation_min_sdk: None,
+        rotation_targets_dev_release: false,
         proof_of_rotation,
         detail: detail
             .strip_prefix("UNSUPPORTED: ")
