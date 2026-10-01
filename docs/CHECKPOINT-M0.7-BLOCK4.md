@@ -32,7 +32,8 @@ The Block 4 correction chain recorded and validated:
 - ERR-072 — residual extra else;
 - ERR-073 — terminology clarification;
 - ERR-074 — unclosed delimiter;
-- ERR-075 — missing Block 3 pull-request target in the validated base workflow.
+- ERR-075 — missing Block 3 pull-request target in the validated base workflow;
+- ERR-076 — PR #15 merge conflict caused by divergent stacked workflow target lists.
 
 The corrected Block 4 head passed Actions #428 / 36873605656 and the final audit/ledger closure commit passed Actions #429 / 36873791944.
 
@@ -50,7 +51,7 @@ No merge is part of this checkpoint.
 
 PR #15 remains intentionally open and unmerged.
 
-After the formal checkpoint Actions run passes, the PR may be marked ready for review. No merge is performed as part of M0.7 Block 4 checkpoint closure.
+After the formal checkpoint Actions run passes and the PR #15 stacked pull-request validation is observed, the PR may be marked ready for review. No merge is performed as part of M0.7 Block 4 checkpoint closure.
 
 ## 6. Explicit boundaries retained
 

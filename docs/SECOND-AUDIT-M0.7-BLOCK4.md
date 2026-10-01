@@ -271,3 +271,19 @@ The existing Block 4 head workflow already targets m07-block3-v31-verification, 
 **SECOND-AUDIT AFTER ERR-075: PASS TO FINAL CHECKPOINT**
 
 The only remaining gate is Actions validation of the formal Block 4 checkpoint commit itself.
+
+## 13. ERR-076 re-audit and final stacked-CI readiness
+
+PR #15 was inspected after ERR-075 validation and reported mergeable=false with mergeable_state=dirty. The workflow files on the base and head branches contained different pull_request.branches target sets, creating a merge conflict.
+
+The bounded correction synchronizes only the workflow trigger target list. The Block 4 push target remains present, the Block 3 pull-request target remains present, the Block 4 target remains represented, and the job graph is unchanged.
+
+GitHub's documented pull_request behavior does not run the workflow while the pull request has a merge conflict. Therefore resolving this conflict is a prerequisite to empirical PR-event validation.
+
+### Pre-validation result
+
+- production scope: PASS;
+- workflow scope: PASS;
+- job graph preserved: PASS;
+- ERR-075 correction remains valid: PASS;
+- PR-event empirical validation: PENDING.

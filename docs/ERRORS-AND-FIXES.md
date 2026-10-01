@@ -836,3 +836,14 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction commit:** 2d506d98e7892e602f4f2c4a99cbcab0b1d190b9
 - **Validation:** Actions #430 / 36874487972 (push) and #431 / 36874495416 (pull_request) both passed Build, Test, Format, and Clippy.
 - **Status:** RESOLVED
+
+## ERR-076 — PR #15 merge conflict blocked stacked pull-request validation
+
+- **Milestone:** M0.7 Block 4 / final stacked-CI audit
+- **Type:** CI configuration / branch synchronization defect
+- **Problem:** PR #15 reported mergeable=false with mergeable_state=dirty after ERR-075. The base workflow and Block 4 head workflow had diverging pull_request.branches lists, producing a workflow-file merge conflict. GitHub does not run pull_request workflows while the PR has a merge conflict.
+- **Root cause:** ERR-075 corrected the validated Block 3 base workflow by adding m07-block3-v31-verification, while the Block 4 head retained its own scoped target list without the future Block 4 target present on the base side.
+- **Correction:** Synchronize the Block 4 head workflow with the validated base target list by retaining the existing Block 4 push trigger and including both m07-block3-v31-verification and m07-block4-integration-completeness in pull_request.branches. The Build → Test → Format → Clippy graph is unchanged.
+- **Correction commit:** pending
+- **Validation:** pending mergeability check and pull-request Actions execution.
+- **Status:** OPEN — awaiting validation
