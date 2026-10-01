@@ -723,3 +723,15 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Additional correction:** The valid authoritative v3.1 fixture's v3 rotation-min-sdk is SDK 32, so its existing expectation was corrected from 33 to 32.
 - **Validation:** Required in new Actions execution.
 - **Status:** RESOLVED — pending new CI execution
+
+
+## ERR-066 — M0.7 Block 3 fixture max SDK expectation used the wrong integer width
+
+- **Milestone:** M0.7 Block 3 / Actions run #390
+- **Type:** Regression-test expectation correction
+- **Actions run:** #390 / 36802149071
+- **Problem:** The valid v3.1 fixture reports maxSDK 2,147,483,647, matching the signed 32-bit Android SDK range convention used by the source corpus; the test expected u32::MAX.
+- **Correction:** Assert the fixture range as `(32, i32::MAX as u32)`.
+- **Correction commit:** 390ed764d3bbdce14e402b28c52cb192cb41b3fa
+- **Validation:** Required in new Actions execution.
+- **Status:** RESOLVED — pending new CI execution
