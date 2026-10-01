@@ -203,6 +203,8 @@ fn error_to_scheme_info_with_evidence(
         algorithms,
         certificate_sha256,
         sdk_ranges,
+        rotation_min_sdk: None,
+        rotation_targets_dev_release: false,
         proof_of_rotation: Vec::new(),
         detail: detail
             .strip_prefix("UNSUPPORTED: ")
@@ -463,6 +465,8 @@ fn verify_v3_block(
                 algorithms,
                 certificate_sha256,
                 sdk_ranges,
+                rotation_min_sdk: None,
+                rotation_targets_dev_release: false,
                 proof_of_rotation: parsed.proof_of_rotation.clone().into_iter().collect(),
                 detail: format!(
                     "v3 signer minSDK/maxSDK ({min_sdk}, {max_sdk}) do not match signed-data values ({}, {})",
@@ -560,6 +564,8 @@ fn verify_v3_block(
                 algorithms,
                 certificate_sha256,
                 sdk_ranges,
+                rotation_min_sdk: None,
+                rotation_targets_dev_release: false,
                 proof_of_rotation: parsed.proof_of_rotation.clone().into_iter().collect(),
                 detail:
                     "v3 digest and signature algorithm ID lists are not identical and ordered equally"
@@ -591,6 +597,8 @@ fn verify_v3_block(
             algorithms,
             certificate_sha256,
             sdk_ranges,
+            rotation_min_sdk: None,
+            rotation_targets_dev_release: false,
             proof_of_rotation: parsed.proof_of_rotation.clone().into_iter().collect(),
             detail,
         });
