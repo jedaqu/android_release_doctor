@@ -1168,6 +1168,7 @@ fn validate_proof_of_rotation(bytes: &[u8], current_certificate: &[u8]) -> Proof
     let mut last_certificate: Option<Vec<u8>> = None;
     let mut last_signature_algorithm = 0_u32;
     let mut level_count = 0_usize;
+    let mut lineage_certificate_sha256 = Vec::<String>::new();
     let mut capabilities = Vec::<ProofOfRotationCapabilities>::new();
 
     macro_rules! return_info {
@@ -1175,6 +1176,7 @@ fn validate_proof_of_rotation(bytes: &[u8], current_certificate: &[u8]) -> Proof
             return ProofOfRotationInfo {
                 state: $state,
                 level_count,
+                lineage_certificate_sha256: lineage_certificate_sha256.clone(),
                 capabilities: capabilities.clone(),
                 detail: $detail,
             };
@@ -1292,6 +1294,7 @@ fn validate_proof_of_rotation(bytes: &[u8], current_certificate: &[u8]) -> Proof
                 format!("duplicate proof-of-rotation certificate at level {level_count}")
             );
         }
+        lineage_certificate_sha256.push(certificate_sha256(certificate).unwrap_or_default());
         certificates.push(certificate.to_vec());
 
         if level_count == 1 {
@@ -1348,6 +1351,7 @@ fn validate_proof_of_rotation(bytes: &[u8], current_certificate: &[u8]) -> Proof
         return ProofOfRotationInfo {
             state: CryptoVerificationState::Invalid,
             level_count: 0,
+            lineage_certificate_sha256,
             capabilities,
             detail: "proof-of-rotation contains no lineage levels".to_string(),
         };
@@ -1356,6 +1360,7 @@ fn validate_proof_of_rotation(bytes: &[u8], current_certificate: &[u8]) -> Proof
         return ProofOfRotationInfo {
             state: CryptoVerificationState::Invalid,
             level_count,
+            lineage_certificate_sha256: lineage_certificate_sha256.clone(),
             capabilities,
             detail: "final proof-of-rotation level must not specify a next-level signing algorithm"
                 .to_string(),
@@ -1365,6 +1370,7 @@ fn validate_proof_of_rotation(bytes: &[u8], current_certificate: &[u8]) -> Proof
         return ProofOfRotationInfo {
             state: CryptoVerificationState::Invalid,
             level_count,
+            lineage_certificate_sha256: lineage_certificate_sha256.clone(),
             capabilities,
             detail:
                 "final proof-of-rotation certificate does not match the current v3 signer certificate"
@@ -1375,6 +1381,7 @@ fn validate_proof_of_rotation(bytes: &[u8], current_certificate: &[u8]) -> Proof
     ProofOfRotationInfo {
         state: CryptoVerificationState::Verified,
         level_count,
+        lineage_certificate_sha256,
         capabilities,
         detail: format!(
             "proof-of-rotation lineage verified across {level_count} certificate level(s)"
