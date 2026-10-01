@@ -86,6 +86,18 @@ Actions run #326 compiled successfully but four new capability-evidence tests fa
 
 The finding is recorded as ERR-054. No production verification behavior changed.
 
+### AUDIT-M0.7-B2-006 — rustfmt-only CI correction
+
+Actions run #333 passed Build and Test, then failed only at Format with three deterministic layout differences in the new helper/tests.
+
+**Correction:** apply exactly the three rustfmt-indicated layout changes and no behavioral changes.
+
+**Actions run:** #333 / `36799797451`
+
+**Correction commit:** `f0bcd2652dab80507cf62b5d51ebaaba848f2539`
+
+The finding is recorded as ERR-055.
+
 ## 5. Scope review
 
 The diff against `m07-block1-crypto-coverage` contains:
