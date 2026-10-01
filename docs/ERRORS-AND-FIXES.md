@@ -648,3 +648,15 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction commits:** `e1d87aab495ed152c6dc3c2aa247175d6e51a8fc` on Block 3; `c747e02aefb506700b1d5c7ce45661fd33b14e7d` on Block 2.
 - **Validation:** PR-event Actions validation required before checkpoint.
 - **Status:** RESOLVED — pending Actions validation
+
+
+## ERR-060 — M0.7 Block 3 build failure from dynamic LengthReader label
+
+- **Milestone:** M0.7 Block 3 / Actions run #356
+- **Type:** Build failure
+- **Actions run:** #356 / 36801502384
+- **Problem:** `LengthReader::read_sequence()` accepts `&str`, but the parameterized v3/v3.1 entry point passed `format!("{scheme_name} signers")`, producing a `String`.
+- **Correction:** Use a static `"v3.1 signers"` or `"v3 signers"` label selected from the block ID.
+- **Correction commit:** 8971a7c0cf55eb2deb4c2a1c6565baf2c1d67da3
+- **Validation:** Required in new Actions execution.
+- **Status:** RESOLVED — pending new CI execution
