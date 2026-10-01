@@ -217,6 +217,8 @@ fn error_to_scheme_info_with_rotation(
     algorithms: Vec<u32>,
     certificate_sha256: Vec<String>,
     sdk_ranges: Vec<(u32, u32)>,
+    rotation_min_sdk: None,
+    rotation_targets_dev_release: false,
     proof_of_rotation: Vec<ProofOfRotationInfo>,
 ) -> CryptoSchemeInfo {
     let detail = error.to_string();
@@ -608,6 +610,8 @@ fn merge_scheme_results(
             algorithms: Vec::new(),
             certificate_sha256: Vec::new(),
             sdk_ranges: Vec::new(),
+            rotation_min_sdk: None,
+            rotation_targets_dev_release: false,
             proof_of_rotation: Vec::new(),
             detail: format!("{scheme} signing block contains no signers"),
         });
@@ -2296,6 +2300,8 @@ mod tests {
                     algorithms: vec![0x0201],
                     certificate_sha256: vec!["a".repeat(64)],
                     sdk_ranges: vec![(28, 32)],
+                    rotation_min_sdk: None,
+                    rotation_targets_dev_release: false,
                     proof_of_rotation: vec![ProofOfRotationInfo {
                         state: CryptoVerificationState::Verified,
                         level_count: 2,
@@ -2312,6 +2318,8 @@ mod tests {
                     algorithms: vec![0x0201],
                     certificate_sha256: vec!["b".repeat(64)],
                     sdk_ranges: vec![(33, 36)],
+                    rotation_min_sdk: None,
+                    rotation_targets_dev_release: false,
                     proof_of_rotation: Vec::new(),
                     detail: "targeted signer B failed verification".to_string(),
                 },
@@ -2341,6 +2349,8 @@ mod tests {
                     algorithms: vec![0x0201],
                     certificate_sha256: vec!["a".repeat(64)],
                     sdk_ranges: vec![(28, 32)],
+                    rotation_min_sdk: None,
+                    rotation_targets_dev_release: false,
                     proof_of_rotation: Vec::new(),
                     detail: "targeted signer A".to_string(),
                 },
@@ -2350,6 +2360,8 @@ mod tests {
                     algorithms: vec![0x0201],
                     certificate_sha256: vec!["b".repeat(64)],
                     sdk_ranges: vec![(33, 36)],
+                    rotation_min_sdk: None,
+                    rotation_targets_dev_release: false,
                     proof_of_rotation: Vec::new(),
                     detail: "targeted signer B".to_string(),
                 },
