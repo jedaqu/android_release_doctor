@@ -1038,3 +1038,21 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Scope:** Documentation and traceability only. No product engine, CLI, Action, tests, or workflow behavior changed.
 - **Validation:** Second audit of the corrected public documentation; public/private separation review; terminal Rust CI required on the corrected commit.
 - **Status:** RESOLVED — second audit and public/private separation review passed; Rust CI run `36923956731` on corrected commit `95e1a7bafe62eaa56bb9c94f77711021ed06152d` passed Build, Test, Format, and Clippy.
+
+
+## ERR-090 — M0.8 Block 3 local Action reference was invalid
+
+- **Milestone:** M0.8 Block 3 / pre-release independent audit correction
+- **Type:** GitHub Action configuration defect
+- **Observed in:** Independent pre-release audit of the v0.1.0 public release state
+- **Problem:** `.github/workflows/m08-block3-action.yml` contained three invalid local composite-action references using `uses: $/.github/actions/android-release-doctor` instead of the repository-relative `uses: ./.github/actions/android-release-doctor`.
+- **Impact:** The Block 3 self-test workflow could not reliably resolve the local composite Action from the repository workspace. The defect affected the success, blocker, and operational-error validation paths.
+- **Correction:** Replace only the three invalid references with `./.github/actions/android-release-doctor`.
+- **Correction commit:** `a91025a3696379991e67037d5f11a569180c196b`.
+- **Second-audit result:** PASS. The correction branch contained exactly three corrected references, zero remaining invalid references, the local `action.yml` path existed, and the Action input/output contract and three validation paths remained intact. Local Cargo Test/Format/Clippy and `git diff --check` passed.
+- **PR validation:** PR #3 Rust CI run `36935984708` on `a91025a3696379991e67037d5f11a569180c196b` passed Build, Test, Format, and Clippy.
+- **Merge:** PR #3 merged to `main` as `d82d03016d7c3b62ac5bd4085d44afd06f9b93ed`.
+- **Post-merge validation:** Rust CI run `36936588880` on the merge commit passed Build, Test, Format, and Clippy.
+- **Direct Block 3 validation:** M0.8 Block 3 Action run `36936876275` on correction state `6663bdc0463519d40bba4a06b99583a490c094fd` passed success, blocker, and operational-error paths. Rust CI run `36936876265` on the same state passed Build, Test, Format, and Clippy.
+- **Current main verification:** `.github/workflows/m08-block3-action.yml` contains 3 correct local Action references and 0 remaining invalid references.
+- **Status:** RESOLVED
