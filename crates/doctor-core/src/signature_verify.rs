@@ -330,8 +330,6 @@ fn error_to_scheme_info_with_rotation(
     algorithms: Vec<u32>,
     certificate_sha256: Vec<String>,
     sdk_ranges: Vec<(u32, u32)>,
-    rotation_min_sdk: None,
-    rotation_targets_dev_release: false,
     proof_of_rotation: Vec<ProofOfRotationInfo>,
 ) -> CryptoSchemeInfo {
     let detail = error.to_string();
