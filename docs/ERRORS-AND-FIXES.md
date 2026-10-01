@@ -660,3 +660,16 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction commit:** 8971a7c0cf55eb2deb4c2a1c6565baf2c1d67da3
 - **Validation:** Required in new Actions execution.
 - **Status:** RESOLVED — pending new CI execution
+
+
+## ERR-061 — M0.7 Block 3 test parser call sites still used the old signature
+
+- **Milestone:** M0.7 Block 3 / Actions run #358
+- **Type:** Test compilation failure
+- **Actions run:** #358 / 36801575904
+- **Problem:** After parameterizing `parse_signed_data_v3()` with `scheme_block_id`, three existing tests still called it with only the signed-data bytes.
+- **Affected call sites:** lines 2069, 2197, and 2482 at the time of the failing run.
+- **Correction:** Pass `V3_BLOCK_ID` at all three existing v3 test call sites. No production verification semantics changed.
+- **Correction commit:** 9ff5dbd80188eb4e08560075f524496bd06221c8
+- **Validation:** Required in new Actions execution.
+- **Status:** RESOLVED — pending new CI execution
