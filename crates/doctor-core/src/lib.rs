@@ -1215,11 +1215,10 @@ fn evaluate(
                         ),
                         "Verify the APK with apksigner and review the reported signing scheme, proof-of-rotation, and any unsupported v3.2 evidence before publication.",
                     ));
-                    }
-                } else {
-                    findings.push(Finding::pass(
-                        "SIGNING-003",
-                        "APK cryptographic signature verified",
+                    } else {
+                        findings.push(Finding::pass(
+                            "SIGNING-003",
+                            "APK cryptographic signature verified",
                         "The supported v2/v3/v3.1 APK signer data, certificate/public-key binding, cryptographic signatures, and APK content digests were verified.",
                     ));
                 }
