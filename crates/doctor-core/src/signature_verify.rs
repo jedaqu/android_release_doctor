@@ -2035,9 +2035,7 @@ mod tests {
                 let signed_data = node_reader
                     .read_sequence("fixture signed data")
                     .expect("fixture node should contain signed data");
-                let flags_offset = 4
-                    + signed_data.len()
-                    + 4;
+                let flags_offset = 4 + signed_data.len();
                 let node_start = reader.cursor - node.len();
                 let absolute_offset = node_start + flags_offset;
                 output[absolute_offset..absolute_offset + 4]
