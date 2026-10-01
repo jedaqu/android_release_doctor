@@ -2,7 +2,7 @@
 
 Open-source, local-first tool for auditing Android APK and AAB releases before publication.
 
-> **Status:** M0.8 productization validated; first public release onboarding is being prepared in M0.9 Block 1.
+> **Status:** M0.9 Block 1 public-release onboarding validated and closed; the first public release remains a separate tag-driven publication operation.
 
 Android Release Doctor inspects the **artifact you are actually going to distribute**, can compare it with the Android application Gradle configuration, and can apply a versioned Google Play submission-readiness profile.
 
