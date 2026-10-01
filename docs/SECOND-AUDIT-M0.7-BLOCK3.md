@@ -103,7 +103,7 @@ The job graph remains unchanged:
 | v3 base block required | PASS |
 | v3 stripping-protection attribute parsed | PASS |
 | rotation-min-SDK cross-check | PASS |
-| v3/v3.1 range overlap rejected | PASS |
+| v3/v3.1 unjustified range overlap rejected | PASS |
 | v3/v3.1 unintended gap rejected | PASS |
 | signer-count consistency | PASS |
 | lineage consistency evidence | PASS |
