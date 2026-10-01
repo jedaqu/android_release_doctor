@@ -996,6 +996,8 @@ struct ParsedV3SignedData<'a> {
     certificate: &'a [u8],
     min_sdk: u32,
     max_sdk: u32,
+    rotation_min_sdk: Option<u32>,
+    rotation_targets_dev_release: bool,
     proof_of_rotation: Option<ProofOfRotationInfo>,
 }
 
@@ -1048,6 +1050,14 @@ fn parse_signed_data_v3(
 
     let mut attributes_reader = LengthReader::new(attributes);
     let mut proof_of_rotation = None;
+    let mut rotation_min_sdk = None;
+    let mut rotation_targets_dev_release = false;
+    let scheme_label = if scheme_block_id == V31_BLOCK_ID {
+        "v3.1"
+    } else {
+        "v3"
+    };
+
     while !attributes_reader.is_empty() {
         let attribute = attributes_reader.read_sequence("v3 attribute")?;
         let mut attribute_reader = LengthReader::new(attribute);
@@ -1060,6 +1070,7 @@ fn parse_signed_data_v3(
                 proof_of_rotation = Some(ProofOfRotationInfo {
                     state: CryptoVerificationState::Invalid,
                     level_count: 0,
+                    lineage_certificate_sha256: Vec::new(),
                     capabilities: Vec::new(),
                     detail: "v3 signed data contains multiple proof-of-rotation attributes"
                         .to_string(),
@@ -1067,6 +1078,32 @@ fn parse_signed_data_v3(
             } else {
                 proof_of_rotation = Some(validate_proof_of_rotation(value, certificate));
             }
+        } else if id == ROTATION_MIN_SDK_VERSION_ATTR_ID {
+            if rotation_min_sdk.is_some() {
+                return Err(SignatureVerificationError(format!(
+                    "{scheme_label} signed data contains multiple rotation-min-sdk attributes"
+                )));
+            }
+            if value.len() != 4 {
+                return Err(SignatureVerificationError(format!(
+                    "{scheme_label} rotation-min-sdk attribute must contain exactly 4 bytes"
+                )));
+            }
+            rotation_min_sdk = Some(u32::from_le_bytes(
+                value.try_into().expect("checked four-byte attribute"),
+            ));
+        } else if id == ROTATION_ON_DEV_RELEASE_ATTR_ID {
+            if rotation_targets_dev_release {
+                return Err(SignatureVerificationError(format!(
+                    "{scheme_label} signed data contains multiple development-release rotation attributes"
+                )));
+            }
+            if !value.is_empty() {
+                return Err(SignatureVerificationError(format!(
+                    "{scheme_label} development-release rotation attribute must be empty"
+                )));
+            }
+            rotation_targets_dev_release = true;
         }
 
         attribute_reader.finish("v3 attribute")?;
@@ -1079,6 +1116,8 @@ fn parse_signed_data_v3(
         certificate,
         min_sdk,
         max_sdk,
+        rotation_min_sdk,
+        rotation_targets_dev_release,
         proof_of_rotation,
     })
 }
