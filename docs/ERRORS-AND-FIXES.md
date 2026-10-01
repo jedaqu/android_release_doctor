@@ -710,3 +710,16 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction commit:** 88ca7a5a8db12b71d17dd845ab53103e54abfdea
 - **Validation:** Required in new Actions execution.
 - **Status:** RESOLVED — pending new CI execution
+
+
+## ERR-065 — M0.7 Block 3 lineage negative fixture was classified incorrectly
+
+- **Milestone:** M0.7 Block 3 / Actions run #384
+- **Type:** Regression-test specification correction
+- **Actions run:** #384 / 36802039515
+- **Problem:** The `v31-2elem-incorrect-lineage.apk` corpus fixture is a malformed-lineage case, not a cross-block semantic mismatch. The test incorrectly expected the semantic message `lineages are inconsistent`.
+- **Correction:** Rename the fixture regression to `rejects_v31_with_malformed_lineage_fixture` and assert cryptographic/lineage validation failure. Add a separate unit test for genuine v3/v3.1 lineage-prefix inconsistency using synthetic evidence objects at the semantic helper boundary, without bypassing APK cryptographic verification.
+- **Correction commit:** 013dfbe2d4433f861a7b2f59bebc12bc581f5c5a
+- **Additional correction:** The valid authoritative v3.1 fixture's v3 rotation-min-sdk is SDK 32, so its existing expectation was corrected from 33 to 32.
+- **Validation:** Required in new Actions execution.
+- **Status:** RESOLVED — pending new CI execution
