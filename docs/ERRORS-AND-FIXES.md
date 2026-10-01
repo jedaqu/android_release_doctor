@@ -1011,4 +1011,17 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Root cause:** The onboarding checksum instructions were written from the Linux verification path used by the release workflow without accounting for the native macOS command surface.
 - **Correction:** Separate the verification instructions by host and use `shasum -a 256 -c SHA256SUMS` for macOS.
 - **Validation:** Re-read the corrected onboarding section and verify the command against the documented x86_64 macOS distribution path; full repository CI remains required for the implementation checkpoint.
-- **Status:** CORRECTION APPLIED — pending CI validation
+- **Status:** RESOLVED — Rust CI #547 / run `36898715401` passed Build, Test, Format, and Clippy.
+
+
+## ERR-088 — M0.9 Block 1 branch missing from Rust CI push coverage
+
+- **Milestone:** M0.9 Block 1 / Public Release & Onboarding
+- **Type:** CI configuration / validation coverage gap
+- **Observed:** No Rust CI workflow run was associated with the first M0.9 implementation head `2ab57c2c653a394505be564c70921955515cc114`.
+- **Problem:** The validated `.github/workflows/rust.yml` on the M0.8 Block 4 base did not include the new M0.9 implementation branch in `push.branches`.
+- **Root cause:** The recurring stacked-branch trigger coverage pattern documented in the ledger was correctly identified during pre-audit but the new head branch had not yet been added to the active push matrix before implementation validation.
+- **Correction:** Add `m09-block1-public-release-onboarding` to the existing Rust CI `push.branches` list without changing the Build → Test → Format → Clippy job graph.
+- **Scope:** Validation infrastructure only; no product behavior, CLI behavior, Action behavior, or audit logic changes.
+- **Validation:** A new push from the corrected branch must produce terminal Rust CI Build/Test/Format/Clippy evidence before this entry is marked resolved.
+- **Status:** RESOLVED — Rust CI #547 / run `36898715401` passed Build, Test, Format, and Clippy.
