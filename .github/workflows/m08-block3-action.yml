@@ -1,6 +1,8 @@
 name: M0.8 Block 3 Action
 
 on:
+  workflow_dispatch:
+
   push:
     branches:
       - m08-block3-github-action
