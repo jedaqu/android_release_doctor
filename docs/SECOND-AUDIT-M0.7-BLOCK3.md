@@ -12,7 +12,7 @@ The second audit reviewed:
 - `docs/AUDIT-M0.7-BLOCK3.md`;
 - `docs/M0.7-DEFINITION.md`;
 - `docs/SECOND-AUDIT-M0.7-DEFINITION.md`;
-- the complete incremental ledger through ERR-059;
+- the complete incremental ledger through ERR-067;
 - the Block 2 checkpoint and final validation;
 - the production diff against the Block 2 checkpoint;
 - the v3.1 fixtures added to the branch;
@@ -35,7 +35,7 @@ The implementation now:
 9. verifies that v3 and v3.1 targeted ranges do not overlap and meet at the rotation boundary without an unintended gap;
 10. requires compatible signer counts;
 11. exposes certificate-level proof-of-rotation lineage evidence;
-12. checks the v3 lineage as a prefix of a corresponding v3.1 lineage;
+12. compares a v3 lineage as a prefix when both sides expose structured lineage, otherwise bridges the v3 signer certificate identity into the verified v3.1 lineage;
 13. preserves unsupported versus invalid cryptographic states;
 14. leaves v3.2/PQC outside the block.
 
@@ -111,14 +111,27 @@ The job graph remains unchanged:
 | Multi-signer evidence preservation | PASS by preserved architecture |
 | Existing Block 2 lineage evidence preserved | PASS |
 | v3.2/PQC excluded | PASS |
-| CI stack configured | PASS pending execution |
+| CI stack configured | PASS |
 
 ## 8. Second-audit conclusion
 
-**SECOND AUDIT: PASS TO ACTIONS**
+**SECOND AUDIT: PASS**
 
-The implementation satisfies the declared M0.7 Block 3 scope at the source and fixture level.
+The implementation satisfies the declared M0.7 Block 3 scope, including the individual-correction chain recorded in ERR-060 through ERR-067.
 
-The only remaining gate is Actions validation, followed by the established individual-correction loop for any concrete CI failure.
+Final Actions validation is recorded below.
 
-No checkpoint closure is authorized until Build, Test, Format and Clippy pass on the final branch state and the stacked PR event is validated.
+No unresolved Block 3 implementation or test finding remains.
+
+## 9. Final Actions validation
+
+**Actions #402 / 36802297492 — PASS**
+
+- Build: PASS
+- Test: PASS
+- Format: PASS
+- Clippy: PASS
+
+The final run validates the functional implementation and the formatting/lint state after the full individual-correction chain through ERR-067.
+
+No merge is performed by the checkpoint process.
