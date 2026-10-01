@@ -602,3 +602,14 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction commit:** f0bcd2652dab80507cf62b5d51ebaaba848f2539
 - **Validation:** Required in new Actions execution.
 - **Status:** RESOLVED — pending new CI execution
+
+
+## ERR-056 — M0.7 Block 2 correction-chain validation closure
+
+- **Milestone:** M0.7 Block 2 / final Actions validation
+- **Type:** Validation closure
+- **Scope:** ERR-050 through ERR-055, including the scoped CI trigger corrections and test/format corrections recorded during this block.
+- **Validation run:** Actions #342 / 36799881789
+- **Result:** Build PASS; Test PASS; Format PASS; Clippy PASS.
+- **Additional validation:** The final capability model and regression suite remain green, including all existing M0.6 proof-of-rotation tests and the new known/unknown capability-flag cases.
+- **Status:** RESOLVED — Block 2 ready for checkpoint
