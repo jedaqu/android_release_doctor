@@ -1879,7 +1879,7 @@ mod tests {
 
         assert_eq!(v3.state, CryptoVerificationState::Verified, "{}", v3.detail);
         assert_eq!(v31.state, CryptoVerificationState::Verified, "{}", v31.detail);
-        assert_eq!(v3.rotation_min_sdk, Some(33));
+        assert_eq!(v3.rotation_min_sdk, Some(32));
         assert_eq!(v31.sdk_ranges, vec![(32, u32::MAX)]);
         assert!(!v31.proof_of_rotation.is_empty());
     }
@@ -1920,12 +1920,63 @@ mod tests {
     }
 
     #[test]
-    fn rejects_v31_when_lineage_is_inconsistent_with_v3() {
+    fn rejects_v31_with_malformed_lineage_fixture() {
         let result = verify_apk_signatures(v31_fixture("crypto-v31-lineage-mismatch.apk"))
-            .expect("v3.1 lineage-mismatch fixture should be structurally readable")
-            .expect("v3.1 lineage-mismatch fixture should contain an APK signing block");
+            .expect("v3.1 malformed-lineage fixture should be structurally readable")
+            .expect("v3.1 malformed-lineage fixture should contain an APK signing block");
 
         let v31 = result.v31.expect("v3.1 block should be detected");
+        assert_eq!(v31.state, CryptoVerificationState::Invalid);
+        assert!(v31.detail.contains("validation failed"));
+    }
+
+    #[test]
+    fn rejects_v31_when_lineage_prefix_is_inconsistent() {
+        let mut result = ApkSignatureVerification {
+            v3: Some(CryptoSchemeInfo {
+                state: CryptoVerificationState::Verified,
+                signer_count: 1,
+                algorithms: vec![0x0101],
+                certificate_sha256: vec!["old-cert".to_string()],
+                sdk_ranges: vec![(28, 32)],
+                rotation_min_sdk: Some(32),
+                rotation_targets_dev_release: false,
+                proof_of_rotation: vec![ProofOfRotationInfo {
+                    state: CryptoVerificationState::Verified,
+                    level_count: 1,
+                    lineage_certificate_sha256: vec!["old-cert".to_string()],
+                    capabilities: Vec::new(),
+                    detail: "lineage verified".to_string(),
+                }],
+                detail: "v3 verified".to_string(),
+            }),
+            v31: Some(CryptoSchemeInfo {
+                state: CryptoVerificationState::Verified,
+                signer_count: 1,
+                algorithms: vec![0x0101],
+                certificate_sha256: vec!["new-cert".to_string()],
+                sdk_ranges: vec![(32, u32::MAX)],
+                rotation_min_sdk: Some(32),
+                rotation_targets_dev_release: false,
+                proof_of_rotation: vec![ProofOfRotationInfo {
+                    state: CryptoVerificationState::Verified,
+                    level_count: 2,
+                    lineage_certificate_sha256: vec![
+                        "wrong-cert".to_string(),
+                        "new-cert".to_string(),
+                    ],
+                    capabilities: Vec::new(),
+                    detail: "lineage verified".to_string(),
+                }],
+                detail: "v3.1 verified".to_string(),
+            }),
+            v31_present: true,
+            ..Default::default()
+        };
+
+        apply_v31_cross_block_semantics(&mut result);
+
+        let v31 = result.v31.expect("v3.1 evidence should remain present");
         assert_eq!(v31.state, CryptoVerificationState::Invalid);
         assert!(v31.detail.contains("lineages are inconsistent"));
     }
