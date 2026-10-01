@@ -329,20 +329,20 @@ fn verify_v3_block(
 ) -> Result<CryptoSchemeInfo, SignatureVerificationError> {
     let mut reader = LengthReader::new(value);
     let signers = reader.read_sequence(format!("{scheme_name} signers"))?;
-    reader.finish("${scheme_name} signer sequence")?;
+    reader.finish("v3 signer sequence")?;
 
     let mut signers_reader = LengthReader::new(signers);
     let mut signer_values = Vec::new();
     while !signers_reader.is_empty() {
-        signer_values.push(signers_reader.read_sequence("${scheme_name} signer")?);
+        signer_values.push(signers_reader.read_sequence("v3 signer")?);
     }
-    signers_reader.finish("${scheme_name} signer sequence")?;
+    signers_reader.finish("v3 signer sequence")?;
 
     let mut results = Vec::with_capacity(signer_values.len());
 
     for signer in signer_values {
         let mut signer_reader = LengthReader::new(signer);
-        let signed_data = match signer_reader.read_sequence("${scheme_name} signed data") {
+        let signed_data = match signer_reader.read_sequence("v3 signed data") {
             Ok(value) => value,
             Err(error) => {
                 results.push(error_to_scheme_info_with_evidence(
@@ -355,7 +355,7 @@ fn verify_v3_block(
                 continue;
             }
         };
-        let min_sdk = match signer_reader.read_u32("${scheme_name} outer minSDK") {
+        let min_sdk = match signer_reader.read_u32("v3 outer minSDK") {
             Ok(value) => value,
             Err(error) => {
                 results.push(error_to_scheme_info_with_evidence(
@@ -368,7 +368,7 @@ fn verify_v3_block(
                 continue;
             }
         };
-        let max_sdk = match signer_reader.read_u32("${scheme_name} outer maxSDK") {
+        let max_sdk = match signer_reader.read_u32("v3 outer maxSDK") {
             Ok(value) => value,
             Err(error) => {
                 results.push(error_to_scheme_info_with_evidence(
@@ -382,7 +382,7 @@ fn verify_v3_block(
             }
         };
         let sdk_ranges = vec![(min_sdk, max_sdk)];
-        let signatures = match signer_reader.read_sequence("${scheme_name} signatures") {
+        let signatures = match signer_reader.read_sequence("v3 signatures") {
             Ok(value) => value,
             Err(error) => {
                 results.push(error_to_scheme_info_with_evidence(
@@ -395,7 +395,7 @@ fn verify_v3_block(
                 continue;
             }
         };
-        let public_key = match signer_reader.read_length_prefixed("${scheme_name} public key") {
+        let public_key = match signer_reader.read_length_prefixed("v3 public key") {
             Ok(value) => value,
             Err(error) => {
                 results.push(error_to_scheme_info_with_evidence(
@@ -408,7 +408,7 @@ fn verify_v3_block(
                 continue;
             }
         };
-        if let Err(error) = signer_reader.finish("${scheme_name} signer") {
+        if let Err(error) = signer_reader.finish("v3 signer") {
             results.push(error_to_scheme_info_with_evidence(
                 error,
                 1,
@@ -419,7 +419,7 @@ fn verify_v3_block(
             continue;
         }
 
-        let parsed = match parse_signed_data_v3(signed_data) {
+        let parsed = match parse_signed_data_v3(signed_data, scheme_block_id) {
             Ok(parsed) => parsed,
             Err(error) => {
                 results.push(error_to_scheme_info_with_evidence(
@@ -458,7 +458,7 @@ fn verify_v3_block(
                 sdk_ranges,
                 proof_of_rotation: parsed.proof_of_rotation.clone().into_iter().collect(),
                 detail: format!(
-                    "${scheme_name} signer minSDK/maxSDK ({min_sdk}, {max_sdk}) do not match signed-data values ({}, {})",
+                    "v3 signer minSDK/maxSDK ({min_sdk}, {max_sdk}) do not match signed-data values ({}, {})",
                     parsed.min_sdk, parsed.max_sdk
                 ),
             });
@@ -519,7 +519,7 @@ fn verify_v3_block(
             None => {
                 results.push(error_to_scheme_info_with_rotation(
                     SignatureVerificationError(format!(
-                        "${scheme_name} digest list does not contain signature algorithm 0x{:08x}",
+                        "v3 digest list does not contain signature algorithm 0x{:08x}",
                         selected.algorithm_id
                     )),
                     1,
@@ -555,7 +555,7 @@ fn verify_v3_block(
                 sdk_ranges,
                 proof_of_rotation: parsed.proof_of_rotation.clone().into_iter().collect(),
                 detail:
-                    "${scheme_name} digest and signature algorithm ID lists are not identical and ordered equally"
+                    "v3 digest and signature algorithm ID lists are not identical and ordered equally"
                         .to_string(),
             });
             continue;
@@ -568,12 +568,12 @@ fn verify_v3_block(
             .unwrap_or(CryptoVerificationState::Verified);
         let detail = if let Some(proof) = &parsed.proof_of_rotation {
             format!(
-                "${scheme_name} signer signature, certificate/public-key binding, SDK range, and APK content digest verified for SDK range {}..={}; {}",
+                "v3 signer signature, certificate/public-key binding, SDK range, and APK content digest verified for SDK range {}..={}; {}",
                 parsed.min_sdk, parsed.max_sdk, proof.detail
             )
         } else {
             format!(
-                "${scheme_name} signer signature, certificate/public-key binding, SDK range, and APK content digest verified for SDK range {}..={}",
+                "v3 signer signature, certificate/public-key binding, SDK range, and APK content digest verified for SDK range {}..={}",
                 parsed.min_sdk, parsed.max_sdk
             )
         };
@@ -589,7 +589,7 @@ fn verify_v3_block(
         });
     }
 
-    merge_scheme_results("v3", results)
+    merge_scheme_results(scheme_name, results)
 }
 
 fn merge_scheme_results(
@@ -1018,34 +1018,35 @@ fn parse_signed_data_v2(bytes: &[u8]) -> Result<ParsedSignedData<'_>, SignatureV
 
 fn parse_signed_data_v3(
     bytes: &[u8],
+    scheme_block_id: u32,
 ) -> Result<ParsedV3SignedData<'_>, SignatureVerificationError> {
     let mut reader = LengthReader::new(bytes);
-    let digests = reader.read_sequence("${scheme_name} digests")?;
-    let certificates = reader.read_sequence("${scheme_name} certificates")?;
-    let min_sdk = reader.read_u32("${scheme_name} signed-data minSDK")?;
-    let max_sdk = reader.read_u32("${scheme_name} signed-data maxSDK")?;
+    let digests = reader.read_sequence("v3 digests")?;
+    let certificates = reader.read_sequence("v3 certificates")?;
+    let min_sdk = reader.read_u32("v3 signed-data minSDK")?;
+    let max_sdk = reader.read_u32("v3 signed-data maxSDK")?;
     if min_sdk > max_sdk {
         return Err(SignatureVerificationError(format!(
-            "${scheme_name} signed-data minSDK {min_sdk} is greater than maxSDK {max_sdk}"
+            "v3 signed-data minSDK {min_sdk} is greater than maxSDK {max_sdk}"
         )));
     }
-    let attributes = reader.read_sequence("${scheme_name} additional attributes")?;
-    reader.finish("${scheme_name} signed data")?;
+    let attributes = reader.read_sequence("v3 additional attributes")?;
+    reader.finish("v3 signed data")?;
 
     let (digest_algorithms, selected_digest) = parse_digest_sequence(digests)?;
     let mut certificates_reader = LengthReader::new(certificates);
-    let certificate = certificates_reader.read_length_prefixed("${scheme_name} certificate")?;
+    let certificate = certificates_reader.read_length_prefixed("v3 certificate")?;
     while !certificates_reader.is_empty() {
-        certificates_reader.read_length_prefixed("${scheme_name} certificate chain entry")?;
+        certificates_reader.read_length_prefixed("v3 certificate chain entry")?;
     }
-    certificates_reader.finish("${scheme_name} certificate sequence")?;
+    certificates_reader.finish("v3 certificate sequence")?;
 
     let mut attributes_reader = LengthReader::new(attributes);
     let mut proof_of_rotation = None;
     while !attributes_reader.is_empty() {
-        let attribute = attributes_reader.read_sequence("${scheme_name} attribute")?;
+        let attribute = attributes_reader.read_sequence("v3 attribute")?;
         let mut attribute_reader = LengthReader::new(attribute);
-        let id = attribute_reader.read_u32("${scheme_name} attribute ID")?;
+        let id = attribute_reader.read_u32("v3 attribute ID")?;
         let value = &attribute_reader.bytes[attribute_reader.cursor..];
         attribute_reader.cursor = attribute_reader.bytes.len();
 
@@ -1055,7 +1056,7 @@ fn parse_signed_data_v3(
                     state: CryptoVerificationState::Invalid,
                     level_count: 0,
                     capabilities: Vec::new(),
-                    detail: "${scheme_name} signed data contains multiple proof-of-rotation attributes"
+                    detail: "v3 signed data contains multiple proof-of-rotation attributes"
                         .to_string(),
                 });
             } else {
@@ -1063,9 +1064,9 @@ fn parse_signed_data_v3(
             }
         }
 
-        attribute_reader.finish("${scheme_name} attribute")?;
+        attribute_reader.finish("v3 attribute")?;
     }
-    attributes_reader.finish("${scheme_name} additional attributes")?;
+    attributes_reader.finish("v3 additional attributes")?;
 
     Ok(ParsedV3SignedData {
         digests: selected_digest,
@@ -1093,7 +1094,7 @@ fn decode_proof_of_rotation_capabilities(flags: u32) -> ProofOfRotationCapabilit
 
 fn validate_proof_of_rotation(bytes: &[u8], current_certificate: &[u8]) -> ProofOfRotationInfo {
     let mut reader = LengthReader::new(bytes);
-    let version = match reader.read_u32("${scheme_name} proof-of-rotation version") {
+    let version = match reader.read_u32("v3 proof-of-rotation version") {
         Ok(value) => value,
         Err(error) => {
             return ProofOfRotationInfo {
@@ -1132,7 +1133,7 @@ fn validate_proof_of_rotation(bytes: &[u8], current_certificate: &[u8]) -> Proof
 
     while !reader.is_empty() {
         level_count += 1;
-        let node = match reader.read_sequence("${scheme_name} proof-of-rotation node") {
+        let node = match reader.read_sequence("v3 proof-of-rotation node") {
             Ok(value) => value,
             Err(error) => {
                 return_info!(
@@ -1142,7 +1143,7 @@ fn validate_proof_of_rotation(bytes: &[u8], current_certificate: &[u8]) -> Proof
             }
         };
         let mut node_reader = LengthReader::new(node);
-        let signed_data = match node_reader.read_sequence("${scheme_name} proof-of-rotation signed data") {
+        let signed_data = match node_reader.read_sequence("v3 proof-of-rotation signed data") {
             Ok(value) => value,
             Err(error) => {
                 return_info!(
@@ -1151,7 +1152,7 @@ fn validate_proof_of_rotation(bytes: &[u8], current_certificate: &[u8]) -> Proof
                 );
             }
         };
-        let flags = match node_reader.read_u32("${scheme_name} proof-of-rotation flags") {
+        let flags = match node_reader.read_u32("v3 proof-of-rotation flags") {
             Ok(value) => value,
             Err(error) => {
                 return_info!(
@@ -1163,7 +1164,7 @@ fn validate_proof_of_rotation(bytes: &[u8], current_certificate: &[u8]) -> Proof
         capabilities.push(decode_proof_of_rotation_capabilities(flags));
 
         let signature_algorithm =
-            match node_reader.read_u32("${scheme_name} proof-of-rotation signature algorithm") {
+            match node_reader.read_u32("v3 proof-of-rotation signature algorithm") {
                 Ok(value) => value,
                 Err(error) => {
                     return_info!(
@@ -1172,7 +1173,7 @@ fn validate_proof_of_rotation(bytes: &[u8], current_certificate: &[u8]) -> Proof
                     );
                 }
             };
-        let signature = match node_reader.read_length_prefixed("${scheme_name} proof-of-rotation signature") {
+        let signature = match node_reader.read_length_prefixed("v3 proof-of-rotation signature") {
             Ok(value) => value,
             Err(error) => {
                 return_info!(
@@ -1181,7 +1182,7 @@ fn validate_proof_of_rotation(bytes: &[u8], current_certificate: &[u8]) -> Proof
                 );
             }
         };
-        if let Err(error) = node_reader.finish("${scheme_name} proof-of-rotation node") {
+        if let Err(error) = node_reader.finish("v3 proof-of-rotation node") {
             return_info!(
                 CryptoVerificationState::Invalid,
                 format!("proof-of-rotation is malformed: {error}")
@@ -1190,7 +1191,7 @@ fn validate_proof_of_rotation(bytes: &[u8], current_certificate: &[u8]) -> Proof
 
         let mut signed_reader = LengthReader::new(signed_data);
         let certificate =
-            match signed_reader.read_length_prefixed("${scheme_name} proof-of-rotation certificate") {
+            match signed_reader.read_length_prefixed("v3 proof-of-rotation certificate") {
                 Ok(value) => value,
                 Err(error) => {
                     return_info!(
@@ -1200,7 +1201,7 @@ fn validate_proof_of_rotation(bytes: &[u8], current_certificate: &[u8]) -> Proof
                 }
             };
         let parent_signature_algorithm =
-            match signed_reader.read_u32("${scheme_name} proof-of-rotation parent signature algorithm") {
+            match signed_reader.read_u32("v3 proof-of-rotation parent signature algorithm") {
                 Ok(value) => value,
                 Err(error) => {
                     return_info!(
@@ -1209,7 +1210,7 @@ fn validate_proof_of_rotation(bytes: &[u8], current_certificate: &[u8]) -> Proof
                     );
                 }
             };
-        if let Err(error) = signed_reader.finish("${scheme_name} proof-of-rotation signed data") {
+        if let Err(error) = signed_reader.finish("v3 proof-of-rotation signed data") {
             return_info!(
                 CryptoVerificationState::Invalid,
                 format!("proof-of-rotation is malformed: {error}")
@@ -1616,10 +1617,10 @@ mod tests {
             .join("../../tests/fixtures/crypto-v3-release.apk");
 
         let result = verify_apk_signatures(&path)
-            .expect("${scheme_name} fixture should be structurally readable")
-            .expect("${scheme_name} fixture should contain an APK signing block");
+            .expect("v3 fixture should be structurally readable")
+            .expect("v3 fixture should contain an APK signing block");
 
-        let v3 = result.v3.expect("${scheme_name} scheme should be detected");
+        let v3 = result.v3.expect("v3 scheme should be detected");
         assert_eq!(
             v3.state,
             CryptoVerificationState::Verified,
@@ -1643,7 +1644,7 @@ mod tests {
             .expect("tampered v3 fixture should be structurally readable")
             .expect("tampered v3 fixture should contain an APK signing block");
 
-        let v3 = result.v3.expect("${scheme_name} scheme should be detected");
+        let v3 = result.v3.expect("v3 scheme should be detected");
         assert_eq!(v3.state, CryptoVerificationState::Invalid);
         assert!(
             v3.detail.contains("digest mismatch") || v3.detail.contains("signature verification"),
@@ -1694,10 +1695,10 @@ mod tests {
             .join("../../tests/fixtures/m07-crypto-v3-ecdsa-sha512-p384.apk");
 
         let result = verify_apk_signatures(&path)
-            .expect("${scheme_name} ECDSA/SHA-512 fixture should be structurally readable")
-            .expect("${scheme_name} ECDSA/SHA-512 fixture should contain an APK signing block");
+            .expect("v3 ECDSA/SHA-512 fixture should be structurally readable")
+            .expect("v3 ECDSA/SHA-512 fixture should contain an APK signing block");
 
-        let v3 = result.v3.expect("${scheme_name} scheme should be detected");
+        let v3 = result.v3.expect("v3 scheme should be detected");
         assert_eq!(v3.state, CryptoVerificationState::Verified, "{}", v3.detail);
         assert_eq!(v3.algorithms, vec![0x0202]);
         assert_eq!(v3.signer_count, 1);
@@ -1730,7 +1731,7 @@ mod tests {
             .expect("tampered v3 ECDSA/SHA-512 fixture should remain readable")
             .expect("tampered v3 ECDSA/SHA-512 fixture should contain a signing block");
 
-        let v3 = result.v3.expect("${scheme_name} scheme should be detected");
+        let v3 = result.v3.expect("v3 scheme should be detected");
         assert_eq!(v3.state, CryptoVerificationState::Invalid);
         std::fs::remove_file(path).expect("temporary tampered fixture should be removed");
     }
@@ -2192,7 +2193,7 @@ mod tests {
         signed_data.extend_from_slice(&35_u32.to_le_bytes());
         signed_data.extend_from_slice(&attributes);
 
-        let parsed = parse_signed_data_v3(&signed_data).expect("${scheme_name} signed data should parse");
+        let parsed = parse_signed_data_v3(&signed_data).expect("v3 signed data should parse");
         let proof_info = parsed
             .proof_of_rotation
             .expect("proof-of-rotation evidence should be present");
