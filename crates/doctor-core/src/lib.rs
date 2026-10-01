@@ -11,6 +11,7 @@ pub mod axml;
 pub mod elf;
 pub mod play;
 pub mod project;
+pub mod report;
 pub mod signature_verify;
 pub mod signing;
 pub mod zip_alignment;
@@ -18,6 +19,7 @@ pub use axml::{ComponentInfo, ManifestInfo};
 pub use elf::{inspect_shared_object, load_segments_are_16kb_aligned, ElfInspection};
 pub use play::{evaluate_play_policy, PlayPlatform, PLAY_POLICY_VERSION};
 pub use project::{parse_project, GradleSyntax, ProjectInfo};
+pub use report::{ReportV1, ReportV1Context};
 pub use signature_verify::{
     verify_apk_signatures, ApkSignatureVerification, CryptoSchemeInfo, CryptoVerificationState,
 };

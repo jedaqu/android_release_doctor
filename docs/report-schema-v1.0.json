@@ -1,0 +1,777 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Android Release Doctor Report v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "engine_version",
+    "artifact",
+    "application",
+    "manifest_error",
+    "inventory",
+    "project",
+    "project_error",
+    "play",
+    "findings",
+    "summary"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "engine_version": {
+      "type": "string"
+    },
+    "artifact": {
+      "$ref": "#/$defs/artifact"
+    },
+    "application": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/application"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "inventory": {
+      "$ref": "#/$defs/inventory"
+    },
+    "project": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/project"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "play": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/play"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/finding"
+      }
+    },
+    "summary": {
+      "$ref": "#/$defs/summary"
+    },
+    "manifest_error": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "project_error": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "path",
+        "size_bytes"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "APK",
+            "AAB"
+          ]
+        },
+        "path": {
+          "type": "string"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "application": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "package_name",
+        "version_code",
+        "version_name",
+        "min_sdk",
+        "target_sdk",
+        "debuggable",
+        "permissions",
+        "components"
+      ],
+      "properties": {
+        "package_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "version_code": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "version_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "min_sdk": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "target_sdk": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "debuggable": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "permissions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "components": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/component"
+          }
+        }
+      }
+    },
+    "component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "name",
+        "exported",
+        "has_intent_filters"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "exported": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "has_intent_filters": {
+          "type": "boolean"
+        }
+      }
+    },
+    "inventory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entries",
+        "manifest_path",
+        "dex_files",
+        "native_abis",
+        "native_libraries",
+        "native_zip_entries",
+        "signature_files",
+        "apk_signing",
+        "apk_signing_error",
+        "apk_signature_verification",
+        "apk_signature_verification_error"
+      ],
+      "properties": {
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "manifest_path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "dex_files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "native_abis": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "native_libraries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/native_library"
+          }
+        },
+        "native_zip_entries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/native_zip_entry"
+          }
+        },
+        "signature_files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "apk_signing": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/apk_signing"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "apk_signing_error": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "apk_signature_verification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/apk_signature_verification"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "apk_signature_verification_error": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "native_library": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "abi",
+        "load_segment_alignments",
+        "error"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "abi": {
+          "type": "string"
+        },
+        "load_segment_alignments": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "error": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "native_zip_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "abi",
+        "compression",
+        "data_offset",
+        "alignment_16kb",
+        "error"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "abi": {
+          "type": "string"
+        },
+        "compression": {
+          "enum": [
+            "stored",
+            "compressed"
+          ]
+        },
+        "data_offset": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "alignment_16kb": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "error": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "apk_signing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "v2",
+        "v3",
+        "v31",
+        "v32",
+        "block_size"
+      ],
+      "properties": {
+        "v2": {
+          "type": "boolean"
+        },
+        "v3": {
+          "type": "boolean"
+        },
+        "v31": {
+          "type": "boolean"
+        },
+        "v32": {
+          "type": "boolean"
+        },
+        "block_size": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "apk_signature_verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "v2",
+        "v3",
+        "v31",
+        "v31_present",
+        "v32_present"
+      ],
+      "properties": {
+        "v2": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/crypto_scheme"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "v3": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/crypto_scheme"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "v31": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/crypto_scheme"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "v31_present": {
+          "type": "boolean"
+        },
+        "v32_present": {
+          "type": "boolean"
+        }
+      }
+    },
+    "crypto_scheme": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "signer_count",
+        "algorithms",
+        "certificate_sha256",
+        "sdk_ranges",
+        "rotation_min_sdk",
+        "rotation_targets_dev_release",
+        "proof_of_rotation",
+        "detail"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "verified",
+            "invalid",
+            "unsupported"
+          ]
+        },
+        "signer_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "algorithms": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "certificate_sha256": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{64}$"
+          }
+        },
+        "sdk_ranges": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "type": "integer",
+                "minimum": 0
+              },
+              {
+                "type": "integer",
+                "minimum": 0
+              }
+            ],
+            "minItems": 2,
+            "maxItems": 2
+          }
+        },
+        "rotation_min_sdk": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "rotation_targets_dev_release": {
+          "type": "boolean"
+        },
+        "proof_of_rotation": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/proof_of_rotation"
+          }
+        },
+        "detail": {
+          "type": "string"
+        }
+      }
+    },
+    "proof_of_rotation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "level_count",
+        "lineage_certificate_sha256",
+        "capabilities",
+        "detail"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "verified",
+            "invalid",
+            "unsupported"
+          ]
+        },
+        "level_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "lineage_certificate_sha256": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{64}$"
+          }
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/capability"
+          }
+        },
+        "detail": {
+          "type": "string"
+        }
+      }
+    },
+    "capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "flags",
+        "known_flags",
+        "unknown_flags",
+        "installed_data",
+        "shared_user_id",
+        "permission",
+        "rollback",
+        "auth"
+      ],
+      "properties": {
+        "flags": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "known_flags": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unknown_flags": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "installed_data": {
+          "type": "boolean"
+        },
+        "shared_user_id": {
+          "type": "boolean"
+        },
+        "permission": {
+          "type": "boolean"
+        },
+        "rollback": {
+          "type": "boolean"
+        },
+        "auth": {
+          "type": "boolean"
+        }
+      }
+    },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "build_file",
+        "syntax",
+        "module_name",
+        "namespace",
+        "application_id",
+        "compile_sdk",
+        "min_sdk",
+        "target_sdk",
+        "version_code",
+        "version_name",
+        "release_debuggable"
+      ],
+      "properties": {
+        "build_file": {
+          "type": "string"
+        },
+        "syntax": {
+          "enum": [
+            "Groovy",
+            "Kotlin DSL"
+          ]
+        },
+        "module_name": {
+          "type": "string"
+        },
+        "namespace": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "application_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "compile_sdk": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "min_sdk": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "target_sdk": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "version_code": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "version_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "release_debuggable": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      }
+    },
+    "play": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "platform",
+        "policy_version"
+      ],
+      "properties": {
+        "platform": {
+          "enum": [
+            "mobile",
+            "wear",
+            "automotive",
+            "tv",
+            "xr"
+          ]
+        },
+        "policy_version": {
+          "type": "string"
+        }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rule_id",
+        "severity",
+        "title",
+        "summary",
+        "remediation"
+      ],
+      "properties": {
+        "rule_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "severity": {
+          "enum": [
+            "PASS",
+            "WARNING",
+            "BLOCKER",
+            "MANUAL-REVIEW"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "remediation": {
+          "type": "string"
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "passed",
+        "warnings",
+        "blockers",
+        "manual_review"
+      ],
+      "properties": {
+        "passed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "warnings": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blockers": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "manual_review": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

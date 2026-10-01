@@ -847,3 +847,30 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction commit:** 50c3735d04d9c7532ffad13a8946bfaadcecf9c9
 - **Validation:** Actions #433 / 36875170256 passed Build, Test, Format, and Clippy; PR #15 returned mergeable=true and mergeable_state=clean. Actions #434 / 36875368536 then executed with event pull_request for PR #15 and passed Build, Test, Format, and Clippy.
 - **Status:** RESOLVED
+
+## ERR-077 — Report v1 implementation imported proof-of-rotation DTO sources from the crate root
+
+- **Milestone:** M0.8 Block 1 / Report v1 production serialization
+- **Type:** Build defect / import path
+- **Observed in:** Actions #444 / run 36883291509, Build step
+- **Commit:** 63aea724a4b3e052a037f3de4acaae14b2bc63d0
+- **Problem:** `crates/doctor-core/src/report.rs` imported `ProofOfRotationCapabilities` and `ProofOfRotationInfo` from `crate::`, but those domain types are defined in `signature_verify.rs` and are not re-exported by the crate root.
+- **Secondary warning:** `ArtifactKind` was imported in `report.rs` but only needed by the test module, producing an unused-import warning during Build.
+- **Root cause:** The new explicit DTO mapper was aligned to the frozen evidence model but used the crate-root import surface without verifying which signature-domain types are publicly re-exported.
+- **Correction:** Import the proof-of-rotation domain types directly from `crate::signature_verify` and keep `ArtifactKind` scoped to the tests where it is used.
+- **Validation:** Corrected commit `2a0b42b911c185ca31eb265d1fc3a13b2c5ab165`; Actions #449 / run `36883817080` passed Build, Test, Format, and Clippy.
+- **Status:** RESOLVED
+
+
+## ERR-078 — Report v1 implementation failed rustfmt gate
+
+- **Milestone:** M0.8 Block 1 / Report v1 production serialization
+- **Type:** Formatting gate failure
+- **Observed in:** Actions #447 / run 36883538774, Format step
+- **Commit:** 339ed88510fa77b17a6e3357f68aa9e1935d8019
+- **Problem:** `crates/doctor-core/src/report.rs` contained five rustfmt differences after the ERR-077 correction.
+- **Scope:** Import ordering/line wrapping, iterator formatting, a long constructor expression, and two assertion expressions. Build and Test both passed before Format stopped the job.
+- **Root cause:** The minimal correction was applied manually after the first Build failure; the resulting file had not yet been normalized by `cargo fmt`.
+- **Correction:** Apply exactly the formatter-indicated changes in `report.rs`; no behavioral or architectural change.
+- **Validation:** Corrected commit `2a0b42b911c185ca31eb265d1fc3a13b2c5ab165`; Actions #449 / run `36883817080` passed Build, Test, Format, and Clippy.
+- **Status:** RESOLVED
