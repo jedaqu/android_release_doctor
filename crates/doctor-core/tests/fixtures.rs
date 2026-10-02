@@ -443,6 +443,22 @@ fn err_095_empty_fourth_v2_fixture_produces_verified_signing_finding() {
     let report = audit_path(fixture("crypto-v2-empty-element-release.apk"))
         .expect("ERR-095 compatibility fixture should remain auditable");
 
+    let verification = report
+        .inventory
+        .apk_signature_verification
+        .as_ref()
+        .expect("ERR-095 v2 verification result should be present");
+    let v2 = verification
+        .v2
+        .as_ref()
+        .expect("ERR-095 v2 verification result should be present");
+    assert_eq!(
+        v2.state,
+        doctor_core::CryptoVerificationState::Verified,
+        "verification detail: {}",
+        v2.detail
+    );
+
     assert_eq!(
         report
             .findings
@@ -450,16 +466,6 @@ fn err_095_empty_fourth_v2_fixture_produces_verified_signing_finding() {
             .find(|finding| finding.rule_id == "SIGNING-003")
             .map(|finding| finding.severity),
         Some(Severity::Pass)
-    );
-
-    let verification = report
-        .inventory
-        .apk_signature_verification
-        .as_ref()
-        .expect("ERR-095 v2 verification result should be present");
-    assert_eq!(
-        verification.v2.as_ref().map(|scheme| scheme.state),
-        Some(doctor_core::CryptoVerificationState::Verified)
     );
 }
 
