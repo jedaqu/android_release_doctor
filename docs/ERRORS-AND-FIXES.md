@@ -1148,6 +1148,17 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Validation:** Required in the next Actions execution.
 - **Status:** CORRECTION APPLIED — pending validation
 
+## ERR-100 — ERR-095 fixture helper rustfmt failure
+
+- **Milestone:** ERR-095 implementation / Actions run #84 / run `37015265330`
+- **Type:** CI formatting failure
+- **Problem:** The corrected ERR-095 base64 fixture helper and its fixed-size assertion did not match the repository formatter's exact layout.
+- **Evidence:** Build passed; all 92 `doctor-core` unit tests passed; all 17 `doctor-core` fixture integration tests passed, including `err_095_empty_fourth_v2_fixture_produces_verified_signing_finding`. Format then failed only on three deterministic rustfmt differences in `crates/doctor-core/tests/fixtures.rs`. Clippy did not run because Format stopped the workflow.
+- **Correction:** Apply only the three rustfmt-indicated layout changes. No production logic, fixture bytes, or test semantics changed.
+- **Scope:** Test formatting only.
+- **Validation:** Required in the next Actions execution.
+- **Status:** CORRECTION APPLIED — pending validation
+
 ## ERR-096 — Android application plugin alias discovery gap
 
 - **Milestone:** Post-release real-world artifact validation
