@@ -1,0 +1,155 @@
+name: Product Integration Stress Test
+
+on:
+  push:
+    branches:
+      - test/stress-integration-2026-10-02
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gradle-projects:
+    name: "Gradle project • ${{ matrix.id }}"
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: groovy
+            project: tests/fixtures/project-release
+          - id: kotlin
+            project: tests/fixtures/project-release-kotlin
+          - id: version-catalog
+            project: tests/fixtures/project-release-version-catalog
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Audit artifact against project
+        id: doctor
+        continue-on-error: true
+        uses: ./.github/actions/android-release-doctor
+        with:
+          artifact: tests/fixtures/minimal-release.apk
+          project: ${{ matrix.project }}
+          play: "false"
+          format: json
+          output: ${{ runner.temp }}/project-${{ matrix.id }}.json
+
+      - name: Validate project report
+        env:
+          EXIT_CODE: ${{ steps.doctor.outputs.exit-code }}
+          REPORT_PATH: ${{ steps.doctor.outputs.report-path }}
+        run: |
+          set -euo pipefail
+          test "$EXIT_CODE" = "0" || test "$EXIT_CODE" = "1" || test "$EXIT_CODE" = "2"
+          test -s "$REPORT_PATH"
+          python3 - "$REPORT_PATH" "${{ matrix.id }}" <<'PY'
+          import json, sys
+          report=json.load(open(sys.argv[1], encoding="utf-8"))
+          case=sys.argv[2]
+          assert report["schema_version"] == "1.0"
+          assert report["project"] is not None, f"{case}: project report missing"
+          print(case, "syntax=", report["project"]["syntax"], "module=", report["project"]["module_name"], "application_id=", report["project"]["application_id"])
+          PY
+
+      - name: Upload project report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: project-report-${{ matrix.id }}
+          path: ${{ runner.temp }}/project-${{ matrix.id }}.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+  play-platforms:
+    name: "Play profile • ${{ matrix.platform }}"
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [mobile, wear, automotive, tv, xr]
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run Play profile
+        id: doctor
+        continue-on-error: true
+        uses: ./.github/actions/android-release-doctor
+        with:
+          artifact: tests/fixtures/crypto-v2-release.apk
+          play: "true"
+          play-platform: ${{ matrix.platform }}
+          format: json
+          output: ${{ runner.temp }}/play-${{ matrix.platform }}.json
+
+      - name: Validate platform contract
+        env:
+          EXIT_CODE: ${{ steps.doctor.outputs.exit-code }}
+          REPORT_PATH: ${{ steps.doctor.outputs.report-path }}
+        run: |
+          set -euo pipefail
+          test "$EXIT_CODE" = "0" || test "$EXIT_CODE" = "1" || test "$EXIT_CODE" = "2"
+          test -s "$REPORT_PATH"
+          python3 - "$REPORT_PATH" "${{ matrix.platform }}" <<'PY'
+          import json, sys
+          r=json.load(open(sys.argv[1], encoding="utf-8"))
+          expected=sys.argv[2]
+          assert r["play"]["platform"] == expected
+          assert r["play"]["policy_version"] == "2026-08-31"
+          assert any(x["rule_id"]=="PLAY-000" for x in r["findings"])
+          print(expected, "profile verified")
+          PY
+
+      - name: Upload profile report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: play-profile-${{ matrix.platform }}
+          path: ${{ runner.temp }}/play-${{ matrix.platform }}.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+  text-output:
+    name: "Text output contract"
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run text report
+        id: doctor
+        continue-on-error: true
+        uses: ./.github/actions/android-release-doctor
+        with:
+          artifact: tests/fixtures/minimal-release.apk
+          format: text
+          output: ${{ runner.temp }}/report.txt
+
+      - name: Validate text output
+        env:
+          EXIT_CODE: ${{ steps.doctor.outputs.exit-code }}
+          REPORT_PATH: ${{ steps.doctor.outputs.report-path }}
+        run: |
+          set -euo pipefail
+          test "$EXIT_CODE" = "0" || test "$EXIT_CODE" = "1"
+          test -s "$REPORT_PATH"
+          grep -q "Android Release Doctor" "$REPORT_PATH"
+
+  Input:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Invalid platform must return usage error
+        id: doctor
+        continue-on-error: true
+        uses: ./.github/actions/android-release-doctor
+        with:
+          artifact: tests/fixtures/minimal-release.apk
+          play: "true"
+          play-platform: "not-a-platform"
+          format: json
+      - name: Validate usage error
+        env:
+          EXIT_CODE: ${{ steps.doctor.outputs.exit-code }}
+        run: test "$EXIT_CODE" = "2"
