@@ -52,7 +52,7 @@ jobs:
           test -s "$DEST"
 
       - name: Build doctor once
-        run: cargo build --quiet --locked -p doctor-cli
+        run: cargo build --quiet -p doctor-cli
 
       - name: Repeated audits
         shell: bash
