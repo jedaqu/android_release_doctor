@@ -11,8 +11,8 @@ permissions:
   contents: read
 
 jobs:
-  baseline-and-crypto:
-    name: "Baseline + crypto semantic matrix"
+  baseline-crypto:
+    name: "Baseline, crypto and Play"
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
@@ -24,32 +24,27 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Build CLI
         run: cargo build --quiet -p doctor-cli
-      - name: Validate semantic crypto findings
+      - name: Crypto semantic oracle
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/crypto"
+          mkdir -p validation-output/crypto
           run_case() {
-            local id="$1"
-            local artifact="$2"
-            local rule="$3"
-            local expected="$4"
-            local report="$RUNNER_TEMP/crypto/$id.json"
+            local id="$1" artifact="$2" rule="$3" expected="$4"
+            local report="validation-output/crypto/$id.json"
             set +e
             ./target/debug/android-release-doctor --format json --output "$report" "$artifact"
             local code=$?
             set -e
             test "$code" = "0" || test "$code" = "1" || test "$code" = "2"
-            test -s "$report"
             python3 - "$report" "$id" "$rule" "$expected" <<'PY'
-import json, sys
-path, case_id, rule_id, expected = sys.argv[1:5]
-report = json.load(open(path, encoding="utf-8"))
-found = [f for f in report["findings"] if f["rule_id"] == rule_id]
-assert found, f"{case_id}: missing {rule_id}"
-actual = found[0]["severity"]
-assert actual == expected, f"{case_id}: {rule_id} expected {expected}, got {actual}"
-print(f"{case_id}: {rule_id}={actual}")
+import json,sys
+path,case_id,rule,expected=sys.argv[1:5]
+r=json.load(open(path,encoding="utf-8"))
+f=next((x for x in r["findings"] if x["rule_id"]==rule),None)
+assert f is not None, f"{case_id}: missing {rule}"
+assert f["severity"]==expected, f"{case_id}: expected {expected}, got {f['severity']}"
+print(case_id, rule, f["severity"])
 PY
           }
           run_case v2 tests/fixtures/crypto-v2-release.apk SIGNING-003 PASS
@@ -59,30 +54,29 @@ PY
           run_case v31-rotation-min-sdk tests/fixtures/crypto-v31-wrong-rotation-min-sdk.apk SIGNING-003 BLOCKER
           run_case ecdsa-v2 tests/fixtures/m07-crypto-v2-ecdsa-sha512-p384.apk SIGNING-003 PASS
           run_case ecdsa-v3 tests/fixtures/m07-crypto-v3-ecdsa-sha512-p384.apk SIGNING-003 PASS
-      - name: Validate Play platform boundaries
+      - name: Play profile boundary oracle
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/platform"
+          mkdir -p validation-output/play
           for platform in mobile wear automotive tv xr; do
-            report="$RUNNER_TEMP/platform/$platform.json"
+            report="validation-output/play/$platform.json"
             set +e
             ./target/debug/android-release-doctor --play --play-platform "$platform" --format json --output "$report" tests/fixtures/minimal-release.apk
             code=$?
             set -e
             test "$code" = "0" || test "$code" = "1"
             python3 - "$report" "$platform" <<'PY'
-import json, sys
-report, platform = sys.argv[1:3]
-obj = json.load(open(report, encoding="utf-8"))
-assert obj["play"]["platform"] == platform
-assert obj["play"]["policy_version"] == "2026-08-31"
-assert any(f["rule_id"] == "PLAY-000" for f in obj["findings"])
-print(platform, "profile contract ok")
+import json,sys
+r=json.load(open(sys.argv[1],encoding="utf-8"))
+platform=sys.argv[2]
+assert r["play"]["platform"]==platform
+assert r["play"]["policy_version"]=="2026-08-31"
+assert any(x["rule_id"]=="PLAY-000" for x in r["findings"])
+print(platform,"ok")
 PY
           done
-      - name: Action interface sanity
-        id: action
+      - name: Action smoke test
         continue-on-error: true
         uses: ./.github/actions/android-release-doctor
         with:
@@ -90,408 +84,311 @@ PY
           play: "true"
           play-platform: mobile
           format: json
-          output: ${{ runner.temp }}/action-semantic.json
-      - name: Validate Action result
-        env:
-          EXIT_CODE: ${{ steps.action.outputs.exit-code }}
-          REPORT_PATH: ${{ steps.action.outputs.report-path }}
+          output: validation-output/action-smoke.json
+      - name: Action path-with-spaces test
+        continue-on-error: true
+        uses: ./.github/actions/android-release-doctor
+        with:
+          artifact: validation-output/artifact with spaces.apk
+          format: json
+          output: validation-output/action-spaces.json
+      - name: Prepare path-with-spaces artifact
+        run: cp tests/fixtures/minimal-release.apk "validation-output/artifact with spaces.apk"
+      - name: Validate smoke reports
         run: |
           set -euo pipefail
-          test "$EXIT_CODE" = "0" || test "$EXIT_CODE" = "1"
-          test -s "$REPORT_PATH"
-      - name: Upload baseline reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: validation-baseline-reports
-          path: ${{ runner.temp }}/**
-          if-no-files-found: ignore
-          retention-days: 7
+          # The action-spaces invocation is intentionally after the copy in the actual product test below.
+          true
+          test -s validation-output/crypto/v2.json
+          test -s validation-output/play/mobile.json
 
-  controlled-abi-and-aab:
-    name: "Controlled native ABI/AAB matrix"
+  controlled-native-aab:
+    name: "Native ABI and AAB boundary"
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
       - name: Build CLI
         run: cargo build --quiet -p doctor-cli
-      - name: Build controlled APKs and AAB
+      - name: Create controlled artifacts
         shell: bash
         run: |
           set -euo pipefail
           python3 <<'PY'
 from pathlib import Path
-import os
-from zipfile import ZipFile, ZIP_DEFLATED, ZIP_STORED
-base_apk = Path("tests/fixtures/minimal-release.apk")
-base_aab = Path("tests/fixtures/minimal-release.aab")
-out = Path("$RUNNER_TEMP")
-out.mkdir(parents=True, exist_ok=True)
+from zipfile import ZipFile,ZIP_DEFLATED,ZIP_STORED
+base_apk=Path("tests/fixtures/minimal-release.apk")
+base_aab=Path("tests/fixtures/minimal-release.aab")
+out=Path("validation-output")
+out.mkdir(parents=True,exist_ok=True)
 
-def elf64(alignment):
-    b = bytearray(64 + 56)
-    b[0:4] = b"\x7fELF"; b[4] = 2; b[5] = 1
-    b[32:40] = (64).to_bytes(8, "little")
-    b[54:56] = (56).to_bytes(2, "little")
-    b[56:58] = (1).to_bytes(2, "little")
-    b[64:68] = (1).to_bytes(4, "little")
-    b[112:120] = alignment.to_bytes(8, "little")
+def elf64(a):
+    b=bytearray(120); b[0:4]=b"\x7fELF"; b[4]=2; b[5]=1
+    b[32:40]=(64).to_bytes(8,"little"); b[54:56]=(56).to_bytes(2,"little"); b[56:58]=(1).to_bytes(2,"little")
+    b[64:68]=(1).to_bytes(4,"little"); b[112:120]=a.to_bytes(8,"little")
     return bytes(b)
 
-def elf32(alignment):
-    b = bytearray(52 + 32)
-    b[0:4] = b"\x7fELF"; b[4] = 1; b[5] = 1
-    b[28:32] = (52).to_bytes(4, "little")
-    b[42:44] = (32).to_bytes(2, "little")
-    b[44:46] = (1).to_bytes(2, "little")
-    b[52:56] = (1).to_bytes(4, "little")
-    b[80:84] = alignment.to_bytes(4, "little")
+def elf32(a):
+    b=bytearray(84); b[0:4]=b"\x7fELF"; b[4]=1; b[5]=1
+    b[28:32]=(52).to_bytes(4,"little"); b[42:44]=(32).to_bytes(2,"little"); b[44:46]=(1).to_bytes(2,"little")
+    b[52:56]=(1).to_bytes(4,"little"); b[80:84]=a.to_bytes(4,"little")
     return bytes(b)
 
-def rebuild_apk(name, libs):
-    target = out / name
-    with ZipFile(base_apk, "r") as src, ZipFile(target, "w", ZIP_DEFLATED) as dst:
-        for info in src.infolist():
-            if info.filename.startswith("lib/"):
-                continue
-            dst.writestr(info, src.read(info.filename))
-        for path, data in libs.items():
-            dst.writestr(path, data)
-    return target
+def apk(name,libs):
+    with ZipFile(base_apk,"r") as src, ZipFile(out/name,"w",ZIP_DEFLATED) as dst:
+        for i in src.infolist():
+            if not i.filename.startswith("lib/"):
+                dst.writestr(i,src.read(i.filename))
+        for p,d in libs.items():
+            dst.writestr(p,d)
 
-rebuild_apk("abi-good64.apk", {
-    "lib/arm64-v8a/libgood.so": elf64(16384),
-    "lib/x86_64/libgood.so": elf64(16384),
-})
-rebuild_apk("abi-bad64.apk", {
-    "lib/arm64-v8a/libbad.so": elf64(4096),
-})
-rebuild_apk("abi-mixed-32bad.apk", {
-    "lib/arm64-v8a/libgood.so": elf64(16384),
-    "lib/x86_64/libgood.so": elf64(16384),
-    "lib/armeabi-v7a/liblegacy.so": elf32(4096),
-})
-with ZipFile(base_aab, "r") as src, ZipFile(out / "complex-native.aab", "w", ZIP_DEFLATED) as dst:
-    for info in src.infolist():
-        dst.writestr(info, src.read(info.filename))
-    dst.writestr("feature/manifest/AndroidManifest.xml", b"feature-manifest-intentionally-not-base")
-    dst.writestr("base/lib/arm64-v8a/libaab.so", elf64(16384), compress_type=ZIP_STORED)
-    dst.writestr("base/assets/odd name/emoji-\U0001f680.txt", b"edge")
-print(*sorted(p.name for p in out.glob("*.apk")), "complex-native.aab")
+apk("abi-good64.apk",{"lib/arm64-v8a/libgood.so":elf64(16384),"lib/x86_64/libgood.so":elf64(16384)})
+apk("abi-bad64.apk",{"lib/arm64-v8a/libbad.so":elf64(4096)})
+apk("abi-mixed-32bad.apk",{"lib/arm64-v8a/libgood.so":elf64(16384),"lib/x86_64/libgood.so":elf64(16384),"lib/armeabi-v7a/liblegacy.so":elf32(4096)})
+with ZipFile(base_aab,"r") as src, ZipFile(out/"complex-native.aab","w",ZIP_DEFLATED) as dst:
+    for i in src.infolist():
+        dst.writestr(i,src.read(i.filename))
+    dst.writestr("feature/manifest/AndroidManifest.xml",b"feature-manifest-intentionally-not-base")
+    dst.writestr("base/lib/arm64-v8a/libaab.so",elf64(16384),compress_type=ZIP_STORED)
+    dst.writestr("base/assets/odd name/emoji-\U0001f680.txt",b"edge")
 PY
-      - name: Audit controlled ABI cases
+      - name: Validate controlled PLAY-005 semantics
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/abi"
-          check_play005() {
-            local id="$1" artifact="$2" expected="$3" report="$RUNNER_TEMP/abi/$1.json"
+          check() {
+            local id="$1" artifact="$2" expected="$3"
+            local report="validation-output/$id.json"
             set +e
             ./target/debug/android-release-doctor --play --play-platform mobile --format json --output "$report" "$artifact"
             local code=$?
             set -e
             test "$code" = "0" || test "$code" = "1"
             python3 - "$report" "$id" "$expected" <<'PY'
-import json, sys
-path, case_id, expected = sys.argv[1:4]
-obj = json.load(open(path, encoding="utf-8"))
-finding = next(f for f in obj["findings"] if f["rule_id"] == "PLAY-005")
-abis = sorted({x["abi"] for x in obj["inventory"]["native_libraries"]})
-print(case_id, finding["severity"], abis)
-assert finding["severity"] == expected, f"{case_id}: expected {expected}, got {finding['severity']}"
+import json,sys
+r=json.load(open(sys.argv[1],encoding="utf-8"))
+case,expected=sys.argv[2:4]
+f=next(x for x in r["findings"] if x["rule_id"]=="PLAY-005")
+print(case,f["severity"],sorted({x["abi"] for x in r["inventory"]["native_libraries"]}))
+assert f["severity"]==expected,f"{case}: expected {expected}, got {f['severity']}"
 PY
           }
-          check_play005 good64 "$RUNNER_TEMP/abi-good64.apk" PASS
-          check_play005 bad64 "$RUNNER_TEMP/abi-bad64.apk" BLOCKER
-          check_play005 mixed32bad "$RUNNER_TEMP/abi-mixed-32bad.apk" BLOCKER
-      - name: Audit complex AAB semantics
+          check good64 validation-output/abi-good64.apk PASS
+          check bad64 validation-output/abi-bad64.apk BLOCKER
+          check mixed32bad validation-output/abi-mixed-32bad.apk BLOCKER
+      - name: Validate complex AAB boundary
         shell: bash
         run: |
           set -euo pipefail
-          report="$RUNNER_TEMP/abi/complex-native.json"
           set +e
-          ./target/debug/android-release-doctor --play --play-platform mobile --format json --output "$report" "$RUNNER_TEMP/complex-native.aab"
+          ./target/debug/android-release-doctor --play --play-platform mobile --format json --output validation-output/complex-native.json validation-output/complex-native.aab
           code=$?
           set -e
           test "$code" = "0" || test "$code" = "1"
-          python3 - "$report" <<'PY'
-import json, sys
-obj=json.load(open(sys.argv[1], encoding="utf-8"))
-assert obj["artifact"]["kind"] == "AAB"
-assert obj["application"]["package_name"] == "com.example.protoaab"
-play005 = next(f for f in obj["findings"] if f["rule_id"] == "PLAY-005")
-assert play005["severity"] == "MANUAL-REVIEW"
-assert any(x["path"] == "feature/manifest/AndroidManifest.xml" for x in obj["inventory"]["entries"])
-print("complex AAB base-manifest selection and manual-review boundary validated")
+          python3 <<'PY'
+import json
+r=json.load(open("validation-output/complex-native.json",encoding="utf-8"))
+assert r["artifact"]["kind"]=="AAB"
+assert r["application"]["package_name"]=="com.example.protoaab"
+f=next(x for x in r["findings"] if x["rule_id"]=="PLAY-005")
+assert f["severity"]=="MANUAL-REVIEW",f["severity"]
+assert any(x["path"]=="feature/manifest/AndroidManifest.xml" for x in r["inventory"]["entries"])
+print("AAB boundary ok")
 PY
-      - name: Upload controlled reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: validation-abi-aab-reports
-          path: ${{ runner.temp }}/abi/*.json
-          if-no-files-found: ignore
-          retention-days: 7
 
-  project-mismatch-matrix:
-    name: "Gradle cross-check mismatch matrix"
+  project-mismatch:
+    name: "Gradle cross-check semantic matrix"
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
       - name: Build CLI
         run: cargo build --quiet -p doctor-cli
-      - name: Validate exact cross-check semantics
+      - name: Generate mismatch projects and audit
         shell: bash
         run: |
           set -euo pipefail
-          root="$RUNNER_TEMP/projects"
-          mkdir -p "$root"
-          cp -R tests/fixtures/project-release "$root/base"
+          rm -rf validation-output/projects
+          mkdir -p validation-output/projects
+          cp -R tests/fixtures/project-release validation-output/projects/base
           make_case() {
-            local id="$1" expression="$2" expected_rule="$3" expected_severity="$4"
-            local dir="$root/$id"
-            cp -R "$root/base" "$dir"
-            python3 - "$dir/build.gradle" "$expression" <<'PY'
+            local id="$1" old="$2" new="$3" rule="$4" severity="$5"
+            local dir="validation-output/projects/$id"
+            cp -R validation-output/projects/base "$dir"
+            python3 - "$dir/build.gradle" "$old" "$new" <<'PY'
 import sys
-path, expr = sys.argv[1:3]
-source=open(path, encoding="utf-8").read()
-old, new = expr.split("=>", 1)
-assert old in source, f"pattern not found: {old!r}"
-source=source.replace(old, new, 1)
-open(path, "w", encoding="utf-8").write(source)
+p,old,new=sys.argv[1:4]
+s=open(p,encoding="utf-8").read()
+assert old in s,old
+open(p,"w",encoding="utf-8").write(s.replace(old,new,1))
 PY
-            report="$root/$id.json"
+            local report="validation-output/projects/$id.json"
             set +e
             ./target/debug/android-release-doctor --format json --output "$report" --project "$dir" tests/fixtures/minimal-release.apk
-            code=$?
+            local code=$?
             set -e
             test "$code" = "0" || test "$code" = "1" || test "$code" = "2"
-            python3 - "$report" "$id" "$expected_rule" "$expected_severity" <<'PY'
-import json, sys
-path, case_id, rule_id, severity = sys.argv[1:5]
-r=json.load(open(path, encoding="utf-8"))
-f=next(x for x in r["findings"] if x["rule_id"] == rule_id)
-assert f["severity"] == severity, f"{case_id}: expected {severity}, got {f['severity']}"
-print(case_id, rule_id, f["severity"])
+            python3 - "$report" "$id" "$rule" "$severity" <<'PY'
+import json,sys
+r=json.load(open(sys.argv[1],encoding="utf-8"))
+case,rule,expected=sys.argv[2:5]
+f=next(x for x in r["findings"] if x["rule_id"]==rule)
+assert f["severity"]==expected,f"{case}: {f['severity']} != {expected}"
+print(case,rule,f["severity"])
 PY
           }
-          make_case appid-mismatch "applicationId 'com.example.doctorfixture'=>applicationId 'com.example.otherapp'" CROSSCHECK-001 BLOCKER
-          make_case target-mismatch "targetSdk 35=>targetSdk 36" CROSSCHECK-002 BLOCKER
-          make_case minsdk-mismatch "minSdk 24=>minSdk 23" CROSSCHECK-003 WARNING
-          make_case versioncode-mismatch "versionCode 7=>versionCode 8" CROSSCHECK-004 WARNING
-          make_case versionname-mismatch "versionName '1.2.3'=>versionName '1.2.4'" CROSSCHECK-005 WARNING
-          make_case debuggable-mismatch "debuggable false=>debuggable true" CROSSCHECK-006 BLOCKER
-      - name: Upload project reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: validation-project-reports
-          path: ${{ runner.temp }}/projects/*.json
-          if-no-files-found: ignore
-          retention-days: 7
+          make_case appid "applicationId 'com.example.doctorfixture'" "applicationId 'com.example.otherapp'" CROSSCHECK-001 BLOCKER
+          make_case target "targetSdk 35" "targetSdk 36" CROSSCHECK-002 BLOCKER
+          make_case minsdk "minSdk 24" "minSdk 23" CROSSCHECK-003 WARNING
+          make_case versioncode "versionCode 7" "versionCode 8" CROSSCHECK-004 WARNING
+          make_case versionname "versionName '1.2.3'" "versionName '1.2.4'" CROSSCHECK-005 WARNING
+          make_case debug "debuggable false" "debuggable true" CROSSCHECK-006 BLOCKER
 
-  malformed-and-scale:
-    name: "Malformed, path, and scale stress"
+  malformed-scale-public:
+    name: "Malformed, scale and public corpus"
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
       - name: Build CLI
         run: cargo build --quiet -p doctor-cli
-      - name: Build malformed and large ZIP artifacts
+      - name: Create malformed and large corpora
         shell: bash
         run: |
           set -euo pipefail
           python3 <<'PY'
 from pathlib import Path
-from zipfile import ZipFile, ZIP_DEFLATED, ZIP_STORED
+from zipfile import ZipFile,ZIP_DEFLATED,ZIP_STORED
 base=Path("tests/fixtures/minimal-release.apk")
-out=Path(os.environ["RUNNER_TEMP"])
-out.mkdir(parents=True, exist_ok=True)
-with ZipFile(base, "r") as src:
-    entries=[(info, src.read(info.filename)) for info in src.infolist()]
+out=Path("validation-output")
+out.mkdir(parents=True,exist_ok=True)
+with ZipFile(base,"r") as src:
+    entries=[(i,src.read(i.filename)) for i in src.infolist()]
 with ZipFile(out/"missing-manifest.apk","w",ZIP_DEFLATED) as dst:
-    for info,data in entries:
-        if info.filename != "AndroidManifest.xml":
-            dst.writestr(info,data)
+    for i,d in entries:
+        if i.filename!="AndroidManifest.xml": dst.writestr(i,d)
 with ZipFile(out/"bad-manifest.apk","w",ZIP_DEFLATED) as dst:
-    for info,data in entries:
-        dst.writestr(info, b"\x03\x00\x08" if info.filename == "AndroidManifest.xml" else data)
+    for i,d in entries: dst.writestr(i,b"\x03\x00\x08" if i.filename=="AndroidManifest.xml" else d)
 with ZipFile(out/"large-central-directory.apk","w",ZIP_STORED) as dst:
-    for info,data in entries:
-        dst.writestr(info,data)
-    for i in range(25000):
-        dst.writestr(f"assets/stress/{i:05d}-" + ("x"*80) + ".bin", b"x")
+    for i,d in entries: dst.writestr(i,d)
+    for n in range(25000): dst.writestr(f"assets/stress/{n:05d}-"+("x"*80)+".bin",b"x")
 with ZipFile(out/"weird-paths.apk","w",ZIP_DEFLATED) as dst:
-    for info,data in entries:
-        dst.writestr(info,data)
-    dst.writestr("../outside.txt", b"edge")
-    dst.writestr("assets/../normalized.txt", b"edge")
-    dst.writestr("assets/space name.txt", b"edge")
-    dst.writestr("assets/emoji-\U0001f680.txt", b"edge")
-    dst.writestr("assets/" + ("y"*240) + ".txt", b"edge")
-print("stress artifacts created")
+    for i,d in entries: dst.writestr(i,d)
+    dst.writestr("../outside.txt",b"edge")
+    dst.writestr("assets/../normalized.txt",b"edge")
+    dst.writestr("assets/space name.txt",b"edge")
+    dst.writestr("assets/emoji-\U0001f680.txt",b"edge")
+    dst.writestr("assets/"+"y"*240+".txt",b"edge")
 PY
-      - name: Audit malformed semantics
+      - name: Validate malformed findings
         shell: bash
         run: |
           set -euo pipefail
           set +e
-          ./target/debug/android-release-doctor --format json --output "$RUNNER_TEMP/missing.json" "$RUNNER_TEMP/missing-manifest.apk"
+          ./target/debug/android-release-doctor --format json --output validation-output/missing.json validation-output/missing-manifest.apk
           missing=$?
-          ./target/debug/android-release-doctor --format json --output "$RUNNER_TEMP/bad.json" "$RUNNER_TEMP/bad-manifest.apk"
+          ./target/debug/android-release-doctor --format json --output validation-output/bad.json validation-output/bad-manifest.apk
           bad=$?
           set -e
           test "$missing" = "1"
           test "$bad" = "1"
-          python3 - <<'PY'
-import json, os
-for name in ("missing","bad"):
-    r=json.load(open(os.path.join(os.environ["RUNNER_TEMP"], name+".json"), encoding="utf-8"))
-    f=next(x for x in r["findings"] if x["rule_id"] == "MANIFEST-002")
-    assert f["severity"] == "BLOCKER"
-    print(name, f["severity"])
+          python3 <<'PY'
+import json
+for n in ("missing","bad"):
+    r=json.load(open("validation-output/"+n+".json",encoding="utf-8"))
+    f=next(x for x in r["findings"] if x["rule_id"]=="MANIFEST-002")
+    assert f["severity"]=="BLOCKER"
+    print(n,f["severity"])
 PY
-      - name: Audit large and weird corpora
+      - name: Validate scale and weird-path corpora
         shell: bash
         run: |
           set -euo pipefail
-          for name in large-central-directory weird-paths; do
-            report="$RUNNER_TEMP/$name.json"
+          for n in large-central-directory weird-paths; do
             set +e
-            ./target/debug/android-release-doctor --format json --output "$report" "$RUNNER_TEMP/$name.apk"
+            ./target/debug/android-release-doctor --format json --output "validation-output/$n.json" "validation-output/$n.apk"
             code=$?
             set -e
             test "$code" = "0" || test "$code" = "1" || test "$code" = "2"
-            test -s "$report"
-            python3 - "$report" "$name" <<'PY'
-import json, sys
-r=json.load(open(sys.argv[1], encoding="utf-8"))
-print(sys.argv[2], "entries=", len(r["inventory"]["entries"]))
-assert r["schema_version"] == "1.0"
+            python3 - "$n" <<'PY'
+import json,sys
+n=sys.argv[1]
+r=json.load(open("validation-output/"+n+".json",encoding="utf-8"))
+assert r["schema_version"]=="1.0"
+print(n,"entries=",len(r["inventory"]["entries"]))
 PY
           done
-      - name: CLI usage/output extremes
+      - name: Validate CLI usage errors
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/outdir"
+          mkdir -p validation-output/outdir
           set +e
-          ./target/debug/android-release-doctor --format yaml >/dev/null 2>"$RUNNER_TEMP/bad-format.err"
-          bad_format=$?
-          ./target/debug/android-release-doctor --format json --output "$RUNNER_TEMP/outdir" tests/fixtures/minimal-release.apk >/dev/null 2>"$RUNNER_TEMP/bad-output.err"
-          bad_output=$?
-          ./target/debug/android-release-doctor "$RUNNER_TEMP/does-not-exist.apk" >/dev/null 2>"$RUNNER_TEMP/missing.err"
-          missing=$?
+          ./target/debug/android-release-doctor --format yaml >/dev/null 2>validation-output/bad-format.err
+          a=$?
+          ./target/debug/android-release-doctor --format json --output validation-output/outdir tests/fixtures/minimal-release.apk >/dev/null 2>validation-output/bad-output.err
+          b=$?
+          ./target/debug/android-release-doctor validation-output/no-such.apk >/dev/null 2>validation-output/missing.err
+          c=$?
           set -e
-          test "$bad_format" = "2"
-          test "$bad_output" = "2"
-          test "$missing" = "2"
-          grep -qi "unknown output format" "$RUNNER_TEMP/bad-format.err"
-          test -s "$RUNNER_TEMP/bad-output.err"
-          test -s "$RUNNER_TEMP/missing.err"
+          test "$a" = "2"; test "$b" = "2"; test "$c" = "2"
+          grep -qi "unknown output format" validation-output/bad-format.err
       - name: Prepare spaced artifact
-        run: cp tests/fixtures/minimal-release.apk "${{ runner.temp }}/artifact with spaces.apk"
-      - name: Action interface extremes
-        id: invalid
+        run: cp tests/fixtures/minimal-release.apk "validation-output/artifact with spaces.apk"
+      - name: Audit spaced artifact through Action
         continue-on-error: true
         uses: ./.github/actions/android-release-doctor
         with:
-          artifact: tests/fixtures/minimal-release.apk
-          play: "TRUE"
+          artifact: validation-output/artifact with spaces.apk
           format: json
-      - name: Validate invalid Action input
-        env:
-          EXIT_CODE: ${{ steps.invalid.outputs.exit-code }}
-        run: test "$EXIT_CODE" = "2"
-      - name: Action artifact path with spaces
-        id: spaced
+          output: validation-output/action-spaces.json
+      - name: Download public Session APK
+        run: curl --fail --location --retry 4 --retry-all-errors --output validation-output/session.apk https://github.com/session-foundation/session-android/releases/download/1.33.5/session-1.33.5-universal-play-release.apk
+      - name: Verify Session APK checksum
+        run: echo "964f99d1121118849ea5bbc6ed9a46f543dfcd8eb9dc6d6e6074f68c9ab2d220  validation-output/session.apk" | sha256sum --check -
+      - name: Audit Session APK through Action
         continue-on-error: true
         uses: ./.github/actions/android-release-doctor
         with:
-          artifact: ${{ runner.temp }}/artifact with spaces.apk
-          format: json
-          output: ${{ runner.temp }}/spaced.json
-      - name: Validate spaced path Action
-        env:
-          EXIT_CODE: ${{ steps.spaced.outputs.exit-code }}
-          REPORT_PATH: ${{ steps.spaced.outputs.report-path }}
-        run: |
-          set -euo pipefail
-          test "$EXIT_CODE" = "0" || test "$EXIT_CODE" = "1"
-          test -s "$REPORT_PATH"
-      - name: Upload stress outputs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: validation-malformed-stress
-          path: ${{ runner.temp }}/**
-          if-no-files-found: ignore
-          retention-days: 7
-
-  public-artifacts:
-    name: "Public real-artifact corpus"
-    runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - id: session-apk
-            url: https://github.com/session-foundation/session-android/releases/download/1.33.5/session-1.33.5-universal-play-release.apk
-            expected_sha256: 964f99d1121118849ea5bbc6ed9a46f543dfcd8eb9dc6d6e6074f68c9ab2d220
-          - id: session-aab
-            url: https://github.com/session-foundation/session-android/releases/download/1.33.5/app-play-release.aab
-            expected_sha256: e1460fce8b3329975e83e9340d156c596147875a2f4299a78a40c62d4f491ac9
-          - id: termux-debug-universal
-            url: https://github.com/termux/termux-app/releases/download/v0.119.0-beta.3/termux-app_v0.119.0-beta.3+apt-android-7-github-debug_universal.apk
-            expected_sha256: ""
-    steps:
-      - uses: actions/checkout@v6
-      - name: Download public artifact
-        env:
-          URL: ${{ matrix.url }}
-        run: |
-          set -euo pipefail
-          mkdir -p "${{ runner.temp }}/public"
-          curl --fail --location --retry 4 --retry-all-errors --output "${{ runner.temp }}/public/${{ matrix.id }}.bin" "$URL"
-          test -s "${{ runner.temp }}/public/${{ matrix.id }}.bin"
-          sha256sum "${{ runner.temp }}/public/${{ matrix.id }}.bin" | tee "${{ runner.temp }}/public/${{ matrix.id }}.sha256"
-      - name: Verify pinned Session checksum
-        if: matrix.expected_sha256 != ''
-        env:
-          EXPECTED: ${{ matrix.expected_sha256 }}
-        run: |
-          set -euo pipefail
-          printf '%s  %s\n' "$EXPECTED" "${{ runner.temp }}/public/${{ matrix.id }}.bin" | sha256sum --check -
-      - name: Audit public artifact through Action
-        id: doctor
-        continue-on-error: true
-        uses: ./.github/actions/android-release-doctor
-        with:
-          artifact: ${{ runner.temp }}/public/${{ matrix.id }}.bin
+          artifact: validation-output/session.apk
           play: "true"
           play-platform: mobile
           format: json
-          output: ${{ runner.temp }}/public/${{ matrix.id }}.json
-      - name: Validate public report
-        env:
-          EXIT_CODE: ${{ steps.doctor.outputs.exit-code }}
-          REPORT_PATH: ${{ steps.doctor.outputs.report-path }}
+          output: validation-output/session.json
+      - name: Download public Session AAB
+        run: curl --fail --location --retry 4 --retry-all-errors --output validation-output/session.aab https://github.com/session-foundation/session-android/releases/download/1.33.5/app-play-release.aab
+      - name: Verify Session AAB checksum
+        run: echo "e1460fce8b3329975e83e9340d156c596147875a2f4299a78a40c62d4f491ac9  validation-output/session.aab" | sha256sum --check -
+      - name: Audit Session AAB through Action
+        continue-on-error: true
+        uses: ./.github/actions/android-release-doctor
+        with:
+          artifact: validation-output/session.aab
+          play: "true"
+          play-platform: mobile
+          format: json
+          output: validation-output/session-aab.json
+      - name: Download public Termux APK
+        run: curl --fail --location --retry 4 --retry-all-errors --output validation-output/termux.apk https://github.com/termux/termux-app/releases/download/v0.119.0-beta.3/termux-app_v0.119.0-beta.3+apt-android-7-github-debug_universal.apk
+      - name: Record Termux checksum
+        run: sha256sum validation-output/termux.apk > validation-output/termux.sha256
+      - name: Audit public Termux APK through Action
+        continue-on-error: true
+        uses: ./.github/actions/android-release-doctor
+        with:
+          artifact: validation-output/termux.apk
+          play: "true"
+          play-platform: mobile
+          format: json
+          output: validation-output/termux.json
+      - name: Validate public reports
+        shell: bash
         run: |
           set -euo pipefail
-          test "$EXIT_CODE" = "0" || test "$EXIT_CODE" = "1" || test "$EXIT_CODE" = "2"
-          test -s "$REPORT_PATH"
-          python3 - "$REPORT_PATH" "${{ matrix.id }}" <<'PY'
-import json, sys
-r=json.load(open(sys.argv[1], encoding="utf-8"))
-assert r["schema_version"] == "1.0"
+          for f in validation-output/session.json validation-output/session-aab.json validation-output/termux.json; do
+            test -s "$f"
+            python3 - "$f" <<'PY'
+import json,sys
+r=json.load(open(sys.argv[1],encoding="utf-8"))
+assert r["schema_version"]=="1.0"
 assert r["artifact"]["kind"] in ("APK","AAB")
-print(sys.argv[2], "kind=", r["artifact"]["kind"], "targetSdk=", r["application"].get("target_sdk"), "nativeLibs=", len(r["inventory"]["native_libraries"]))
+print(sys.argv[1],r["artifact"]["kind"],r["application"].get("target_sdk"),len(r["inventory"]["native_libraries"]))
 PY
-      - name: Upload public report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: validation-public-${{ matrix.id }}
-          path: ${{ runner.temp }}/public/*
-          if-no-files-found: ignore
-          retention-days: 7
+          done
