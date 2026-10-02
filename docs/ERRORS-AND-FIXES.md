@@ -1301,3 +1301,16 @@ From this point forward, a historical `OPEN` entry is not considered an active w
 - **Correction commit:** `1e9550533980cdd04d6c02e63e975a35327af45f`
 - **Validation:** Rust CI run #134 / `37046916708` passed Build, Test, Format, and Clippy.
 - **Status:** RESOLVED
+
+
+## ERR-108 — ERR-038-B RSA-16384 fixture test API corrections
+
+- **Milestone:** ERR-038-B / PR #40
+- **Type:** Test compile failure
+- **Observed:** Rust CI run #142 / `37050030001`, Test step.
+- **Problem:** The RSA-16384 fixture test accessed private `x509-parser` TBS data and passed `Cow<[u8]>` where the verifier requires `&[u8]`.
+- **Correction:** Remove the redundant certificate-self-signature test path, retain the four deterministic RSA-16384 signature fixtures as the cryptographic evidence set, and use `pem.contents.as_ref()` when parsing the public certificate.
+- **Scope:** ERR-038-B tests only.
+- **No production behavior change:** The extended RSA verification helper and Android algorithm dispatch were unchanged.
+- **Validation:** Pending terminal CI after the correction.
+- **Status:** OPEN — correction in progress.
