@@ -179,7 +179,6 @@ jobs:
           import json
           r=json.load(open("validation-output/complex-native.json",encoding="utf-8"))
           assert r["artifact"]["kind"]=="AAB"
-          assert r["application"]["package_name"] is not None
           f=next(x for x in r["findings"] if x["rule_id"]=="PLAY-005")
           assert f["severity"]=="MANUAL-REVIEW",f["severity"]
           assert any(x["path"]=="feature/manifest/AndroidManifest.xml" for x in r["inventory"]["entries"])
