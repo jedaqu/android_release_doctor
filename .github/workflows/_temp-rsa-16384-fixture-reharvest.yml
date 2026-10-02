@@ -79,7 +79,7 @@ jobs:
           )"
 
           parent="$(gh api "repos/$repo/git/ref/heads/$ref" --jq .object.sha)"
-          base_tree="$(gh api "repos/$repo/commits/$parent" --jq .tree.sha)"
+          base_tree="$(gh api "repos/$repo/commits/$parent" --jq .commit.tree.sha)"
 
           tree_json="$(
             jq -n               --arg c "$cert_sha"               --arg a "$pkcs1_256_sha"               --arg b "$pkcs1_512_sha"               --arg c2 "$pss_256_sha"               --arg d "$pss_512_sha"               '[
