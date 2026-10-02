@@ -489,7 +489,9 @@ pub fn audit_path(path: impl AsRef<Path>) -> Result<AuditReport, AuditError> {
             entry.read_to_end(&mut bytes)?;
 
             let parsed = match kind {
-                ArtifactKind::Apk => axml::parse_manifest(&bytes).map_err(|error| error.to_string()),
+                ArtifactKind::Apk => {
+                    axml::parse_manifest(&bytes).map_err(|error| error.to_string())
+                }
                 ArtifactKind::Aab => {
                     manifest_proto::parse_manifest(&bytes).map_err(|error| error.to_string())
                 }
