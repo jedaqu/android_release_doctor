@@ -16,6 +16,12 @@ use ring::{
     digest,
     signature::{self, UnparsedPublicKey},
 };
+use rsa::{
+    pkcs1v15::Pkcs1v15Sign,
+    pss::Pss,
+    sha2::{Digest as RsaDigest, Sha256 as RsaSha256, Sha512 as RsaSha512},
+    RsaPublicKey,
+};
 use sha2::{Digest, Sha256, Sha512};
 use subtle::ConstantTimeEq;
 use x509_parser::{
@@ -994,6 +1000,20 @@ fn verify_signature_bytes(
         return Ok(());
     }
 
+    if let PublicKey::RSA(rsa) = &parsed_public_key {
+        let key_size = rsa.key_size();
+        if key_size == 1024 || key_size == 16_384 {
+            return verify_extended_rsa_signature(
+                algorithm_id,
+                key_size,
+                rsa.modulus,
+                rsa.exponent,
+                signed_data,
+                signature_bytes,
+            );
+        }
+    }
+
     let algorithm: &dyn signature::VerificationAlgorithm = match algorithm_id {
         0x0101 => {
             let PublicKey::RSA(rsa) = &parsed_public_key else {
@@ -1111,6 +1131,85 @@ fn verify_signature_bytes(
     verifier.verify(signed_data, signature_bytes).map_err(|_| {
         SignatureVerificationError(format!(
             "cryptographic signature verification failed for algorithm 0x{algorithm_id:08x}"
+        ))
+    })
+}
+
+fn verify_extended_rsa_signature(
+    algorithm_id: u32,
+    key_size: usize,
+    modulus: &[u8],
+    exponent: &[u8],
+    signed_data: &[u8],
+    signature_bytes: &[u8],
+) -> Result<(), SignatureVerificationError> {
+    if key_size == 1024 && algorithm_id == 0x0102 {
+        return Err(SignatureVerificationError(
+            "UNSUPPORTED: RSA 1024-bit key is too short for RSASSA-PSS SHA-512 with the required 64-byte salt"
+                .to_string(),
+        ));
+    }
+
+    let modulus = rsa::BigUint::from_bytes_be(modulus);
+    let exponent = rsa::BigUint::from_bytes_be(exponent);
+    let public_key = if key_size == 16_384 {
+        // x509-parser has already parsed and validated this RSA public key.
+        // rsa 0.9.10's checked constructor rejects moduli above its built-in
+        // size limit, so only the explicitly supported 16384-bit boundary
+        // uses the unchecked constructor.
+        RsaPublicKey::new_unchecked(modulus, exponent)
+    } else {
+        RsaPublicKey::new(modulus, exponent).map_err(|error| {
+            SignatureVerificationError(format!(
+                "RSA public key construction failed for {}-bit key: {error}",
+                key_size
+            ))
+        })?
+    };
+
+    let result = match algorithm_id {
+        0x0101 => {
+            let digest = RsaSha256::digest(signed_data);
+            public_key.verify(
+                Pss::new_with_salt::<RsaSha256>(32),
+                digest.as_ref(),
+                signature_bytes,
+            )
+        }
+        0x0102 => {
+            let digest = RsaSha512::digest(signed_data);
+            public_key.verify(
+                Pss::new_with_salt::<RsaSha512>(64),
+                digest.as_ref(),
+                signature_bytes,
+            )
+        }
+        0x0103 => {
+            let digest = RsaSha256::digest(signed_data);
+            public_key.verify(
+                Pkcs1v15Sign::new::<RsaSha256>(),
+                digest.as_ref(),
+                signature_bytes,
+            )
+        }
+        0x0104 => {
+            let digest = RsaSha512::digest(signed_data);
+            public_key.verify(
+                Pkcs1v15Sign::new::<RsaSha512>(),
+                digest.as_ref(),
+                signature_bytes,
+            )
+        }
+        _ => {
+            return Err(SignatureVerificationError(format!(
+                "UNSUPPORTED: signature algorithm 0x{algorithm_id:08x} is not supported by the extended RSA verifier"
+            )))
+        }
+    };
+
+    result.map_err(|_| {
+        SignatureVerificationError(format!(
+            "cryptographic signature verification failed for algorithm 0x{algorithm_id:08x} on RSA {key_size}-bit key"
         ))
     })
 }
@@ -1846,6 +1945,7 @@ impl<'a> LengthReader<'a> {
 mod tests {
     use super::*;
     use std::io::Write;
+    use x509_parser::pem::parse_x509_pem;
 
     #[test]
     fn verifies_real_v2_signed_apk_fixture() {
@@ -2382,6 +2482,195 @@ mod tests {
         assert!(error
             .to_string()
             .starts_with("UNSUPPORTED: ECDSA SHA-512 signer curve is neither P-384 nor P-521"));
+    }
+
+    #[test]
+    fn verifies_extended_rsa_1024_pkcs1_sha256() {
+        const CERTIFICATE_HEX: &str = "30820244308201ada00302010202142b39807fe7042283f23640917f3b9431a5453a77300d06092a864886f70d01010b050030343132303006035504030c29416e64726f69642052656c6561736520446f63746f72204552522d3033382d42205253412d31303234301e170d3236313030323138343235305a170d3336303932393138343235305a30343132303006035504030c29416e64726f69642052656c6561736520446f63746f72204552522d3033382d42205253412d3130323430819f300d06092a864886f70d010101050003818d0030818902818100c52ef610592856a31dd080c4f23e503528b5a1e19fd0446d7f0573a787db87cc68f8bb11b63900155cb1b1fdc69602bfe8d658ac9cf690abbc1f74a31ddf08e3cc7efa21af38209b5433dd56276f04edd5bd9ce9e6885fe8a02b34321c573df893541c7ac985f0e44692b4cd4322399e1e925a89a6c1a143790eecefbad978790203010001a3533051301d0603551d0e041604146af530ad002de35edb847d63051db47369a66ac8301f0603551d230418301680146af530ad002de35edb847d63051db47369a66ac8300f0603551d130101ff040530030101ff300d06092a864886f70d01010b05000381810087c69112fe20d7d3d5831f829a72b1ba28246f9ff594911dfe13c2b88c21211b6f0474bb7342ff807ec695280afd7ad45f44b4c5088bd5bb3a163cff4453e9a5706f9d2da24d26c17d9bf9d749a629c9296f789e593d80402f34e8f112d4cef739a633d482254612e4e1a000b9bd88d70277f7f3ec88e6945006545846657c38";
+        const SIGNATURE_HEX: &str = "19b15a238dddad1d4451b6860bf614bb5872e2e317b8f03dfddd8468bfdf74820749b21f5a9e817efa46405ed7ceb476e9e78190537f13ac74ca979b7c369ca14999b6410d51860bf209795821d967ad9106d95e8a789171a04f4932ca047751996e256c2fde520a2d4bcef8e47852c42c546137df3b7e5965c98e059cca106e";
+        let certificate = decode_hex_bytes(CERTIFICATE_HEX);
+        let signed_data = b"Android Release Doctor ERR-038-B RSA-1024 deterministic test message";
+        let signature = decode_hex_bytes(SIGNATURE_HEX);
+
+        let (_, cert) =
+            X509Certificate::from_der(&certificate).expect("RSA-1024 certificate should parse");
+        let rsa = match cert
+            .public_key()
+            .parsed()
+            .expect("RSA public key should parse")
+        {
+            PublicKey::RSA(rsa) => rsa,
+            _ => panic!("expected RSA public key"),
+        };
+
+        verify_extended_rsa_signature(
+            0x0103,
+            1024,
+            rsa.modulus,
+            rsa.exponent,
+            signed_data,
+            &signature,
+        )
+        .expect("RSA-1024 PKCS1/SHA-256 should verify");
+    }
+
+    #[test]
+    fn verifies_extended_rsa_1024_pkcs1_sha512() {
+        const CERTIFICATE_HEX: &str = "30820244308201ada00302010202142b39807fe7042283f23640917f3b9431a5453a77300d06092a864886f70d01010b050030343132303006035504030c29416e64726f69642052656c6561736520446f63746f72204552522d3033382d42205253412d31303234301e170d3236313030323138343235305a170d3336303932393138343235305a30343132303006035504030c29416e64726f69642052656c6561736520446f63746f72204552522d3033382d42205253412d3130323430819f300d06092a864886f70d010101050003818d0030818902818100c52ef610592856a31dd080c4f23e503528b5a1e19fd0446d7f0573a787db87cc68f8bb11b63900155cb1b1fdc69602bfe8d658ac9cf690abbc1f74a31ddf08e3cc7efa21af38209b5433dd56276f04edd5bd9ce9e6885fe8a02b34321c573df893541c7ac985f0e44692b4cd4322399e1e925a89a6c1a143790eecefbad978790203010001a3533051301d0603551d0e041604146af530ad002de35edb847d63051db47369a66ac8301f0603551d230418301680146af530ad002de35edb847d63051db47369a66ac8300f0603551d130101ff040530030101ff300d06092a864886f70d01010b05000381810087c69112fe20d7d3d5831f829a72b1ba28246f9ff594911dfe13c2b88c21211b6f0474bb7342ff807ec695280afd7ad45f44b4c5088bd5bb3a163cff4453e9a5706f9d2da24d26c17d9bf9d749a629c9296f789e593d80402f34e8f112d4cef739a633d482254612e4e1a000b9bd88d70277f7f3ec88e6945006545846657c38";
+        const SIGNATURE_HEX: &str = "b34ec713c854fe3fef244b71f255e1e445bfcfdfe8691d6fdd034601a3bc5b598b5efea9b17727f5a6f8154b914ddae70add643a218f768c5efcb38cf3d9677567744b4d51ae7b84aa11b78f62b45b989d621d607dae58fdbb91c946238b518f58e06217fedd5afef55651881fb952ab42ba90ec6b9f6cd3ffcef0fd28cc4901";
+        let certificate = decode_hex_bytes(CERTIFICATE_HEX);
+        let signed_data = b"Android Release Doctor ERR-038-B RSA-1024 deterministic test message";
+        let signature = decode_hex_bytes(SIGNATURE_HEX);
+
+        let (_, cert) =
+            X509Certificate::from_der(&certificate).expect("RSA-1024 certificate should parse");
+        let rsa = match cert
+            .public_key()
+            .parsed()
+            .expect("RSA public key should parse")
+        {
+            PublicKey::RSA(rsa) => rsa,
+            _ => panic!("expected RSA public key"),
+        };
+
+        verify_extended_rsa_signature(
+            0x0104,
+            1024,
+            rsa.modulus,
+            rsa.exponent,
+            signed_data,
+            &signature,
+        )
+        .expect("RSA-1024 PKCS1/SHA-512 should verify");
+    }
+
+    #[test]
+    fn verifies_extended_rsa_1024_pss_sha256() {
+        const CERTIFICATE_HEX: &str = "30820244308201ada00302010202142b39807fe7042283f23640917f3b9431a5453a77300d06092a864886f70d01010b050030343132303006035504030c29416e64726f69642052656c6561736520446f63746f72204552522d3033382d42205253412d31303234301e170d3236313030323138343235305a170d3336303932393138343235305a30343132303006035504030c29416e64726f69642052656c6561736520446f63746f72204552522d3033382d42205253412d3130323430819f300d06092a864886f70d010101050003818d0030818902818100c52ef610592856a31dd080c4f23e503528b5a1e19fd0446d7f0573a787db87cc68f8bb11b63900155cb1b1fdc69602bfe8d658ac9cf690abbc1f74a31ddf08e3cc7efa21af38209b5433dd56276f04edd5bd9ce9e6885fe8a02b34321c573df893541c7ac985f0e44692b4cd4322399e1e925a89a6c1a143790eecefbad978790203010001a3533051301d0603551d0e041604146af530ad002de35edb847d63051db47369a66ac8301f0603551d230418301680146af530ad002de35edb847d63051db47369a66ac8300f0603551d130101ff040530030101ff300d06092a864886f70d01010b05000381810087c69112fe20d7d3d5831f829a72b1ba28246f9ff594911dfe13c2b88c21211b6f0474bb7342ff807ec695280afd7ad45f44b4c5088bd5bb3a163cff4453e9a5706f9d2da24d26c17d9bf9d749a629c9296f789e593d80402f34e8f112d4cef739a633d482254612e4e1a000b9bd88d70277f7f3ec88e6945006545846657c38";
+        const SIGNATURE_HEX: &str = "40cfd7f64fd834368ac56736e3c5a7fc2f590e2ae8222eddd6c88add518c25b83544d6f94da74fe42e4355c8d86f821582a47f9dac6cbd038fe1e922afdcfd4a9ac511fc1fb4b03d88fbfa52ae3daefe7ae72925286d2ff66d1856c4ab72a859af24026e3fd0dea339f09df4db45b63969fe1cc33260068d54e5aca4c881078b";
+        let certificate = decode_hex_bytes(CERTIFICATE_HEX);
+        let signed_data = b"Android Release Doctor ERR-038-B RSA-1024 deterministic test message";
+        let signature = decode_hex_bytes(SIGNATURE_HEX);
+
+        let (_, cert) =
+            X509Certificate::from_der(&certificate).expect("RSA-1024 certificate should parse");
+        let rsa = match cert
+            .public_key()
+            .parsed()
+            .expect("RSA public key should parse")
+        {
+            PublicKey::RSA(rsa) => rsa,
+            _ => panic!("expected RSA public key"),
+        };
+
+        verify_extended_rsa_signature(
+            0x0101,
+            1024,
+            rsa.modulus,
+            rsa.exponent,
+            signed_data,
+            &signature,
+        )
+        .expect("RSA-1024 PSS/SHA-256 should verify");
+    }
+
+    #[test]
+    fn rejects_extended_rsa_1024_pss_sha512_as_unsupported() {
+        let modulus = vec![0xff; 128];
+        let exponent = vec![0x01, 0x00, 0x01];
+
+        let error = verify_extended_rsa_signature(
+            0x0102,
+            1024,
+            &modulus,
+            &exponent,
+            b"Android Release Doctor ERR-038-B RSA-1024 deterministic test message",
+            &[0; 128],
+        )
+        .expect_err("RSA-1024 PSS/SHA-512 must be unsupported");
+
+        assert!(error
+            .to_string()
+            .starts_with("UNSUPPORTED: RSA 1024-bit key is too short"));
+    }
+
+    #[test]
+    fn verifies_aosp_rsa_16384_certificate_self_signature_sha256() {
+        let certificate_pem = std::fs::read_to_string(
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../../tests/fixtures/err-038-b/rsa-16384/rsa-16384.x509.pem"),
+        )
+        .expect("RSA-16384 certificate fixture should be readable");
+        let (_, pem) =
+            parse_x509_pem(certificate_pem.as_bytes()).expect("AOSP RSA-16384 PEM should parse");
+        let certificate = pem.contents.as_ref();
+        let (_, cert) = X509Certificate::from_der(certificate)
+            .expect("AOSP RSA-16384 certificate should parse");
+
+        let rsa = match cert.public_key().parsed().unwrap() {
+            PublicKey::RSA(rsa) => rsa,
+            _ => panic!("expected RSA public key"),
+        };
+        assert_eq!(rsa.key_size(), 16_384);
+
+        let signed_data = b"Android Release Doctor ERR-038-B RSA-16384 deterministic test message";
+        let vectors = [
+            (
+                0x0103_u32,
+                "tests/fixtures/err-038-b/rsa-16384/sig-pkcs1-sha256.bin",
+            ),
+            (
+                0x0104_u32,
+                "tests/fixtures/err-038-b/rsa-16384/sig-pkcs1-sha512.bin",
+            ),
+            (
+                0x0101_u32,
+                "tests/fixtures/err-038-b/rsa-16384/sig-pss-sha256.bin",
+            ),
+            (
+                0x0102_u32,
+                "tests/fixtures/err-038-b/rsa-16384/sig-pss-sha512.bin",
+            ),
+        ];
+
+        for (algorithm_id, fixture) in vectors {
+            let signature = std::fs::read(
+                std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                    .join(format!("../../{fixture}")),
+            )
+            .expect("RSA-16384 signature fixture should be readable");
+
+            verify_extended_rsa_signature(
+                algorithm_id,
+                16_384,
+                rsa.modulus,
+                rsa.exponent,
+                signed_data,
+                &signature,
+            )
+            .unwrap_or_else(|error| {
+                panic!("RSA-16384 algorithm 0x{algorithm_id:04x} should verify: {error}")
+            });
+        }
+
+        let mut tampered = std::fs::read(
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../../tests/fixtures/err-038-b/rsa-16384/sig-pss-sha256.bin"),
+        )
+        .expect("RSA-16384 signature fixture should be readable");
+        *tampered.last_mut().expect("signature must not be empty") ^= 0x01;
+        assert!(
+            verify_extended_rsa_signature(
+                0x0101,
+                16_384,
+                rsa.modulus,
+                rsa.exponent,
+                signed_data,
+                &tampered,
+            )
+            .is_err(),
+            "tampered RSA-16384 PSS/SHA-256 signature must fail"
+        );
     }
 
     #[test]

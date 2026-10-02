@@ -12,6 +12,7 @@ x509-parser.workspace = true
 sha2.workspace = true
 p384.workspace = true
 p521.workspace = true
+rsa.workspace = true
 zip.workspace = true
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
