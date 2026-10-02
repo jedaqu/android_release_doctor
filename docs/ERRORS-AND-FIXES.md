@@ -1124,7 +1124,7 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction:** Replace only those three `expect_err` assertions with explicit `match` expressions that extract the expected `Err` without adding a production `Debug` implementation or changing parser behavior.
 - **Scope:** Test code only. No production behavior, fixture bytes, workflow, or public API changes.
 - **Validation:** Required in the next Actions execution.
-- **Status:** CORRECTION APPLIED — pending validation
+- **Status:** RESOLVED — Actions run #85 / run `37015424258` passed Build, Test, Format, and Clippy.
 
 ## ERR-098 — ERR-095 public compatibility fixture omitted the signer length prefix
 
@@ -1135,7 +1135,7 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction:** Replace only the public fixture bytes with the correctly nested v2 structure: signedData + signatures + publicKey inside the signer, the signer length-prefixed inside the signers sequence, and the signers sequence length-prefixed in the v2 block. The corrected fixture contains exactly one empty fourth signed-data element (`00 00 00 00`) and has SHA-256 `596db1d5efe23cf8a5227e430123595464c319f673cfc37f275f04c09efabdc5`.
 - **Scope:** Test fixture bytes and checksum documentation only. No production behavior or workflow changes.
 - **Validation:** Required in the next Actions execution.
-- **Status:** CORRECTION APPLIED — pending validation
+- **Status:** RESOLVED — Actions run #85 / run `37015424258` passed Build, Test, Format, and Clippy.
 
 ## ERR-099 — ERR-095 binary fixture did not survive public Git blob transport byte-for-byte
 
@@ -1146,7 +1146,7 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction:** Replace the binary repository fixture with a UTF-8 base64 representation of the exact canonical APK bytes. The focused integration test decodes the text fixture to a temporary 1,588-byte APK before auditing it. No production behavior changes.
 - **Scope:** Public test fixture transport and test helper only.
 - **Validation:** Required in the next Actions execution.
-- **Status:** CORRECTION APPLIED — pending validation
+- **Status:** RESOLVED — Actions run #85 / run `37015424258` passed Build, Test, Format, and Clippy.
 
 ## ERR-100 — ERR-095 fixture helper rustfmt failure
 
@@ -1157,6 +1157,16 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction:** Apply only the three rustfmt-indicated layout changes. No production logic, fixture bytes, or test semantics changed.
 - **Scope:** Test formatting only.
 - **Validation:** Required in the next Actions execution.
+- **Status:** RESOLVED — Actions run #85 / run `37015424258` passed Build, Test, Format, and Clippy.
+
+## ERR-101 — ERR-095 public corpus documentation retained a stale binary-fixture reference
+
+- **Milestone:** ERR-095 second audit / public corpus documentation
+- **Type:** Documentation consistency defect
+- **Problem:** The public corpus table had been migrated to the text-encoded `crypto-v2-empty-element-release.apk.b64` fixture, but one narrative sentence still named the removed binary `.apk` path.
+- **Correction:** Replace that stale path and describe the checksum as the SHA-256 of the decoded APK bytes. No product or test behavior changed.
+- **Scope:** Public documentation only.
+- **Validation:** Second-audit re-read required in the next Actions execution.
 - **Status:** CORRECTION APPLIED — pending validation
 
 ## ERR-096 — Android application plugin alias discovery gap
