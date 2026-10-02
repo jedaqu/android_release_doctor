@@ -464,9 +464,9 @@ The `v0.1.2` package names are:
 
 | Platform | Package |
 |---|---|
-| Linux x86_64 | `android-release-doctor-v0.1.1-linux-x86_64.tar.gz` |
-| Windows x86_64 | `android-release-doctor-v0.1.1-windows-x86_64.zip` |
-| macOS Intel x86_64 | `android-release-doctor-v0.1.1-macos-x86_64.tar.gz` |
+| Linux x86_64 | `android-release-doctor-v0.1.2-linux-x86_64.tar.gz` |
+| Windows x86_64 | `android-release-doctor-v0.1.2-windows-x86_64.zip` |
+| macOS Intel x86_64 | `android-release-doctor-v0.1.2-macos-x86_64.tar.gz` |
 
 The release also includes `SHA256SUMS`.
 
