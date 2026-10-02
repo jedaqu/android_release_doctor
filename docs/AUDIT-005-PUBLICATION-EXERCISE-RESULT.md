@@ -96,11 +96,12 @@ No publication guard, package format, checksum algorithm, permission, platform m
 
 At the time of this document:
 
-- `v0.1.0` exists and points to `c3a4095838e3030ebe945d91bf417dc5aa84cf8c`;
+- `v0.1.0` exists and still points to `c3a4095838e3030ebe945d91bf417dc5aa84cf8c`;
 - no GitHub Release exists for `v0.1.0`;
-- the correction is present on branch `fix/audit-005-publish-repo-context`;
-- final validation and real publication remain pending.
+- the correction was merged to `main` by PR #12 as `4d14ae288882667f23fdd241d26481e215163318`;
+- PR CI run `36948346937` and main CI run `36948475354` passed Build, Test, Format, and Clippy;
+- the remaining controlled action is to re-establish `v0.1.0` on the validated release commit and exercise the real tag publication path.
 
 ## Status
 
-**AUDIT-005 — OPEN: correction implemented, publication validation pending.**
+**AUDIT-005 — OPEN: correction validated; real publication pending.**
