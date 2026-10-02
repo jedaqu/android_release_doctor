@@ -3,7 +3,7 @@
 ## Status
 
 **Root cause:** DEMONSTRATED  
-**Implementation:** NOT STARTED  
+**Implementation:** APPLIED — focused correction and regression coverage on the ERR-095 branch  
 **ERR-096:** OUT OF SCOPE  
 **Production code changes in this document:** NONE
 
@@ -144,13 +144,13 @@ The anticipated production change is confined to the v2 `signedData` parser in:
 
 `crates/doctor-core/src/signature_verify.rs`
 
-The intended semantic change is limited to the transition immediately after parsing:
+The implemented semantic change is limited to the transition immediately after parsing:
 
 - `v2 digests`;
 - `v2 certificates`;
 - `v2 additional attributes`.
 
-No public evidence-model change is required by this delimitation.
+The parser now accepts exactly one additional length-prefixed element only when its payload is empty, then requires complete consumption. No public evidence-model change was introduced.
 
 ## 7. Acceptance criteria
 
