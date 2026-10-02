@@ -39,9 +39,9 @@ jobs:
           openssl x509 -in rsa-16384.x509.pem -pubkey -noout > "$pubkey"
 
           openssl dgst -sha256 -verify "$pubkey" -signature sig-pkcs1-sha256.bin message.txt
-          openssl dgst -sha512 -verify "$pubkey.pem" -signature sig-pkcs1-sha512.bin message.txt
-          openssl dgst -sha256 -verify "$pubkey.pem" -signature sig-pss-sha256.bin             -sigopt rsa_padding_mode:pss -sigopt rsa_pss_saltlen:32 message.txt
-          openssl dgst -sha512 -verify "$pubkey.pem" -signature sig-pss-sha512.bin             -sigopt rsa_padding_mode:pss -sigopt rsa_pss_saltlen:64 message.txt
+          openssl dgst -sha512 -verify "$pubkey" -signature sig-pkcs1-sha512.bin message.txt
+          openssl dgst -sha256 -verify "$pubkey" -signature sig-pss-sha256.bin             -sigopt rsa_padding_mode:pss -sigopt rsa_pss_saltlen:32 message.txt
+          openssl dgst -sha512 -verify "$pubkey" -signature sig-pss-sha512.bin             -sigopt rsa_padding_mode:pss -sigopt rsa_pss_saltlen:64 message.txt
 
           rm -f rsa-16384.pk8 rsa-16384.key.pem "$pubkey"
 
