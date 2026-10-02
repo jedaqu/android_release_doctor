@@ -1137,6 +1137,17 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Validation:** Required in the next Actions execution.
 - **Status:** CORRECTION APPLIED — pending validation
 
+## ERR-099 — ERR-095 binary fixture did not survive public Git blob transport byte-for-byte
+
+- **Milestone:** ERR-095 implementation / Actions run #77 / run `37014683071`
+- **Type:** Test fixture publication / transport defect
+- **Problem:** The corrected local APK fixture is a valid 1,588-byte ZIP/APK, but the binary Git blob stored for the public fixture did not reproduce the canonical bytes. CI therefore reported `InvalidArchive("invalid Zip archive: Could not find EOCD")`.
+- **Evidence:** The failing run had 92 `doctor-core` unit tests passing; only the ERR-095 integration fixture failed during `audit_path`. The canonical local fixture SHA-256 is `596db1d5efe23cf8a5227e430123595464c319f673cfc37f275f04c09efabdc5`.
+- **Correction:** Replace the binary repository fixture with a UTF-8 base64 representation of the exact canonical APK bytes. The focused integration test decodes the text fixture to a temporary 1,588-byte APK before auditing it. No production behavior changes.
+- **Scope:** Public test fixture transport and test helper only.
+- **Validation:** Required in the next Actions execution.
+- **Status:** CORRECTION APPLIED — pending validation
+
 ## ERR-096 — Android application plugin alias discovery gap
 
 - **Milestone:** Post-release real-world artifact validation
