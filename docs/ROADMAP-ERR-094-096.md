@@ -8,7 +8,7 @@
 
 - **ERR-094:** RESOLVED — implementation, repository-level validation, and real-world AAB validation completed.
 - **ERR-095:** RESOLVED — minimal v2 parser correction, public regression fixture, second audit, public-boundary audit, and four-gate CI validation completed.
-- **ERR-096:** OPEN — Android application plugin alias discovery investigation pending.
+- **ERR-096:** RESOLVED — safe version-catalog plugin alias discovery implemented, regression coverage added, second audit completed, and four-gate CI validation passed.
 
 ## Resolution order
 
