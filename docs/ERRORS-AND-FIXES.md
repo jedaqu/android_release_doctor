@@ -1068,3 +1068,18 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction commit:** `a3f9ffd1f0c2124415133d7c19004b15d065c1ae`
 - **Validation:** Second audit `docs/AUDIT-005-SECOND-AUDIT.md` passed; PR #12 CI run `36948346937` passed Build, Test, Format, and Clippy; PR #12 merged as `4d14ae288882667f23fdd241d26481e215163318`; main CI run `36948475354` passed Build, Test, Format, and Clippy.
 - **Status:** RESOLVED
+
+
+## ERR-093 — Nondeterministic SHA256SUMS self-inclusion in publication checksum generation
+
+- **Milestone:** M0.9 / AUDIT-005 post-closure corrective audit
+- **Type:** CI publication workflow defect
+- **Observed in:** Distribution run `36945562430`, rerun attempt `2`, job `publish`, step `Generate and verify checksums`
+- **Observed head:** `c3a4095838e3030ebe945d91bf417dc5aa84cf8c`
+- **Problem:** The checksum command creates `SHA256SUMS` through shell redirection while concurrently enumerating regular files with `find`. The output file can therefore be included in its own checksum input. In the observed execution, the three package checksums reported `OK`, while `SHA256SUMS: FAILED` caused the step to exit with code 1.
+- **Root cause:** The checksum input set is not explicitly bounded to the package files and races with creation of the checksum output file. The behavior is nondeterministic: the final publication run `36949141163` succeeded, while the later rerun of the older commit reproduced the failure.
+- **Relation to prior closure:** The prior AUDIT-005 closure recorded the original mismatch as a non-reproduced anomaly. The later rerun provides additional evidence that the mismatch is reproducible under the affected workflow, so this entry records a distinct post-closure workflow defect without rewriting the historical closure entry.
+- **Correction:** Exclude `SHA256SUMS` explicitly from the `find` input set. Preserve the existing three-package count, SHA-256 algorithm, verification command, and filename assertions.
+- **Correction commit:** `4c849b2a0e007270b32d53c4bd64a17da171ab5e`
+- **Validation:** Pending PR CI and post-correction distribution validation.
+- **Status:** OPEN
