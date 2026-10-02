@@ -598,6 +598,7 @@ fn play_mobile_profile_flags_existing_fixture_target_api() {
     );
 }
 
+
 fn proto_encode_varint(value: u64, output: &mut Vec<u8>) {
     let mut value = value;
     while value >= 0x80 {
