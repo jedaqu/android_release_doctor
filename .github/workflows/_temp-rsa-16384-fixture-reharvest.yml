@@ -4,29 +4,39 @@ on:
   push:
     branches:
       - fix/err-038-b-rsa-1024-16384-2026-10-02
+    paths:
+      - .github/workflows/_temp-rsa-16384-fixture-reharvest.yml
+
+permissions:
+  contents: write
 
 jobs:
   harvest:
     runs-on: ubuntu-24.04
     steps:
-      - name: Fetch matching AOSP key pair and generate vectors
+      - name: Fetch matching AOSP key pair and create repository fixtures
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
+
           curl -fsSL "https://android.googlesource.com/platform/tools/apksig/+/refs/heads/main/src/test/resources/com/android/apksig/rsa-16384.pk8?format=TEXT"             | base64 --decode > rsa-16384.pk8
           curl -fsSL "https://android.googlesource.com/platform/tools/apksig/+/refs/heads/main/src/test/resources/com/android/apksig/rsa-16384.x509.pem?format=TEXT"             | base64 --decode > rsa-16384.x509.pem
 
           openssl pkcs8 -inform DER -nocrypt -in rsa-16384.pk8 -out rsa-16384.key.pem
 
           cert_pub_hash="$(
-            openssl x509 -in rsa-16384.x509.pem -pubkey -noout               | openssl pkey -pubin -outform DER               | sha256sum | cut -d' ' -f1
+            openssl x509 -in rsa-16384.x509.pem -pubkey -noout |
+              openssl pkey -pubin -outform DER |
+              sha256sum | cut -d' ' -f1
           )"
           key_pub_hash="$(
-            openssl pkey -in rsa-16384.key.pem -pubout               | openssl pkey -pubin -outform DER               | sha256sum | cut -d' ' -f1
+            openssl pkey -in rsa-16384.key.pem -pubout |
+              openssl pkey -pubin -outform DER |
+              sha256sum | cut -d' ' -f1
           )"
-
           test "$cert_pub_hash" = "$key_pub_hash"
-          echo "Matching RSA-16384 certificate/private-key public component: $cert_pub_hash"
 
           printf '%s' "Android Release Doctor ERR-038-B RSA-16384 deterministic test message" > message.txt
 
@@ -43,17 +53,54 @@ jobs:
           openssl dgst -sha256 -verify "$pubkey" -signature sig-pss-sha256.bin             -sigopt rsa_padding_mode:pss -sigopt rsa_pss_saltlen:32 message.txt
           openssl dgst -sha512 -verify "$pubkey" -signature sig-pss-sha512.bin             -sigopt rsa_padding_mode:pss -sigopt rsa_pss_saltlen:64 message.txt
 
-          rm -f rsa-16384.pk8 rsa-16384.key.pem "$pubkey"
+          repo="jedaqu/android_release_doctor"
+          ref="fix/err-038-b-rsa-1024-16384-2026-10-02"
 
-      - name: Upload matching public certificate and signature vectors
-        uses: actions/upload-artifact@v4
-        with:
-          name: err-038-b-rsa-16384-vectors-v2
-          path: |
-            rsa-16384.x509.pem
-            message.txt
-            sig-pkcs1-sha256.bin
-            sig-pkcs1-sha512.bin
-            sig-pss-sha256.bin
-            sig-pss-sha512.bin
-          if-no-files-found: error
+          cert_blob="$(base64 -w0 rsa-16384.x509.pem)"
+          pkcs1_256_blob="$(base64 -w0 sig-pkcs1-sha256.bin)"
+          pkcs1_512_blob="$(base64 -w0 sig-pkcs1-sha512.bin)"
+          pss_256_blob="$(base64 -w0 sig-pss-sha256.bin)"
+          pss_512_blob="$(base64 -w0 sig-pss-sha512.bin)"
+
+          cert_sha="$(
+            gh api --method POST "repos/$repo/git/blobs"               -f content="$cert_blob" -f encoding=base64 --jq .sha
+          )"
+          pkcs1_256_sha="$(
+            gh api --method POST "repos/$repo/git/blobs"               -f content="$pkcs1_256_blob" -f encoding=base64 --jq .sha
+          )"
+          pkcs1_512_sha="$(
+            gh api --method POST "repos/$repo/git/blobs"               -f content="$pkcs1_512_blob" -f encoding=base64 --jq .sha
+          )"
+          pss_256_sha="$(
+            gh api --method POST "repos/$repo/git/blobs"               -f content="$pss_256_blob" -f encoding=base64 --jq .sha
+          )"
+          pss_512_sha="$(
+            gh api --method POST "repos/$repo/git/blobs"               -f content="$pss_512_blob" -f encoding=base64 --jq .sha
+          )"
+
+          parent="$(gh api "repos/$repo/git/ref/heads/$ref" --jq .object.sha)"
+          base_tree="$(gh api "repos/$repo/commits/$parent" --jq .tree.sha)"
+
+          tree_json="$(
+            jq -n               --arg c "$cert_sha"               --arg a "$pkcs1_256_sha"               --arg b "$pkcs1_512_sha"               --arg c2 "$pss_256_sha"               --arg d "$pss_512_sha"               '[
+                {path:"tests/fixtures/err-038-b/rsa-16384/rsa-16384.x509.pem",mode:"100644",type:"blob",sha:$c},
+                {path:"tests/fixtures/err-038-b/rsa-16384/sig-pkcs1-sha256.bin",mode:"100644",type:"blob",sha:$a},
+                {path:"tests/fixtures/err-038-b/rsa-16384/sig-pkcs1-sha512.bin",mode:"100644",type:"blob",sha:$b},
+                {path:"tests/fixtures/err-038-b/rsa-16384/sig-pss-sha256.bin",mode:"100644",type:"blob",sha:$c2},
+                {path:"tests/fixtures/err-038-b/rsa-16384/sig-pss-sha512.bin",mode:"100644",type:"blob",sha:$d}
+              ]'
+          )"
+
+          commit_tree="$(
+            jq -n               --arg base "$base_tree"               --argjson tree "$tree_json"               '{base_tree:$base,tree:$tree}' |
+              gh api --method POST "repos/$repo/git/trees" --input - --jq .sha
+          )"
+
+          commit_sha="$(
+            jq -n               --arg message "test: replace RSA-16384 fixtures with verified AOSP vectors"               --arg tree "$commit_tree"               --arg parent "$parent"               '{message:$message,tree:$tree,parents:[$parent]}' |
+              gh api --method POST "repos/$repo/git/commits" --input - --jq .sha
+          )"
+
+          gh api --method PATCH "repos/$repo/git/refs/heads/$ref" -f sha="$commit_sha" >/dev/null
+
+          echo "Fixture commit: $commit_sha"
