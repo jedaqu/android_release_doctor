@@ -234,11 +234,11 @@ jobs:
           FLIPPED_EXIT: ${{ steps.flipped.outputs.exit-code }}
         run: |
           set -euo pipefail
-          for value in "$TRUNCATED" "$EMPTY" "$RANDOM" "$FLIPPED"; do
+          for value in "$TRUNCATED_EXIT" "$EMPTY_EXIT" "$RANDOM_EXIT" "$FLIPPED_EXIT"; do
             test "$value" = "0" || test "$value" = "1" || test "$value" = "2"
           done
-          test "$FLIPPED" != "0"
-          printf 'truncated=%s empty=%s random=%s flipped-signed=%s\n' "$TRUNCATED" "$EMPTY" "$RANDOM" "$FLIPPED"
+          test "$FLIPPED_EXIT" != "0"
+          printf 'truncated=%s empty=%s random=%s flipped-signed=%s\n' "$TRUNCATED_EXIT" "$EMPTY_EXIT" "$RANDOM_EXIT" "$FLIPPED_EXIT"
 
       - name: Upload malformed reports
         if: always()
