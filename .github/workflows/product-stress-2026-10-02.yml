@@ -228,10 +228,10 @@ jobs:
 
       - name: Validate malformed exit codes
         env:
-          TRUNCATED: ${{ steps.truncated.outputs.exit-code }}
-          EMPTY: ${{ steps.empty.outputs.exit-code }}
-          RANDOM: ${{ steps.random.outputs.exit-code }}
-          FLIPPED: ${{ steps.flipped.outputs.exit-code }}
+          TRUNCATED_EXIT: ${{ steps.truncated.outputs.exit-code }}
+          EMPTY_EXIT: ${{ steps.empty.outputs.exit-code }}
+          RANDOM_EXIT: ${{ steps.random.outputs.exit-code }}
+          FLIPPED_EXIT: ${{ steps.flipped.outputs.exit-code }}
         run: |
           set -euo pipefail
           for value in "$TRUNCATED" "$EMPTY" "$RANDOM" "$FLIPPED"; do
