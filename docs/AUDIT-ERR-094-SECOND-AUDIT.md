@@ -39,10 +39,16 @@ No changes were made to:
 - APK signing verification
 - distribution workflows
 
+## Final real-world validation
+
+A real-world AAB regression check against the corrected public code passed. The generated Report v1 output contains an AAB application section with targetSdk data, `manifest_error` is null, and no `MANIFEST-002` finding is emitted.
+
+This final evidence closes the original compatibility finding without identifying the external artifact source.
+
 ## Conclusion
 
-**SECOND AUDIT — PASS for the implementation and repository-level regression surface.**
+**SECOND AUDIT — PASS. ERR-094 RESOLVED.**
 
-ERR-094 remains formally OPEN until the corrected code is re-run against a real-world AAB in the private validation environment. That recheck is a separate evidence step and is not replaced by the synthetic protobuf fixture.
+The implementation, repository-level regression suite, and real-world AAB validation all pass. ERR-094 can now be removed from the active remediation set only at the historical-error level; its ledger entry is retained permanently.
 
 The remediation roadmap remains active because ERR-095 and ERR-096 are still open.
