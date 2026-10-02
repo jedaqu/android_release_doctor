@@ -2605,20 +2605,20 @@ mod tests {
             b"Android Release Doctor ERR-038-B RSA-16384 deterministic test message";
         let vectors = [
             (
-                0x0101_u32,
-                "tests/fixtures/err-038-b/rsa-16384/sig-pss-sha256.bin",
-            ),
-            (
-                0x0102_u32,
-                "tests/fixtures/err-038-b/rsa-16384/sig-pss-sha512.bin",
-            ),
-            (
                 0x0103_u32,
                 "tests/fixtures/err-038-b/rsa-16384/sig-pkcs1-sha256.bin",
             ),
             (
                 0x0104_u32,
                 "tests/fixtures/err-038-b/rsa-16384/sig-pkcs1-sha512.bin",
+            ),
+            (
+                0x0101_u32,
+                "tests/fixtures/err-038-b/rsa-16384/sig-pss-sha256.bin",
+            ),
+            (
+                0x0102_u32,
+                "tests/fixtures/err-038-b/rsa-16384/sig-pss-sha512.bin",
             ),
         ];
 
