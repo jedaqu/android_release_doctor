@@ -805,6 +805,19 @@ androidLibrary = { id = "com.android.library", version.ref = "agp" }
     }
 
     #[test]
+    fn resolves_dashed_version_catalog_plugin_alias() {
+        let catalog = r#"
+[plugins]
+android-application = { id = "com.android.application", version = "8.9.1" }
+"#;
+
+        assert!(looks_like_android_application(
+            "plugins { alias(libs.plugins.android.application) }",
+            Some(catalog)
+        ));
+    }
+
+    #[test]
     fn ignores_apply_false_application_alias_during_discovery() {
         let catalog = r#"
 [plugins]
