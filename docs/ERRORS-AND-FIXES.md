@@ -1169,6 +1169,17 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Validation:** Second-audit re-read required in the next Actions execution.
 - **Status:** RESOLVED — Actions run #88 / run `37015630862` passed Build, Test, Format, and Clippy.
 
+## ERR-102 — ERR-096 helper newline literal syntax error
+
+- **Milestone:** ERR-096 implementation / Actions run #91 / run `37017902525`
+- **Type:** Implementation compile failure
+- **Problem:** The new `line_end()` helper contained `'\\\\n'` in source instead of the single newline character literal `'\\n'`.
+- **Evidence:** Build failed with Rust error E0762-equivalent character-literal diagnostics at `crates/doctor-core/src/project.rs:385`. Test, Format, and Clippy did not run.
+- **Correction:** Replace only the malformed character literal with `'\\n'`. No discovery semantics changed.
+- **Scope:** ERR-096 helper implementation only.
+- **Validation:** Required in the next Actions execution.
+- **Status:** CORRECTION APPLIED — pending validation
+
 ## ERR-096 — Android application plugin alias discovery gap
 
 - **Milestone:** Post-release real-world artifact validation
