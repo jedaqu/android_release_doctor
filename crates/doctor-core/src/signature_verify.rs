@@ -2494,7 +2494,11 @@ mod tests {
 
         let (_, cert) =
             X509Certificate::from_der(&certificate).expect("RSA-1024 certificate should parse");
-        let rsa = match cert.public_key().parsed().expect("RSA public key should parse") {
+        let rsa = match cert
+            .public_key()
+            .parsed()
+            .expect("RSA public key should parse")
+        {
             PublicKey::RSA(rsa) => rsa,
             _ => panic!("expected RSA public key"),
         };
@@ -2592,8 +2596,8 @@ mod tests {
         let (_, pem) =
             parse_x509_pem(certificate_pem.as_bytes()).expect("AOSP RSA-16384 PEM should parse");
         let certificate = pem.contents.as_ref();
-        let (_, cert) =
-            X509Certificate::from_der(certificate).expect("AOSP RSA-16384 certificate should parse");
+        let (_, cert) = X509Certificate::from_der(certificate)
+            .expect("AOSP RSA-16384 certificate should parse");
 
         let rsa = match cert.public_key().parsed().unwrap() {
             PublicKey::RSA(rsa) => rsa,
