@@ -1,0 +1,249 @@
+name: Product Stress Test
+
+on:
+  push:
+    branches:
+      - test/stress-product-2026-10-02
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  action-matrix:
+    name: "Action • ${{ matrix.id }}"
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        include:
+          - id: fixture-minimal-apk
+            source: fixture
+            artifact: tests/fixtures/minimal-release.apk
+          - id: fixture-minimal-aab
+            source: fixture
+            artifact: tests/fixtures/minimal-release.aab
+          - id: fixture-v2
+            source: fixture
+            artifact: tests/fixtures/crypto-v2-release.apk
+          - id: fixture-v3
+            source: fixture
+            artifact: tests/fixtures/crypto-v3-release.apk
+          - id: fixture-v31
+            source: fixture
+            artifact: tests/fixtures/crypto-v31-release.apk
+          - id: fixture-v31-lineage-mismatch
+            source: fixture
+            artifact: tests/fixtures/crypto-v31-lineage-mismatch.apk
+          - id: fixture-v31-rotation-min-sdk
+            source: fixture
+            artifact: tests/fixtures/crypto-v31-wrong-rotation-min-sdk.apk
+          - id: fixture-ecdsa-v2
+            source: fixture
+            artifact: tests/fixtures/m07-crypto-v2-ecdsa-sha512-p384.apk
+          - id: fixture-ecdsa-v3
+            source: fixture
+            artifact: tests/fixtures/m07-crypto-v3-ecdsa-sha512-p384.apk
+          - id: external-session-aab
+            source: external
+            artifact: external/session-1.33.5.aab
+            url: https://github.com/session-foundation/session-android/releases/download/1.33.5/app-play-release.aab
+            sha256: e1460fce8b3329975e83e9340d156c596147875a2f4299a78a40c62d4f491ac9
+          - id: external-session-apk
+            source: external
+            artifact: external/session-1.33.5-universal-play-release.apk
+            url: https://github.com/session-foundation/session-android/releases/download/1.33.5/session-1.33.5-universal-play-release.apk
+            sha256: 964f99d1121118849ea5bbc6ed9a46f543dfcd8eb9dc6d6e6074f68c9ab2d220
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Prepare external artifact
+        if: matrix.source == 'external'
+        shell: bash
+        env:
+          URL: ${{ matrix.url }}
+          SHA256: ${{ matrix.sha256 }}
+          DEST: ${{ matrix.artifact }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$(dirname "$DEST")"
+          curl --fail --location --retry 4 --retry-all-errors --output "$DEST" "$URL"
+          printf '%s  %s\n' "$SHA256" "$DEST" | sha256sum --check -
+          test -s "$DEST"
+
+      - name: Action audit
+        id: doctor
+        continue-on-error: true
+        uses: ./.github/actions/android-release-doctor
+        with:
+          artifact: ${{ matrix.artifact }}
+          play: "true"
+          play-platform: mobile
+          format: json
+          output: ${{ runner.temp }}/android-release-doctor-${{ matrix.id }}.json
+
+      - name: Validate report contract
+        env:
+          EXIT_CODE: ${{ steps.doctor.outputs.exit-code }}
+          REPORT_PATH: ${{ steps.doctor.outputs.report-path }}
+        run: |
+          set -euo pipefail
+          test "$EXIT_CODE" = "0" || test "$EXIT_CODE" = "1" || test "$EXIT_CODE" = "2"
+          test -n "$REPORT_PATH"
+          test -s "$REPORT_PATH"
+          python3 - "$REPORT_PATH" "$EXIT_CODE" "${{ matrix.id }}" <<'PY'
+          import json
+          import sys
+
+          path, exit_code, case_id = sys.argv[1:4]
+          with open(path, "r", encoding="utf-8") as handle:
+              report = json.load(handle)
+
+          assert report["schema_version"] == "1.0"
+          assert "findings" in report
+          assert "summary" in report
+          assert all(key in report["summary"] for key in ("blockers", "warnings", "manual_review", "info"))
+          print(f"{case_id}: exit={exit_code} blockers={report['summary']['blockers']} warnings={report['summary']['warnings']} manual_review={report['summary']['manual_review']}")
+          PY
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stress-report-${{ matrix.id }}
+          path: ${{ runner.temp }}/android-release-doctor-${{ matrix.id }}.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+  interface-contract:
+    name: "Action interface contract"
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Success-style JSON invocation
+        id: success
+        continue-on-error: true
+        uses: ./.github/actions/android-release-doctor
+        with:
+          artifact: tests/fixtures/minimal-release.apk
+          format: json
+          output: ${{ runner.temp }}/contract-success.json
+
+      - name: Validate JSON output
+        env:
+          EXIT_CODE: ${{ steps.success.outputs.exit-code }}
+          REPORT_PATH: ${{ steps.success.outputs.report-path }}
+        run: |
+          set -euo pipefail
+          test "$EXIT_CODE" = "0" || test "$EXIT_CODE" = "1"
+          test -s "$REPORT_PATH"
+          python3 - "$REPORT_PATH" <<'PY'
+          import json, sys
+          with open(sys.argv[1], "r", encoding="utf-8") as handle:
+              report = json.load(handle)
+          assert report["schema_version"] == "1.0"
+          PY
+
+      - name: Operational error invocation
+        id: error
+        continue-on-error: true
+        uses: ./.github/actions/android-release-doctor
+        with:
+          artifact: tests/fixtures/does-not-exist.apk
+          format: json
+          output: ${{ runner.temp }}/contract-error.json
+
+      - name: Validate operational error exit contract
+        env:
+          EXIT_CODE: ${{ steps.error.outputs.exit-code }}
+        run: |
+          test "$EXIT_CODE" = "2"
+
+  malformed-input-stress:
+    name: "Malformed input stress"
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Create malformed inputs
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/malformed"
+          cp tests/fixtures/minimal-release.apk "$RUNNER_TEMP/malformed/truncated.apk"
+          truncate -s 64 "$RUNNER_TEMP/malformed/truncated.apk"
+          : > "$RUNNER_TEMP/malformed/empty.apk"
+          head -c 4096 /dev/urandom > "$RUNNER_TEMP/malformed/random.apk"
+          cp tests/fixtures/minimal-release.apk "$RUNNER_TEMP/malformed/flipped-byte.apk"
+          python3 - "$RUNNER_TEMP/malformed/flipped-byte.apk" <<'PY'
+          import sys
+          path=sys.argv[1]
+          data=bytearray(open(path,"rb").read())
+          index=max(0, len(data)//2)
+          data[index] ^= 0xFF
+          open(path,"wb").write(data)
+          PY
+          ls -l "$RUNNER_TEMP/malformed"
+
+      - name: Truncated archive
+        id: truncated
+        continue-on-error: true
+        uses: ./.github/actions/android-release-doctor
+        with:
+          artifact: ${{ runner.temp }}/malformed/truncated.apk
+          format: json
+          output: ${{ runner.temp }}/malformed/truncated.json
+
+      - name: Empty archive
+        id: empty
+        continue-on-error: true
+        uses: ./.github/actions/android-release-doctor
+        with:
+          artifact: ${{ runner.temp }}/malformed/empty.apk
+          format: json
+          output: ${{ runner.temp }}/malformed/empty.json
+
+      - name: Random bytes
+        id: random
+        continue-on-error: true
+        uses: ./.github/actions/android-release-doctor
+        with:
+          artifact: ${{ runner.temp }}/malformed/random.apk
+          format: json
+          output: ${{ runner.temp }}/malformed/random.json
+
+      - name: Flipped byte
+        id: flipped
+        continue-on-error: true
+        uses: ./.github/actions/android-release-doctor
+        with:
+          artifact: ${{ runner.temp }}/malformed/flipped-byte.apk
+          format: json
+          output: ${{ runner.temp }}/malformed/flipped.json
+
+      - name: Validate malformed exit codes
+        env:
+          TRUNCATED: ${{ steps.truncated.outputs.exit-code }}
+          EMPTY: ${{ steps.empty.outputs.exit-code }}
+          RANDOM: ${{ steps.random.outputs.exit-code }}
+          FLIPPED: ${{ steps.flipped.outputs.exit-code }}
+        run: |
+          set -euo pipefail
+          for value in "$TRUNCATED" "$EMPTY" "$RANDOM" "$FLIPPED"; do
+            test "$value" = "1" || test "$value" = "2"
+          done
+          printf 'truncated=%s empty=%s random=%s flipped=%s\n' "$TRUNCATED" "$EMPTY" "$RANDOM" "$FLIPPED"
+
+      - name: Upload malformed reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stress-malformed-reports
+          path: ${{ runner.temp }}/malformed/*.json
+          if-no-files-found: ignore
+          retention-days: 7
