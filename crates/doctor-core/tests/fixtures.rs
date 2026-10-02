@@ -501,36 +501,24 @@ fn err_095_empty_fourth_v2_fixture_produces_verified_signing_finding() {
         .v2
         .as_ref()
         .expect("ERR-095 v2 verification result should be present");
+
     assert_eq!(
         v2.state,
         doctor_core::CryptoVerificationState::Verified,
         "verification detail: {}",
         v2.detail
     );
-
-fn err_095_empty_fourth_v2_fixture_produces_verified_signing_finding() {
-    let path = decoded_apk_fixture(
-        "crypto-v2-empty-element-release.apk.b64",
-        "v2-empty-element",
-    );
-    let report = audit_path(&path).expect("ERR-095 compatibility fixture should remain auditable");
-
-    let verification = report
-        .inventory
-        .apk_signature_verification
-        .as_ref()
-        .expect("ERR-095 v2 verification result should be present");
-    let v2 = verification
-        .v2
-        .as_ref()
-        .expect("ERR-095 v2 verification result should be present");
     assert_eq!(
-        v2.state,
-        doctor_core::CryptoVerificationState::Verified,
-        "verification detail: {}",
-        v2.detail
+        report
+            .findings
+            .iter()
+            .find(|finding| finding.rule_id == "SIGNING-003")
+            .map(|finding| finding.severity),
+        Some(Severity::Pass)
     );
 
+    fs::remove_file(path).expect("decoded ERR-095 fixture should be removed");
+}
 
 #[test]
 fn tampered_v2_fixture_produces_signature_blocker() {
