@@ -1219,3 +1219,16 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Documentation consistency note:** `README.md` and `CHANGELOG.md` currently describe `v0.1.1` as published, but GitHub currently has no `v0.1.1` Release. This must be corrected during release preparation.
 - **Status:** OPEN
 - **Pre-audit:** `docs/AUDIT-ERR-104-PRE-AUDIT.md`
+
+
+## ERR-105 — README retained stale v0.1.1 package filenames
+
+- **Milestone:** M0.9 / ERR-093 v0.1.2 release rebaseline
+- **Type:** Public documentation consistency defect
+- **Observed:** After the v0.1.2 release rebaseline, the README release target was `v0.1.2`, but the three supported-download filenames still contained `v0.1.1`.
+- **Problem:** Users could be directed to package filenames that do not correspond to the current release target.
+- **Root cause:** The rebaseline updated surrounding release references but missed the three literal package filename rows in the supported-download table.
+- **Scope:** Replace only those three stale filenames with their `v0.1.2` equivalents.
+- **Out of scope:** Product code, distribution workflow, checksum logic, package matrix, CLI/version logic, changelog, or historical tags/releases.
+- **Status:** OPEN
+- **Pre-audit:** `docs/AUDIT-ERR-105-PRE-AUDIT.md`
