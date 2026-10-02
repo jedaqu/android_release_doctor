@@ -1945,6 +1945,7 @@ impl<'a> LengthReader<'a> {
 mod tests {
     use super::*;
     use std::io::Write;
+    use x509_parser::pem::parse_x509_pem;
 
     #[test]
     fn verifies_real_v2_signed_apk_fixture() {
