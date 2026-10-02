@@ -757,6 +757,105 @@ android {
     }
 
     #[test]
+    fn discovers_android_application_from_version_catalog_alias() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures/project-release-version-catalog");
+
+        let project = parse_project(root).expect("version-catalog project should be discovered");
+
+        assert_eq!(project.module_name, "app");
+        assert_eq!(project.syntax, GradleSyntax::Kotlin);
+        assert_eq!(
+            project.application_id.as_deref(),
+            Some("com.example.catalogfixture")
+        );
+        assert_eq!(project.target_sdk, Some(35));
+        assert_eq!(project.version_code, Some(8));
+        assert_eq!(project.version_name.as_deref(), Some("2.0.0"));
+        assert_eq!(project.release_debuggable, Some(false));
+    }
+
+    #[test]
+    fn direct_application_plugin_id_remains_an_application_match() {
+        assert!(looks_like_android_application(
+            "plugins { id(\"com.android.application\") }",
+            None
+        ));
+    }
+
+    #[test]
+    fn resolves_only_android_application_plugin_aliases() {
+        let catalog = r#"
+[versions]
+agp = "8.9.1"
+
+[plugins]
+androidApplication = { id = "com.android.application", version.ref = "agp" }
+androidLibrary = { id = "com.android.library", version.ref = "agp" }
+"#;
+
+        assert!(looks_like_android_application(
+            "plugins { alias(libs.plugins.androidApplication) }",
+            Some(catalog)
+        ));
+        assert!(!looks_like_android_application(
+            "plugins { alias(libs.plugins.androidLibrary) }",
+            Some(catalog)
+        ));
+    }
+
+    #[test]
+    fn ignores_apply_false_application_alias_during_discovery() {
+        let catalog = r#"
+[plugins]
+androidApplication = { id = "com.android.application", version = "8.9.1" }
+"#;
+
+        assert!(!looks_like_android_application(
+            "plugins { alias(libs.plugins.androidApplication) apply false }",
+            Some(catalog)
+        ));
+    }
+
+    #[test]
+    fn ignores_application_alias_text_inside_plugin_strings() {
+        let catalog = r#"
+[plugins]
+androidApplication = { id = "com.android.application", version = "8.9.1" }
+"#;
+
+        assert!(!looks_like_android_application(
+            r#"plugins { id("example") println("alias(libs.plugins.androidApplication)") }"#,
+            Some(catalog)
+        ));
+    }
+
+    #[test]
+    fn ignores_alias_without_a_version_catalog() {
+        assert!(!looks_like_android_application(
+            "plugins { alias(libs.plugins.androidApplication) }",
+            None
+        ));
+    }
+
+    #[test]
+    fn ignores_aliases_in_non_plugin_blocks() {
+        let catalog = r#"
+[plugins]
+androidApplication = { id = "com.android.application", version = "8.9.1" }
+"#;
+
+        assert!(!looks_like_android_application(
+            r#"
+            dependencies {
+                println("alias(libs.plugins.androidApplication)")
+            }
+            "#,
+            Some(catalog)
+        ));
+    }
+
+    #[test]
     fn ignores_words_inside_comments() {
         let source = strip_comments(
             r#"
