@@ -6,9 +6,9 @@ Scope: Current public cryptographic documentation after ERR-038-A and ERR-038-B
 
 ## Closure state
 
-This documentation block follows:
+This documentation block completed the full controlled sequence:
 
-**PRE-AUDIT → scoped correction → second audit → PR CI → merge → post-merge main CI → checkpoint.**
+**PRE-AUDIT → scoped correction → second audit → PR CI → merge → post-merge main CI → checkpoint → checkpoint CI → checkpoint merge → final post-merge main CI.**
 
 ## Objective
 
@@ -38,6 +38,10 @@ No Rust production code, tests, fixtures, workflows, changelog, release metadata
 - PR CI run #167 / `37058009288`: Build PASS; Test PASS; Format PASS; Clippy PASS
 - Merge commit: `385bec9847e6f4c5843655a6693d05fec294cb4b`
 - Post-merge main Rust CI run #168 / `37058195631`: Build PASS; Test PASS; Format PASS; Clippy PASS
+- Checkpoint PR: #42
+- Checkpoint PR CI run #169 / `37058412425`: Build PASS; Test PASS; Format PASS; Clippy PASS
+- Checkpoint merge commit: `7fa7915a8de841b44e9ddc5c5ea53a0e751232b5`
+- Final post-merge main Rust CI run #170 / `37058583237`: Build PASS; Test PASS; Format PASS; Clippy PASS
 - Pre-audit: `docs/AUDIT-ERR-038-PUBLIC-CRYPTO-DOCS-PRE-AUDIT-2026-10-02.md`
 - Second audit: `docs/AUDIT-ERR-038-PUBLIC-CRYPTO-DOCS-SECOND-AUDIT-2026-10-02.md`
 
@@ -51,4 +55,4 @@ This checkpoint does not authorize DSA implementation and does not change the v3
 
 The public cryptographic documentation is synchronized with the currently validated implementation state.
 
-**CHECKPOINT READY FOR TERMINAL VALIDATION.**
+**CHECKPOINT CLOSED — PASS.**
