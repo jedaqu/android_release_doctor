@@ -1111,7 +1111,7 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Implementation:** Applied on the ERR-095 branch in `crates/doctor-core/src/signature_verify.rs`; focused parser and integration regressions added. Final validation remains pending.
 - **Regression target:** Conventional three-field v2 data remains Verified; the compatible fourth-empty-element structure becomes Verified; malformed/truncated/non-empty/multiple residual variants remain Invalid.
 - **Public-boundary note:** The real-world artifact and private evidence remain private. The public regression will encode the demonstrated structural contract rather than publish the external artifact.
-- **Status:** OPEN — root cause demonstrated; correction delimited.
+- **Status:** RESOLVED — root cause demonstrated, minimal correction applied, second audit completed, public-boundary audit passed, and Actions run #88 / run `37015630862` passed Build, Test, Format, and Clippy.
 - **Delimitation:** docs/AUDIT-ERR-095-DELIMITATION.md
 - **Roadmap:** docs/ROADMAP-ERR-094-096.md
 
@@ -1167,7 +1167,7 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction:** Replace that stale path and describe the checksum as the SHA-256 of the decoded APK bytes. No product or test behavior changed.
 - **Scope:** Public documentation only.
 - **Validation:** Second-audit re-read required in the next Actions execution.
-- **Status:** CORRECTION APPLIED — pending validation
+- **Status:** RESOLVED — Actions run #88 / run `37015630862` passed Build, Test, Format, and Clippy.
 
 ## ERR-096 — Android application plugin alias discovery gap
 
