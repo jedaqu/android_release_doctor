@@ -2638,17 +2638,15 @@ mod tests {
                 &signature,
             )
             .unwrap_or_else(|error| {
-                panic!(
-                    "RSA-16384 algorithm 0x{algorithm_id:04x} should verify: {error}"
-                )
+                panic!("RSA-16384 algorithm 0x{algorithm_id:04x} should verify: {error}")
             });
         }
 
-        let mut tampered =
-            std::fs::read(std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(
-                "../../tests/fixtures/err-038-b/rsa-16384/sig-pss-sha256.bin",
-            ))
-            .expect("RSA-16384 signature fixture should be readable");
+        let mut tampered = std::fs::read(
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../../tests/fixtures/err-038-b/rsa-16384/sig-pss-sha256.bin"),
+        )
+        .expect("RSA-16384 signature fixture should be readable");
         *tampered.last_mut().expect("signature must not be empty") ^= 0x01;
         assert!(
             verify_extended_rsa_signature(
