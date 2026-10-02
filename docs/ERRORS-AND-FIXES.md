@@ -1083,3 +1083,39 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction commit:** `4c849b2a0e007270b32d53c4bd64a17da171ab5e`
 - **Validation:** Pending PR CI and post-correction distribution validation.
 - **Status:** OPEN
+
+
+## ERR-094 — AAB manifest parsing compatibility gap
+
+- **Milestone:** Post-release real-world artifact validation
+- **Type:** Artifact parsing / Android App Bundle compatibility
+- **Observed:** A real AAB audit reached manifest evaluation but the manifest parser reported an invalid Android binary XML root.
+- **Problem:** The current manifest parser expects the Android binary XML representation used by APK manifests and does not yet decode the protobuf manifest representation used inside Android App Bundles.
+- **Impact:** Manifest-derived evidence such as target SDK may be unavailable for AAB audits, which can cascade into downstream Play-readiness findings.
+- **Correction:** Pending focused audit. Add native AAB manifest decoding without weakening the existing APK manifest parser.
+- **Validation target:** Focused AAB manifest fixtures, real-world AAB regression coverage, and successful extraction of manifest fields required by the existing audit rules.
+- **Status:** OPEN
+- **Roadmap:** docs/ROADMAP-ERR-094-096.md
+
+## ERR-095 — APK v2 signature false negative
+
+- **Milestone:** Post-release real-world artifact validation
+- **Type:** Cryptographic verification / compatibility defect
+- **Observed:** A real APK audit reported SIGNING-003 with `v2 signed data contains trailing bytes`.
+- **Independent evidence:** The same APK was accepted by the Android SDK apksigner verifier for APK Signature Scheme v2 and v3.
+- **Problem:** ADR's v2 parser can classify a valid real-world signature as invalid.
+- **Correction:** Pending focused audit of length-delimited v2 signed-data parsing, including certificate-chain and additional-attribute handling. No relaxation of malformed-input rejection without evidence.
+- **Validation target:** Valid real-world v2/v3 APK verification plus negative tests proving malformed/trailing data remains rejected.
+- **Status:** OPEN
+- **Roadmap:** docs/ROADMAP-ERR-094-096.md
+
+## ERR-096 — Android application plugin alias discovery gap
+
+- **Milestone:** Post-release real-world artifact validation
+- **Type:** Project parser / Kotlin DSL compatibility
+- **Observed:** A real Android application project using build.gradle.kts and a version-catalog plugin alias was not recognized by project discovery.
+- **Problem:** Current discovery relies on finding the literal com.android.application in the module build file and therefore misses supported Kotlin DSL/version-catalog alias usage.
+- **Correction:** Pending focused audit of safe application-plugin detection for direct plugin IDs and version-catalog aliases, without introducing broad text heuristics.
+- **Validation target:** Representative Groovy/Kotlin DSL direct-ID fixtures, version-catalog alias fixtures, and negative cases that must remain non-application projects.
+- **Status:** OPEN
+- **Roadmap:** docs/ROADMAP-ERR-094-096.md
