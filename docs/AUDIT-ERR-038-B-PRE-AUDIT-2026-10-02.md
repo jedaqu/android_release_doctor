@@ -33,6 +33,7 @@ Android APK Signature Scheme v2 defines:
 
 - 0x0101 — RSASSA-PSS, SHA-256 message digest, MGF1-SHA-256, 32-byte salt, trailer 0xbc.
 - 0x0102 — RSASSA-PSS, SHA-512 message digest, MGF1-SHA-512, 64-byte salt, trailer 0xbc.
+- A 1024-bit RSA modulus is too short to encode a valid RSASSA-PSS/SHA-512 signature with the required 64-byte salt. AOSP therefore does not provide a 1024-bit PSS/SHA-512 fixture.
 - 0x0103 — RSASSA-PKCS1-v1_5 with SHA-256.
 - 0x0104 — RSASSA-PKCS1-v1_5 with SHA-512.
 
@@ -95,7 +96,7 @@ Certificate/public-key binding remains enforced by the existing verify_certifica
 ERR-038-B may be considered complete only when all of the following pass:
 
 1. 1024-bit RSA verifies successfully for 0x0101.
-2. 1024-bit RSA verifies successfully for 0x0102.
+2. 1024-bit RSA + 0x0102 is explicitly Unsupported because the Android PSS/SHA-512/64-byte-salt encoding cannot fit a 1024-bit modulus.
 3. 1024-bit RSA verifies successfully for 0x0103.
 4. 1024-bit RSA verifies successfully for 0x0104.
 5. 16384-bit RSA verifies successfully for 0x0101.
@@ -108,7 +109,7 @@ ERR-038-B may be considered complete only when all of the following pass:
 12. RSA sizes outside the documented Android matrix remain Unsupported.
 13. Certificate/SPKI binding remains enforced.
 14. v2/v3 content digest verification remains unchanged.
-15. Deterministic repository-contained regression vectors cover both key-size boundaries and all four RSA algorithm IDs.
+15. Deterministic repository-contained regression vectors cover all cryptographically valid target combinations.
 16. Build → Test → Format → Clippy pass in GitHub Actions.
 17. A second audit confirms the diff does not replace the existing 2048–8192 backend or broaden scope.
 18. Post-merge main CI passes.
@@ -137,6 +138,8 @@ This increment is acceptable only because the dependency is used exclusively for
 ## 9. Pre-audit conclusion
 
 ERR-038-B PRE-AUDIT: PASS.
+
+Compatibility correction: the initial generic acceptance wording for 1024-bit 0x0102 has been narrowed to the actual Android/AOSP compatibility boundary; this is not an implementation defect.
 
 The remaining RSA coverage gap is technically correctable through a dedicated public-verification backend while preserving the current validated ring path.
 
