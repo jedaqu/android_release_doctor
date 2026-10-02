@@ -1090,11 +1090,12 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Milestone:** Post-release real-world artifact validation
 - **Type:** Artifact parsing / Android App Bundle compatibility
 - **Observed:** A real AAB audit reached manifest evaluation but the manifest parser reported an invalid Android binary XML root.
-- **Problem:** The current manifest parser expects the Android binary XML representation used by APK manifests and does not yet decode the protobuf manifest representation used inside Android App Bundles.
-- **Impact:** Manifest-derived evidence such as target SDK may be unavailable for AAB audits, which can cascade into downstream Play-readiness findings.
-- **Correction:** Pending focused audit. Add native AAB manifest decoding without weakening the existing APK manifest parser.
-- **Validation target:** Focused AAB manifest fixtures, real-world AAB regression coverage, and successful extraction of manifest fields required by the existing audit rules.
-- **Status:** OPEN
+- **Problem:** The previous AAB path passed the protobuf manifest representation through the APK-specific Android Binary XML parser.
+- **Impact:** Manifest-derived evidence such as target SDK was unavailable for affected AAB audits and could cascade into downstream Play-readiness findings.
+- **Correction:** Added a focused protobuf manifest decoder for the AAPT2 `XmlNode`/`XmlElement`/`XmlAttribute` representation used by AAB manifests. APK manifests continue to use the existing binary-XML parser unchanged. The decoder extracts only the existing `ManifestInfo` fields and component evidence required by the current audit.
+- **Validation:** Public Rust CI run `36960802366` reached terminal success for Build, Test, Format, and Clippy. Focused parser tests and an end-to-end generated-protobuf AAB audit regression pass. Existing APK manifest tests also pass.
+- **Second audit:** Exact diff limited to `crates/doctor-core/src/lib.rs`, new `crates/doctor-core/src/manifest_proto.rs`, and the focused AAB fixture updates in `crates/doctor-core/tests/fixtures.rs`. No Play, project, signing, or APK AXML logic was changed.
+- **Status:** OPEN — code correction and public validation are complete; real-world AAB recheck remains pending before final closure.
 - **Roadmap:** docs/ROADMAP-ERR-094-096.md
 
 ## ERR-095 — APK v2 signature false negative
