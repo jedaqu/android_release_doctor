@@ -38,14 +38,14 @@ jobs:
             set -e
             test "$code" = "0" || test "$code" = "1" || test "$code" = "2"
             python3 - "$report" "$id" "$rule" "$expected" <<'PY'
-import json,sys
-path,case_id,rule,expected=sys.argv[1:5]
-r=json.load(open(path,encoding="utf-8"))
-f=next((x for x in r["findings"] if x["rule_id"]==rule),None)
-assert f is not None, f"{case_id}: missing {rule}"
-assert f["severity"]==expected, f"{case_id}: expected {expected}, got {f['severity']}"
-print(case_id, rule, f["severity"])
-PY
+          import json,sys
+          path,case_id,rule,expected=sys.argv[1:5]
+          r=json.load(open(path,encoding="utf-8"))
+          f=next((x for x in r["findings"] if x["rule_id"]==rule),None)
+          assert f is not None, f"{case_id}: missing {rule}"
+          assert f["severity"]==expected, f"{case_id}: expected {expected}, got {f['severity']}"
+          print(case_id, rule, f["severity"])
+          PY
           }
           run_case v2 tests/fixtures/crypto-v2-release.apk SIGNING-003 PASS
           run_case v3 tests/fixtures/crypto-v3-release.apk SIGNING-003 PASS
@@ -67,14 +67,14 @@ PY
             set -e
             test "$code" = "0" || test "$code" = "1"
             python3 - "$report" "$platform" <<'PY'
-import json,sys
-r=json.load(open(sys.argv[1],encoding="utf-8"))
-platform=sys.argv[2]
-assert r["play"]["platform"]==platform
-assert r["play"]["policy_version"]=="2026-08-31"
-assert any(x["rule_id"]=="PLAY-000" for x in r["findings"])
-print(platform,"ok")
-PY
+          import json,sys
+          r=json.load(open(sys.argv[1],encoding="utf-8"))
+          platform=sys.argv[2]
+          assert r["play"]["platform"]==platform
+          assert r["play"]["policy_version"]=="2026-08-31"
+          assert any(x["rule_id"]=="PLAY-000" for x in r["findings"])
+          print(platform,"ok")
+          PY
           done
       - name: Action smoke test
         continue-on-error: true
@@ -105,42 +105,42 @@ PY
         run: |
           set -euo pipefail
           python3 <<'PY'
-  from pathlib import Path
-  from zipfile import ZipFile,ZIP_DEFLATED,ZIP_STORED
-  base_apk=Path("tests/fixtures/minimal-release.apk")
-  base_aab=Path("tests/fixtures/minimal-release.aab")
-  out=Path("validation-output")
-  out.mkdir(parents=True,exist_ok=True)
-  
-  def elf64(a):
-      b=bytearray(120); b[0:4]=b"\x7fELF"; b[4]=2; b[5]=1
-      b[32:40]=(64).to_bytes(8,"little"); b[54:56]=(56).to_bytes(2,"little"); b[56:58]=(1).to_bytes(2,"little")
-      b[64:68]=(1).to_bytes(4,"little"); b[112:120]=a.to_bytes(8,"little")
-      return bytes(b)
-  
-  def elf32(a):
-      b=bytearray(84); b[0:4]=b"\x7fELF"; b[4]=1; b[5]=1
-      b[28:32]=(52).to_bytes(4,"little"); b[42:44]=(32).to_bytes(2,"little"); b[44:46]=(1).to_bytes(2,"little")
-      b[52:56]=(1).to_bytes(4,"little"); b[80:84]=a.to_bytes(4,"little")
-      return bytes(b)
-  
-  def apk(name,libs):
-      with ZipFile(base_apk,"r") as src, ZipFile(out/name,"w",ZIP_DEFLATED) as dst:
-          for i in src.infolist():
-              if not i.filename.startswith("lib/"):
-                  dst.writestr(i,src.read(i.filename))
-          for p,d in libs.items():
-              dst.writestr(p,d)
-  
-  apk("abi-good64.apk",{"lib/arm64-v8a/libgood.so":elf64(16384),"lib/x86_64/libgood.so":elf64(16384)})
-  apk("abi-bad64.apk",{"lib/arm64-v8a/libbad.so":elf64(4096)})
-  apk("abi-mixed-32bad.apk",{"lib/arm64-v8a/libgood.so":elf64(16384),"lib/x86_64/libgood.so":elf64(16384),"lib/armeabi-v7a/liblegacy.so":elf32(4096)})
-  with ZipFile(base_aab,"r") as src, ZipFile(out/"complex-native.aab","w",ZIP_DEFLATED) as dst:
-      for i in src.infolist():
-          dst.writestr(i,src.read(i.filename))
-      dst.writestr("feature/manifest/AndroidManifest.xml",b"feature-manifest-intentionally-not-base")
-      dst.writestr("base/lib/arm64-v8a/libaab.so",elf64(16384),compress_type=ZIP_STORED)
-      dst.writestr("base/assets/odd name/emoji-\U0001f680.txt",b"edge")
+            from pathlib import Path
+            from zipfile import ZipFile,ZIP_DEFLATED,ZIP_STORED
+            base_apk=Path("tests/fixtures/minimal-release.apk")
+            base_aab=Path("tests/fixtures/minimal-release.aab")
+            out=Path("validation-output")
+            out.mkdir(parents=True,exist_ok=True)
+            
+            def elf64(a):
+                b=bytearray(120); b[0:4]=b"\x7fELF"; b[4]=2; b[5]=1
+                b[32:40]=(64).to_bytes(8,"little"); b[54:56]=(56).to_bytes(2,"little"); b[56:58]=(1).to_bytes(2,"little")
+                b[64:68]=(1).to_bytes(4,"little"); b[112:120]=a.to_bytes(8,"little")
+                return bytes(b)
+            
+            def elf32(a):
+                b=bytearray(84); b[0:4]=b"\x7fELF"; b[4]=1; b[5]=1
+                b[28:32]=(52).to_bytes(4,"little"); b[42:44]=(32).to_bytes(2,"little"); b[44:46]=(1).to_bytes(2,"little")
+                b[52:56]=(1).to_bytes(4,"little"); b[80:84]=a.to_bytes(4,"little")
+                return bytes(b)
+            
+            def apk(name,libs):
+                with ZipFile(base_apk,"r") as src, ZipFile(out/name,"w",ZIP_DEFLATED) as dst:
+                    for i in src.infolist():
+                        if not i.filename.startswith("lib/"):
+                            dst.writestr(i,src.read(i.filename))
+                    for p,d in libs.items():
+                        dst.writestr(p,d)
+            
+            apk("abi-good64.apk",{"lib/arm64-v8a/libgood.so":elf64(16384),"lib/x86_64/libgood.so":elf64(16384)})
+            apk("abi-bad64.apk",{"lib/arm64-v8a/libbad.so":elf64(4096)})
+            apk("abi-mixed-32bad.apk",{"lib/arm64-v8a/libgood.so":elf64(16384),"lib/x86_64/libgood.so":elf64(16384),"lib/armeabi-v7a/liblegacy.so":elf32(4096)})
+            with ZipFile(base_aab,"r") as src, ZipFile(out/"complex-native.aab","w",ZIP_DEFLATED) as dst:
+                for i in src.infolist():
+                    dst.writestr(i,src.read(i.filename))
+                dst.writestr("feature/manifest/AndroidManifest.xml",b"feature-manifest-intentionally-not-base")
+                dst.writestr("base/lib/arm64-v8a/libaab.so",elf64(16384),compress_type=ZIP_STORED)
+                dst.writestr("base/assets/odd name/emoji-\U0001f680.txt",b"edge")
           PY
       - name: Validate controlled PLAY-005 semantics
         shell: bash
@@ -155,13 +155,13 @@ PY
             set -e
             test "$code" = "0" || test "$code" = "1"
             python3 - "$report" "$id" "$expected" <<'PY'
-import json,sys
-r=json.load(open(sys.argv[1],encoding="utf-8"))
-case,expected=sys.argv[2:4]
-f=next(x for x in r["findings"] if x["rule_id"]=="PLAY-005")
-print(case,f["severity"],sorted({x["abi"] for x in r["inventory"]["native_libraries"]}))
-assert f["severity"]==expected,f"{case}: expected {expected}, got {f['severity']}"
-PY
+          import json,sys
+          r=json.load(open(sys.argv[1],encoding="utf-8"))
+          case,expected=sys.argv[2:4]
+          f=next(x for x in r["findings"] if x["rule_id"]=="PLAY-005")
+          print(case,f["severity"],sorted({x["abi"] for x in r["inventory"]["native_libraries"]}))
+          assert f["severity"]==expected,f"{case}: expected {expected}, got {f['severity']}"
+          PY
           }
           check good64 validation-output/abi-good64.apk PASS
           check bad64 validation-output/abi-bad64.apk BLOCKER
@@ -176,14 +176,14 @@ PY
           set -e
           test "$code" = "0" || test "$code" = "1"
           python3 <<'PY'
-  import json
-  r=json.load(open("validation-output/complex-native.json",encoding="utf-8"))
-  assert r["artifact"]["kind"]=="AAB"
-  assert r["application"]["package_name"]=="com.example.protoaab"
-  f=next(x for x in r["findings"] if x["rule_id"]=="PLAY-005")
-  assert f["severity"]=="MANUAL-REVIEW",f["severity"]
-  assert any(x["path"]=="feature/manifest/AndroidManifest.xml" for x in r["inventory"]["entries"])
-  print("AAB boundary ok")
+            import json
+            r=json.load(open("validation-output/complex-native.json",encoding="utf-8"))
+            assert r["artifact"]["kind"]=="AAB"
+            assert r["application"]["package_name"]=="com.example.protoaab"
+            f=next(x for x in r["findings"] if x["rule_id"]=="PLAY-005")
+            assert f["severity"]=="MANUAL-REVIEW",f["severity"]
+            assert any(x["path"]=="feature/manifest/AndroidManifest.xml" for x in r["inventory"]["entries"])
+            print("AAB boundary ok")
           PY
 
   project-mismatch:
@@ -205,12 +205,12 @@ PY
             local dir="validation-output/projects/$id"
             cp -R validation-output/projects/base "$dir"
             python3 - "$dir/build.gradle" "$old" "$new" <<'PY'
-import sys
-p,old,new=sys.argv[1:4]
-s=open(p,encoding="utf-8").read()
-assert old in s,old
-open(p,"w",encoding="utf-8").write(s.replace(old,new,1))
-PY
+          import sys
+          p,old,new=sys.argv[1:4]
+          s=open(p,encoding="utf-8").read()
+          assert old in s,old
+          open(p,"w",encoding="utf-8").write(s.replace(old,new,1))
+          PY
             local report="validation-output/projects/$id.json"
             set +e
             ./target/debug/android-release-doctor --format json --output "$report" --project "$dir" tests/fixtures/minimal-release.apk
@@ -218,13 +218,13 @@ PY
             set -e
             test "$code" = "0" || test "$code" = "1" || test "$code" = "2"
             python3 - "$report" "$id" "$rule" "$severity" <<'PY'
-import json,sys
-r=json.load(open(sys.argv[1],encoding="utf-8"))
-case,rule,expected=sys.argv[2:5]
-f=next(x for x in r["findings"] if x["rule_id"]==rule)
-assert f["severity"]==expected,f"{case}: {f['severity']} != {expected}"
-print(case,rule,f["severity"])
-PY
+          import json,sys
+          r=json.load(open(sys.argv[1],encoding="utf-8"))
+          case,rule,expected=sys.argv[2:5]
+          f=next(x for x in r["findings"] if x["rule_id"]==rule)
+          assert f["severity"]==expected,f"{case}: {f['severity']} != {expected}"
+          print(case,rule,f["severity"])
+          PY
           }
           make_case appid "applicationId 'com.example.doctorfixture'" "applicationId 'com.example.otherapp'" CROSSCHECK-001 BLOCKER
           make_case target "targetSdk 35" "targetSdk 36" CROSSCHECK-002 BLOCKER
@@ -245,28 +245,28 @@ PY
         run: |
           set -euo pipefail
           python3 <<'PY'
-  from pathlib import Path
-  from zipfile import ZipFile,ZIP_DEFLATED,ZIP_STORED
-  base=Path("tests/fixtures/minimal-release.apk")
-  out=Path("validation-output")
-  out.mkdir(parents=True,exist_ok=True)
-  with ZipFile(base,"r") as src:
-      entries=[(i,src.read(i.filename)) for i in src.infolist()]
-  with ZipFile(out/"missing-manifest.apk","w",ZIP_DEFLATED) as dst:
-      for i,d in entries:
-          if i.filename!="AndroidManifest.xml": dst.writestr(i,d)
-  with ZipFile(out/"bad-manifest.apk","w",ZIP_DEFLATED) as dst:
-      for i,d in entries: dst.writestr(i,b"\x03\x00\x08" if i.filename=="AndroidManifest.xml" else d)
-  with ZipFile(out/"large-central-directory.apk","w",ZIP_STORED) as dst:
-      for i,d in entries: dst.writestr(i,d)
-      for n in range(25000): dst.writestr(f"assets/stress/{n:05d}-"+("x"*80)+".bin",b"x")
-  with ZipFile(out/"weird-paths.apk","w",ZIP_DEFLATED) as dst:
-      for i,d in entries: dst.writestr(i,d)
-      dst.writestr("../outside.txt",b"edge")
-      dst.writestr("assets/../normalized.txt",b"edge")
-      dst.writestr("assets/space name.txt",b"edge")
-      dst.writestr("assets/emoji-\U0001f680.txt",b"edge")
-      dst.writestr("assets/"+"y"*240+".txt",b"edge")
+            from pathlib import Path
+            from zipfile import ZipFile,ZIP_DEFLATED,ZIP_STORED
+            base=Path("tests/fixtures/minimal-release.apk")
+            out=Path("validation-output")
+            out.mkdir(parents=True,exist_ok=True)
+            with ZipFile(base,"r") as src:
+                entries=[(i,src.read(i.filename)) for i in src.infolist()]
+            with ZipFile(out/"missing-manifest.apk","w",ZIP_DEFLATED) as dst:
+                for i,d in entries:
+                    if i.filename!="AndroidManifest.xml": dst.writestr(i,d)
+            with ZipFile(out/"bad-manifest.apk","w",ZIP_DEFLATED) as dst:
+                for i,d in entries: dst.writestr(i,b"\x03\x00\x08" if i.filename=="AndroidManifest.xml" else d)
+            with ZipFile(out/"large-central-directory.apk","w",ZIP_STORED) as dst:
+                for i,d in entries: dst.writestr(i,d)
+                for n in range(25000): dst.writestr(f"assets/stress/{n:05d}-"+("x"*80)+".bin",b"x")
+            with ZipFile(out/"weird-paths.apk","w",ZIP_DEFLATED) as dst:
+                for i,d in entries: dst.writestr(i,d)
+                dst.writestr("../outside.txt",b"edge")
+                dst.writestr("assets/../normalized.txt",b"edge")
+                dst.writestr("assets/space name.txt",b"edge")
+                dst.writestr("assets/emoji-\U0001f680.txt",b"edge")
+                dst.writestr("assets/"+"y"*240+".txt",b"edge")
           PY
       - name: Validate malformed findings
         shell: bash
@@ -281,12 +281,12 @@ PY
           test "$missing" = "1"
           test "$bad" = "1"
           python3 <<'PY'
-  import json
-  for n in ("missing","bad"):
-      r=json.load(open("validation-output/"+n+".json",encoding="utf-8"))
-      f=next(x for x in r["findings"] if x["rule_id"]=="MANIFEST-002")
-      assert f["severity"]=="BLOCKER"
-      print(n,f["severity"])
+            import json
+            for n in ("missing","bad"):
+                r=json.load(open("validation-output/"+n+".json",encoding="utf-8"))
+                f=next(x for x in r["findings"] if x["rule_id"]=="MANIFEST-002")
+                assert f["severity"]=="BLOCKER"
+                print(n,f["severity"])
           PY
       - name: Validate scale and weird-path corpora
         shell: bash
@@ -299,12 +299,12 @@ PY
             set -e
             test "$code" = "0" || test "$code" = "1" || test "$code" = "2"
             python3 - "$n" <<'PY'
-import json,sys
-n=sys.argv[1]
-r=json.load(open("validation-output/"+n+".json",encoding="utf-8"))
-assert r["schema_version"]=="1.0"
-print(n,"entries=",len(r["inventory"]["entries"]))
-PY
+          import json,sys
+          n=sys.argv[1]
+          r=json.load(open("validation-output/"+n+".json",encoding="utf-8"))
+          assert r["schema_version"]=="1.0"
+          print(n,"entries=",len(r["inventory"]["entries"]))
+          PY
           done
       - name: Validate CLI usage errors
         shell: bash
@@ -376,10 +376,10 @@ PY
           for f in validation-output/session.json validation-output/session-aab.json validation-output/termux.json; do
             test -s "$f"
             python3 - "$f" <<'PY'
-import json,sys
-r=json.load(open(sys.argv[1],encoding="utf-8"))
-assert r["schema_version"]=="1.0"
-assert r["artifact"]["kind"] in ("APK","AAB")
-print(sys.argv[1],r["artifact"]["kind"],r["application"].get("target_sdk"),len(r["inventory"]["native_libraries"]))
-PY
+          import json,sys
+          r=json.load(open(sys.argv[1],encoding="utf-8"))
+          assert r["schema_version"]=="1.0"
+          assert r["artifact"]["kind"] in ("APK","AAB")
+          print(sys.argv[1],r["artifact"]["kind"],r["application"].get("target_sdk"),len(r["inventory"]["native_libraries"]))
+          PY
           done
