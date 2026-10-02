@@ -1,3 +1,29 @@
+## [0.1.3] — Cryptographic coverage expansion
+
+### Highlights
+
+This release publishes the validated cryptographic coverage added after v0.1.2:
+
+- ECDSA/SHA-256 with NIST P-521 (0x0201).
+- ECDSA/SHA-512 with NIST P-521 (0x0202).
+- RSA-PSS/SHA-256 with 1024-bit and 16384-bit keys (0x0101).
+- RSA-PSS/SHA-512 with 16384-bit keys (0x0102); 1024-bit RSA/PSS/SHA-512 remains explicitly Unsupported because the required salt does not fit the modulus boundary.
+- RSA PKCS#1 v1.5/SHA-256 with 1024-bit and 16384-bit keys (0x0103).
+- RSA PKCS#1 v1.5/SHA-512 with 1024-bit and 16384-bit keys (0x0104).
+- Deterministic positive/negative cryptographic fixtures and validation for the new boundaries.
+
+### Explicit boundaries
+
+- DSA/SHA-256 (0x0301) remains Unsupported and is deferred for a separate security/backend decision.
+- APK Signature Scheme v3.2/PQC remains outside cryptographic verification scope.
+- AAB cryptographic signing verification remains outside scope; AABs are audited as bundle artifacts, while APK signing is verified from the APK signing block.
+
+### Distribution
+
+The release package matrix remains Linux x86_64, Windows x86_64, and Intel macOS x86_64. Published release artifacts are accompanied by SHA256SUMS.
+
+v0.1.3 is the first public release containing the validated ERR-038-A and ERR-038-B cryptographic expansion.
+
 # Changelog
 
 ## [0.1.2] — Publication integrity correction
