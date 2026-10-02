@@ -1051,3 +1051,20 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Scope:** Public documentation only. No product, CLI, Action, test, workflow, or release behavior changed.
 - **Validation:** Exact correction diff reviewed; public-boundary second audit completed; terminal Rust CI passed Build, Test, Format, and Clippy on the correction commit.
 - **Status:** RESOLVED — correction commit `e140d7242e8fadc003774c0e7425ee75e4a66bfb` merged to `main` by PR #5 as `b22616a92c406448a146876292f6bfa1fc3cfca3`. CI run `36941326086` completed successfully.
+
+
+## ERR-092 — M0.9 AUDIT-005 publication job lacked repository context
+
+- **Milestone:** M0.9 / AUDIT-005 real release publication
+- **Type:** CI publication workflow defect
+- **Observed in:** Distribution run `36945562430`, rerun attempt `2`, job `publish`, step `Publish GitHub Release`
+- **Head:** `c3a4095838e3030ebe945d91bf417dc5aa84cf8c`
+- **Problem:** The release command `gh release create` failed with `fatal: not a git repository` because the artifact-only `publish` job did not establish local Git repository context and did not explicitly identify the repository.
+- **Root cause:** The publication command relied on implicit repository context that is unavailable in the `publish` job after artifact download.
+- **Evidence distinction:** The checksum failure in attempt `1` was not reproduced in the controlled rerun and is therefore not attributed to this root cause.
+- **Correction:** Pass the workflow-provided repository identifier explicitly to `gh release create` using `--repo "$GITHUB_REPOSITORY"`. No checkout, publication-guard change, package-format change, checksum-algorithm change, permission change, platform-matrix change, or version-contract change.
+- **Reference:** https://cli.github.com/manual/gh_release_create
+- **Correction branch:** `fix/audit-005-publish-repo-context`
+- **Correction commit:** `a3f9ffd1f0c2124415133d7c19004b15d065c1ae`
+- **Validation:** Pending second audit and CI.
+- **Status:** OPEN
