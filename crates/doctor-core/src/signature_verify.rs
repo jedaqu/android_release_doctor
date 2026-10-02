@@ -2117,6 +2117,67 @@ mod tests {
         assert_eq!(parsed.certificate, b"signer");
     }
 
+    fn v2_signed_data_for_parser(extra: &[u8]) -> Vec<u8> {
+        let mut digest_entry = Vec::new();
+        digest_entry.extend_from_slice(&0x0201_u32.to_le_bytes());
+        digest_entry.extend_from_slice(&32_u32.to_le_bytes());
+        digest_entry.extend_from_slice(&[0_u8; 32]);
+
+        let digests = encode_sequence(&encode_sequence(&digest_entry));
+        let certificates = encode_sequence(&encode_sequence(b"signer"));
+        let attributes = encode_sequence(&[]);
+
+        let mut signed_data = Vec::new();
+        signed_data.extend_from_slice(&digests);
+        signed_data.extend_from_slice(&certificates);
+        signed_data.extend_from_slice(&attributes);
+        signed_data.extend_from_slice(extra);
+        signed_data
+    }
+
+    #[test]
+    fn accepts_v2_empty_fourth_signed_data_element() {
+        let signed_data = v2_signed_data_for_parser(&encode_sequence(&[]));
+
+        parse_signed_data_v2(&signed_data)
+            .expect("an empty fourth v2 signed-data element should be accepted");
+    }
+
+    #[test]
+    fn rejects_v2_truncated_fourth_signed_data_element() {
+        let signed_data = v2_signed_data_for_parser(&[0, 0, 0]);
+
+        let error = parse_signed_data_v2(&signed_data)
+            .expect_err("a truncated fourth element length must be rejected");
+        assert!(error
+            .to_string()
+            .contains("v2 optional fourth signed-data element is truncated"));
+    }
+
+    #[test]
+    fn rejects_v2_non_empty_fourth_signed_data_element() {
+        let signed_data = v2_signed_data_for_parser(&encode_sequence(b"x"));
+
+        let error = parse_signed_data_v2(&signed_data)
+            .expect_err("a non-empty fourth element must be rejected");
+        assert!(error
+            .to_string()
+            .contains("v2 optional fourth signed-data element must be empty"));
+    }
+
+    #[test]
+    fn rejects_v2_multiple_fourth_signed_data_elements() {
+        let mut extra = encode_sequence(&[]);
+        extra.extend_from_slice(&encode_sequence(&[]));
+        let signed_data = v2_signed_data_for_parser(&extra);
+
+        let error = parse_signed_data_v2(&signed_data)
+            .expect_err("multiple residual elements must be rejected");
+        assert!(error
+            .to_string()
+            .contains("v2 signed data contains trailing bytes"));
+    }
+
     #[test]
     fn accepts_additional_v3_certificate_chain_entries() {
         let digest_entry = {
