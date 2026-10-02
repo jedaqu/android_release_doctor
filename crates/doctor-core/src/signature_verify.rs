@@ -1126,18 +1126,16 @@ fn verify_p521_ecdsa_signature(
     signature_bytes: &[u8],
     digest_algorithm: DigestAlgorithm,
 ) -> Result<(), SignatureVerificationError> {
-    let verifying_key =
-        P521VerifyingKey::from_sec1_bytes(&cert.public_key().subject_public_key.data).map_err(
-            |error| {
-                SignatureVerificationError(format!(
-                    "signer P-521 public key is not a valid SEC1 point: {error}"
-                ))
-            },
-        )?;
-    let signature = P521Signature::from_der(signature_bytes).map_err(|error| {
+    let verifying_key = P521VerifyingKey::from_sec1_bytes(
+        &cert.public_key().subject_public_key.data,
+    )
+    .map_err(|error| {
         SignatureVerificationError(format!(
-            "ECDSA P-521 signature is not valid DER: {error}"
+            "signer P-521 public key is not a valid SEC1 point: {error}"
         ))
+    })?;
+    let signature = P521Signature::from_der(signature_bytes).map_err(|error| {
+        SignatureVerificationError(format!("ECDSA P-521 signature is not valid DER: {error}"))
     })?;
 
     let prehash: Vec<u8> = match digest_algorithm {
