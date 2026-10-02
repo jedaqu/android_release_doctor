@@ -1286,5 +1286,18 @@ From this point forward, a historical `OPEN` entry is not considered an active w
 - **Correction:** Borrow the parsed certificate at the P-521 call sites; normalize SHA-256/SHA-512 prehashes to `Vec<u8>`; borrow the EC OID during the P-521/P-384 capability checks.
 - **Scope:** ERR-038-A P-521 implementation only.
 - **No behavior change:** The supported algorithm IDs, curve matrix, cryptographic verification semantics, and unsupported boundaries remain unchanged.
-- **Validation:** Pending terminal CI after the corrections.
-- **Status:** OPEN — correction in progress.
+- **Validation:** Rust CI run #134 / `37046916708` passed Build, Test, Format, and Clippy after the corrections.
+- **Status:** RESOLVED
+
+
+## ERR-107 — ERR-038-A rustfmt layout after implementation correction
+
+- **Milestone:** ERR-038-A / PR #37
+- **Type:** CI formatting failure
+- **Observed:** Rust CI run #133 / `37046745804`
+- **Problem:** The P-521 helper's error-handling layout did not match the repository's deterministic rustfmt output.
+- **Evidence:** Build PASS; Test PASS; Format failed only on the formatter-indicated layout in `crates/doctor-core/src/signature_verify.rs`; Clippy was skipped by the workflow gate.
+- **Correction:** Apply only the rustfmt-indicated layout changes to the P-521 helper.
+- **Correction commit:** `1e9550533980cdd04d6c02e63e975a35327af45f`
+- **Validation:** Rust CI run #134 / `37046916708` passed Build, Test, Format, and Clippy.
+- **Status:** RESOLVED
