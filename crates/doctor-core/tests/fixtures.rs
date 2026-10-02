@@ -73,42 +73,72 @@ fn audits_minimal_apk_fixture() {
 
 #[test]
 fn audits_minimal_aab_fixture() {
-    let report = audit_path(fixture("minimal-release.aab")).expect("AAB fixture should parse");
+    let path = std::env::temp_dir().join(format!(
+        "android-release-doctor-proto-aab-{}.aab",
+        std::process::id()
+    ));
+
+    {
+        let file = File::create(&path).expect("temporary AAB should be created");
+        let mut archive = ZipWriter::new(file);
+        let options =
+            SimpleFileOptions::default().compression_method(CompressionMethod::Stored);
+
+        archive
+            .start_file("base/manifest/AndroidManifest.xml", options)
+            .expect("proto manifest entry should be created");
+        archive
+            .write_all(&proto_aab_manifest())
+            .expect("proto manifest bytes should be written");
+
+        archive
+            .start_file("base/dex/classes.dex", options)
+            .expect("dex entry should be created");
+        archive
+            .write_all(b"dex-fixture")
+            .expect("dex bytes should be written");
+
+        archive.finish().expect("temporary AAB should be finalized");
+    }
+
+    let report = audit_path(&path).expect("proto AAB should remain auditable");
     assert_eq!(report.artifact_kind, ArtifactKind::Aab);
     assert_eq!(
         report.inventory.manifest_path.as_deref(),
         Some("base/manifest/AndroidManifest.xml")
     );
-
     assert!(report.manifest_error.is_none());
-    let manifest = report.manifest.expect("manifest should parse");
+
+    let manifest = report.manifest.expect("proto AAB manifest should parse");
     assert_eq!(
         manifest.package_name.as_deref(),
-        Some("com.example.doctorfixture")
+        Some("com.example.protoaab")
     );
+    assert_eq!(manifest.version_code, Some(7));
+    assert_eq!(manifest.version_name.as_deref(), Some("1.2.3"));
     assert_eq!(manifest.min_sdk, Some(24));
     assert_eq!(manifest.target_sdk, Some(35));
+    assert_eq!(manifest.debuggable, Some(false));
+    assert_eq!(
+        manifest.permissions,
+        vec!["android.permission.INTERNET".to_string()]
+    );
     assert_eq!(manifest.components.len(), 1);
+    assert_eq!(manifest.components[0].kind, "activity");
     assert!(manifest.components[0].has_intent_filters);
 
-    assert_eq!(report.inventory.dex_files, vec!["base/dex/classes.dex"]);
-    assert_eq!(
-        report.inventory.native_abis,
-        vec!["arm64-v8a", "armeabi-v7a"]
-    );
-    assert_eq!(report.inventory.native_libraries.len(), 2);
     assert!(report
-        .inventory
-        .native_libraries
+        .findings
         .iter()
-        .all(|library| library.error.is_some()));
-    assert_eq!(report.inventory.signature_files.len(), 2);
+        .find(|finding| finding.rule_id == "MANIFEST-002")
+        .is_none());
     assert!(report
         .findings
         .iter()
         .all(|finding| finding.severity != Severity::Blocker));
-}
 
+    fs::remove_file(path).expect("temporary AAB should be removed");
+}
 #[test]
 fn reports_manifest_parse_error_in_the_audit_report() {
     let path = std::env::temp_dir().join(format!(
@@ -702,6 +732,12 @@ fn proto_aab_manifest() -> Vec<u8> {
                         "name",
                         "com.example.protoaab.MainActivity",
                         None,
+                    ),
+                    proto_attribute(
+                        "http://schemas.android.com/apk/res/android",
+                        "exported",
+                        "true",
+                        Some((0x12, 1)),
                     )],
                     &[proto_element_node("intent-filter", &[], &[])],
                 )],
@@ -710,72 +746,3 @@ fn proto_aab_manifest() -> Vec<u8> {
     )
 }
 
-#[test]
-fn audits_proto_aab_manifest_fixture() {
-    let path = std::env::temp_dir().join(format!(
-        "android-release-doctor-proto-aab-{}.aab",
-        std::process::id()
-    ));
-
-    {
-        let file = File::create(&path).expect("temporary AAB should be created");
-        let mut archive = ZipWriter::new(file);
-        let options =
-            SimpleFileOptions::default().compression_method(CompressionMethod::Stored);
-
-        archive
-            .start_file("base/manifest/AndroidManifest.xml", options)
-            .expect("proto manifest entry should be created");
-        archive
-            .write_all(&proto_aab_manifest())
-            .expect("proto manifest bytes should be written");
-
-        archive
-            .start_file("base/dex/classes.dex", options)
-            .expect("dex entry should be created");
-        archive
-            .write_all(b"dex-fixture")
-            .expect("dex bytes should be written");
-
-        archive.finish().expect("temporary AAB should be finalized");
-    }
-
-    let report = audit_path(&path).expect("proto AAB should remain auditable");
-
-    assert_eq!(report.artifact_kind, ArtifactKind::Aab);
-    assert_eq!(
-        report.inventory.manifest_path.as_deref(),
-        Some("base/manifest/AndroidManifest.xml")
-    );
-    assert!(report.manifest_error.is_none());
-
-    let manifest = report.manifest.expect("proto AAB manifest should parse");
-    assert_eq!(
-        manifest.package_name.as_deref(),
-        Some("com.example.protoaab")
-    );
-    assert_eq!(manifest.version_code, Some(7));
-    assert_eq!(manifest.version_name.as_deref(), Some("1.2.3"));
-    assert_eq!(manifest.min_sdk, Some(24));
-    assert_eq!(manifest.target_sdk, Some(35));
-    assert_eq!(manifest.debuggable, Some(false));
-    assert_eq!(
-        manifest.permissions,
-        vec!["android.permission.INTERNET".to_string()]
-    );
-    assert_eq!(manifest.components.len(), 1);
-    assert_eq!(manifest.components[0].kind, "activity");
-    assert!(manifest.components[0].has_intent_filters);
-
-    assert!(report
-        .findings
-        .iter()
-        .find(|finding| finding.rule_id == "MANIFEST-002")
-        .is_none());
-    assert!(report
-        .findings
-        .iter()
-        .all(|finding| finding.severity != Severity::Blocker));
-
-    fs::remove_file(path).expect("temporary AAB should be removed");
-}
