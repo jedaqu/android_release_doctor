@@ -2372,7 +2372,7 @@ mod tests {
             .windows(curve_oid.len())
             .position(|window| window == curve_oid)
             .expect("P-384 curve OID should be present in certificate");
-        certificate[position + curve_oid.len() - 1] = 0x23;
+        certificate[position + curve_oid.len() - 1] = 0x21;
 
         let result = verify_signature_bytes(
             0x0202,
@@ -2380,10 +2380,10 @@ mod tests {
             b"M0.7 Block 1 deterministic ECDSA/SHA-512 verification test message",
             &[],
         );
-        let error = result.expect_err("non-P-384 ECDSA/SHA-512 must remain unsupported");
+        let error = result.expect_err("unsupported ECDSA/SHA-512 curve must remain unsupported");
         assert!(error
             .to_string()
-            .starts_with("UNSUPPORTED: ECDSA SHA-512 signer curve is not P-384"));
+            .starts_with("UNSUPPORTED: ECDSA SHA-512 signer curve is neither P-384 nor P-521"));
     }
 
     #[test]
