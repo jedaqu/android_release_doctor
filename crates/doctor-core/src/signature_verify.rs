@@ -2147,8 +2147,10 @@ mod tests {
     fn rejects_v2_truncated_fourth_signed_data_element() {
         let signed_data = v2_signed_data_for_parser(&[0, 0, 0]);
 
-        let error = parse_signed_data_v2(&signed_data)
-            .expect_err("a truncated fourth element length must be rejected");
+        let error = match parse_signed_data_v2(&signed_data) {
+            Ok(_) => panic!("a truncated fourth element length must be rejected"),
+            Err(error) => error,
+        };
         assert!(error
             .to_string()
             .contains("v2 optional fourth signed-data element is truncated"));
@@ -2158,8 +2160,10 @@ mod tests {
     fn rejects_v2_non_empty_fourth_signed_data_element() {
         let signed_data = v2_signed_data_for_parser(&encode_sequence(b"x"));
 
-        let error = parse_signed_data_v2(&signed_data)
-            .expect_err("a non-empty fourth element must be rejected");
+        let error = match parse_signed_data_v2(&signed_data) {
+            Ok(_) => panic!("a non-empty fourth element must be rejected"),
+            Err(error) => error,
+        };
         assert!(error
             .to_string()
             .contains("v2 optional fourth signed-data element must be empty"));
@@ -2171,8 +2175,10 @@ mod tests {
         extra.extend_from_slice(&encode_sequence(&[]));
         let signed_data = v2_signed_data_for_parser(&extra);
 
-        let error = parse_signed_data_v2(&signed_data)
-            .expect_err("multiple residual elements must be rejected");
+        let error = match parse_signed_data_v2(&signed_data) {
+            Ok(_) => panic!("multiple residual elements must be rejected"),
+            Err(error) => error,
+        };
         assert!(error
             .to_string()
             .contains("v2 signed data contains trailing bytes"));
