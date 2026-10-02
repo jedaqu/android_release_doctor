@@ -16,6 +16,12 @@ use ring::{
     digest,
     signature::{self, UnparsedPublicKey},
 };
+use rsa::{
+    pkcs1v15::Pkcs1v15Sign,
+    pss::Pss,
+    sha2::{Digest as RsaDigest, Sha256 as RsaSha256, Sha512 as RsaSha512},
+    RsaPublicKey,
+};
 use sha2::{Digest, Sha256, Sha512};
 use subtle::ConstantTimeEq;
 use x509_parser::{
@@ -994,6 +1000,20 @@ fn verify_signature_bytes(
         return Ok(());
     }
 
+    if let PublicKey::RSA(rsa) = &parsed_public_key {
+        let key_size = rsa.key_size();
+        if key_size == 1024 || key_size == 16_384 {
+            return verify_extended_rsa_signature(
+                algorithm_id,
+                key_size,
+                rsa.modulus,
+                rsa.exponent,
+                signed_data,
+                signature_bytes,
+            );
+        }
+    }
+
     let algorithm: &dyn signature::VerificationAlgorithm = match algorithm_id {
         0x0101 => {
             let PublicKey::RSA(rsa) = &parsed_public_key else {
@@ -1111,6 +1131,79 @@ fn verify_signature_bytes(
     verifier.verify(signed_data, signature_bytes).map_err(|_| {
         SignatureVerificationError(format!(
             "cryptographic signature verification failed for algorithm 0x{algorithm_id:08x}"
+        ))
+    })
+}
+
+fn verify_extended_rsa_signature(
+    algorithm_id: u32,
+    key_size: usize,
+    modulus: &[u8],
+    exponent: &[u8],
+    signed_data: &[u8],
+    signature_bytes: &[u8],
+) -> Result<(), SignatureVerificationError> {
+    if key_size == 1024 && algorithm_id == 0x0102 {
+        return Err(SignatureVerificationError(
+            "UNSUPPORTED: RSA 1024-bit key is too short for RSASSA-PSS SHA-512 with the required 64-byte salt"
+                .to_string(),
+        ));
+    }
+
+    let public_key = RsaPublicKey::new(
+        rsa::BigUint::from_bytes_be(modulus),
+        rsa::BigUint::from_bytes_be(exponent),
+    )
+    .map_err(|error| {
+        SignatureVerificationError(format!(
+            "RSA public key construction failed for {}-bit key: {error}",
+            key_size
+        ))
+    })?;
+
+    let result = match algorithm_id {
+        0x0101 => {
+            let digest = RsaSha256::digest(signed_data);
+            public_key.verify(
+                Pss::new_with_salt::<RsaSha256>(32),
+                digest.as_ref(),
+                signature_bytes,
+            )
+        }
+        0x0102 => {
+            let digest = RsaSha512::digest(signed_data);
+            public_key.verify(
+                Pss::new_with_salt::<RsaSha512>(64),
+                digest.as_ref(),
+                signature_bytes,
+            )
+        }
+        0x0103 => {
+            let digest = RsaSha256::digest(signed_data);
+            public_key.verify(
+                Pkcs1v15Sign::new::<RsaSha256>(),
+                digest.as_ref(),
+                signature_bytes,
+            )
+        }
+        0x0104 => {
+            let digest = RsaSha512::digest(signed_data);
+            public_key.verify(
+                Pkcs1v15Sign::new::<RsaSha512>(),
+                digest.as_ref(),
+                signature_bytes,
+            )
+        }
+        _ => {
+            return Err(SignatureVerificationError(format!(
+                "UNSUPPORTED: signature algorithm 0x{algorithm_id:08x} is not supported by the extended RSA verifier"
+            )))
+        }
+    };
+
+    result.map_err(|_| {
+        SignatureVerificationError(format!(
+            "cryptographic signature verification failed for algorithm 0x{algorithm_id:08x} on RSA {key_size}-bit key"
         ))
     })
 }
@@ -2382,6 +2475,223 @@ mod tests {
         assert!(error
             .to_string()
             .starts_with("UNSUPPORTED: ECDSA SHA-512 signer curve is neither P-384 nor P-521"));
+    }
+
+    #[test]
+    fn verifies_extended_rsa_1024_pkcs1_sha256() {
+        const CERTIFICATE_HEX: &str = "30820244308201ada00302010202142b39807fe7042283f23640917f3b9431a5453a77300d06092a864886f70d01010b050030343132303006035504030c29416e64726f69642052656c6561736520446f63746f72204552522d3033382d42205253412d31303234301e170d3236313030323138343235305a170d3336303932393138343235305a30343132303006035504030c29416e64726f69642052656c6561736520446f63746f72204552522d3033382d42205253412d3130323430819f300d06092a864886f70d010101050003818d0030818902818100c52ef610592856a31dd080c4f23e503528b5a1e19fd0446d7f0573a787db87cc68f8bb11b63900155cb1b1fdc69602bfe8d658ac9cf690abbc1f74a31ddf08e3cc7efa21af38209b5433dd56276f04edd5bd9ce9e6885fe8a02b34321c573df893541c7ac985f0e44692b4cd4322399e1e925a89a6c1a143790eecefbad978790203010001a3533051301d0603551d0e041604146af530ad002de35edb847d63051db47369a66ac8301f0603551d230418301680146af530ad002de35edb847d63051db47369a66ac8300f0603551d130101ff040530030101ff300d06092a864886f70d01010b05000381810087c69112fe20d7d3d5831f829a72b1ba28246f9ff594911dfe13c2b88c21211b6f0474bb7342ff807ec695280afd7ad45f44b4c5088bd5bb3a163cff4453e9a5706f9d2da24d26c17d9bf9d749a629c9296f789e593d80402f34e8f112d4cef739a633d482254612e4e1a000b9bd88d70277f7f3ec88e6945006545846657c38";
+        const SIGNATURE_HEX: &str = "19b15a238dddad1d4451b6860bf614bb5872e2e317b8f03dfddd8468bfdf74820749b21f5a9e817efa46405ed7ceb476e9e78190537f13ac74ca979b7c369ca14999b6410d51860bf209795821d967ad9106d95e8a789171a04f4932ca047751996e256c2fde520a2d4bcef8e47852c42c546137df3b7e5965c98e059cca106e";
+        let certificate = decode_hex_bytes(CERTIFICATE_HEX);
+        let signed_data = b"Android Release Doctor ERR-038-B RSA-1024 deterministic test message";
+        let signature = decode_hex_bytes(SIGNATURE_HEX);
+
+        let (_, cert) =
+            X509Certificate::from_der(&certificate).expect("RSA-1024 certificate should parse");
+        let rsa = match cert.public_key().parsed().expect("RSA public key should parse") {
+            PublicKey::RSA(rsa) => rsa,
+            _ => panic!("expected RSA public key"),
+        };
+
+        verify_extended_rsa_signature(
+            0x0103,
+            1024,
+            rsa.modulus,
+            rsa.exponent,
+            signed_data,
+            &signature,
+        )
+        .expect("RSA-1024 PKCS1/SHA-256 should verify");
+    }
+
+    #[test]
+    fn verifies_extended_rsa_1024_pkcs1_sha512() {
+        const CERTIFICATE_HEX: &str = "30820244308201ada00302010202142b39807fe7042283f23640917f3b9431a5453a77300d06092a864886f70d01010b050030343132303006035504030c29416e64726f69642052656c6561736520446f63746f72204552522d3033382d42205253412d31303234301e170d3236313030323138343235305a170d3336303932393138343235305a30343132303006035504030c29416e64726f69642052656c6561736520446f63746f72204552522d3033382d42205253412d3130323430819f300d06092a864886f70d010101050003818d0030818902818100c52ef610592856a31dd080c4f23e503528b5a1e19fd0446d7f0573a787db87cc68f8bb11b63900155cb1b1fdc69602bfe8d658ac9cf690abbc1f74a31ddf08e3cc7efa21af38209b5433dd56276f04edd5bd9ce9e6885fe8a02b34321c573df893541c7ac985f0e44692b4cd4322399e1e925a89a6c1a143790eecefbad978790203010001a3533051301d0603551d0e041604146af530ad002de35edb847d63051db47369a66ac8301f0603551d230418301680146af530ad002de35edb847d63051db47369a66ac8300f0603551d130101ff040530030101ff300d06092a864886f70d01010b05000381810087c69112fe20d7d3d5831f829a72b1ba28246f9ff594911dfe13c2b88c21211b6f0474bb7342ff807ec695280afd7ad45f44b4c5088bd5bb3a163cff4453e9a5706f9d2da24d26c17d9bf9d749a629c9296f789e593d80402f34e8f112d4cef739a633d482254612e4e1a000b9bd88d70277f7f3ec88e6945006545846657c38";
+        const SIGNATURE_HEX: &str = "b34ec713c854fe3fef244b71f255e1e445bfcfdfe8691d6fdd034601a3bc5b598b5efea9b17727f5a6f8154b914ddae70add643a218f768c5efcb38cf3d9677567744b4d51ae7b84aa11b78f62b45b989d621d607dae58fdbb91c946238b518f58e06217fedd5afef55651881fb952ab42ba90ec6b9f6cd3ffcef0fd28cc4901";
+        let certificate = decode_hex_bytes(CERTIFICATE_HEX);
+        let signed_data = b"Android Release Doctor ERR-038-B RSA-1024 deterministic test message";
+        let signature = decode_hex_bytes(SIGNATURE_HEX);
+
+        let (_, cert) =
+            X509Certificate::from_der(&certificate).expect("RSA-1024 certificate should parse");
+        let rsa = match cert.public_key().parsed().expect("RSA public key should parse") {
+            PublicKey::RSA(rsa) => rsa,
+            _ => panic!("expected RSA public key"),
+        };
+
+        verify_extended_rsa_signature(
+            0x0104,
+            1024,
+            rsa.modulus,
+            rsa.exponent,
+            signed_data,
+            &signature,
+        )
+        .expect("RSA-1024 PKCS1/SHA-512 should verify");
+    }
+
+    #[test]
+    fn verifies_extended_rsa_1024_pss_sha256() {
+        const CERTIFICATE_HEX: &str = "30820244308201ada00302010202142b39807fe7042283f23640917f3b9431a5453a77300d06092a864886f70d01010b050030343132303006035504030c29416e64726f69642052656c6561736520446f63746f72204552522d3033382d42205253412d31303234301e170d3236313030323138343235305a170d3336303932393138343235305a30343132303006035504030c29416e64726f69642052656c6561736520446f63746f72204552522d3033382d42205253412d3130323430819f300d06092a864886f70d010101050003818d0030818902818100c52ef610592856a31dd080c4f23e503528b5a1e19fd0446d7f0573a787db87cc68f8bb11b63900155cb1b1fdc69602bfe8d658ac9cf690abbc1f74a31ddf08e3cc7efa21af38209b5433dd56276f04edd5bd9ce9e6885fe8a02b34321c573df893541c7ac985f0e44692b4cd4322399e1e925a89a6c1a143790eecefbad978790203010001a3533051301d0603551d0e041604146af530ad002de35edb847d63051db47369a66ac8301f0603551d230418301680146af530ad002de35edb847d63051db47369a66ac8300f0603551d130101ff040530030101ff300d06092a864886f70d01010b05000381810087c69112fe20d7d3d5831f829a72b1ba28246f9ff594911dfe13c2b88c21211b6f0474bb7342ff807ec695280afd7ad45f44b4c5088bd5bb3a163cff4453e9a5706f9d2da24d26c17d9bf9d749a629c9296f789e593d80402f34e8f112d4cef739a633d482254612e4e1a000b9bd88d70277f7f3ec88e6945006545846657c38";
+        const SIGNATURE_HEX: &str = "40cfd7f64fd834368ac56736e3c5a7fc2f590e2ae8222eddd6c88add518c25b83544d6f94da74fe42e4355c8d86f821582a47f9dac6cbd038fe1e922afdcfd4a9ac511fc1fb4b03d88fbfa52ae3daefe7ae72925286d2ff66d1856c4ab72a859af24026e3fd0dea339f09df4db45b63969fe1cc33260068d54e5aca4c881078b";
+        let certificate = decode_hex_bytes(CERTIFICATE_HEX);
+        let signed_data = b"Android Release Doctor ERR-038-B RSA-1024 deterministic test message";
+        let signature = decode_hex_bytes(SIGNATURE_HEX);
+
+        let (_, cert) =
+            X509Certificate::from_der(&certificate).expect("RSA-1024 certificate should parse");
+        let rsa = match cert.public_key().parsed().expect("RSA public key should parse") {
+            PublicKey::RSA(rsa) => rsa,
+            _ => panic!("expected RSA public key"),
+        };
+
+        verify_extended_rsa_signature(
+            0x0101,
+            1024,
+            rsa.modulus,
+            rsa.exponent,
+            signed_data,
+            &signature,
+        )
+        .expect("RSA-1024 PSS/SHA-256 should verify");
+    }
+
+    #[test]
+    fn rejects_extended_rsa_1024_pss_sha512_as_unsupported() {
+        let modulus = vec![0xff; 128];
+        let exponent = vec![0x01, 0x00, 0x01];
+
+        let error = verify_extended_rsa_signature(
+            0x0102,
+            1024,
+            &modulus,
+            &exponent,
+            b"Android Release Doctor ERR-038-B RSA-1024 deterministic test message",
+            &[0; 128],
+        )
+        .expect_err("RSA-1024 PSS/SHA-512 must be unsupported");
+
+        assert!(error
+            .to_string()
+            .starts_with("UNSUPPORTED: RSA 1024-bit key is too short"));
+    }
+
+    #[test]
+    fn verifies_aosp_rsa_16384_certificate_self_signature_sha256() {
+        const CERTIFICATE_PEM: &str = r#"-----BEGIN CERTIFICATE-----
+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
+-----END CERTIFICATE-----"#;
+        let certificate = decode_pem_certificate(CERTIFICATE_PEM);
+        let (_, cert) =
+            X509Certificate::from_der(&certificate).expect("AOSP RSA-16384 certificate should parse");
+        assert_eq!(cert.public_key().parsed().unwrap().key_size(), 16_384);
+
+        let tbs = cert.tbs_certificate.raw;
+        let signature = cert.signature_value.data;
+        let (_, parsed_public_key) = X509Certificate::from_der(&certificate)
+            .expect("AOSP RSA-16384 certificate should parse");
+        let rsa = match parsed_public_key.public_key().parsed().unwrap() {
+            PublicKey::RSA(rsa) => rsa,
+            _ => panic!("expected RSA public key"),
+        };
+        verify_extended_rsa_signature(
+            0x0103,
+            16_384,
+            rsa.modulus,
+            rsa.exponent,
+            tbs,
+            signature,
+        )
+        .expect("AOSP RSA-16384 certificate self-signature should verify with PKCS1/SHA-256");
     }
 
     #[test]
