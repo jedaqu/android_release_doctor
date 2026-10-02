@@ -90,11 +90,11 @@ PY
           play: "true"
           play-platform: mobile
           format: json
-          output: ${EXPR{ runner.temp }}/action-semantic.json
+          output: ${{ runner.temp }}/action-semantic.json
       - name: Validate Action result
         env:
-          EXIT_CODE: ${EXPR{ steps.action.outputs.exit-code }}
-          REPORT_PATH: ${EXPR{ steps.action.outputs.report-path }}
+          EXIT_CODE: ${{ steps.action.outputs.exit-code }}
+          REPORT_PATH: ${{ steps.action.outputs.report-path }}
         run: |
           set -euo pipefail
           test "$EXIT_CODE" = "0" || test "$EXIT_CODE" = "1"
@@ -104,7 +104,7 @@ PY
         uses: actions/upload-artifact@v4
         with:
           name: validation-baseline-reports
-          path: ${EXPR{ runner.temp }}/**
+          path: ${{ runner.temp }}/**
           if-no-files-found: ignore
           retention-days: 7
 
@@ -229,7 +229,7 @@ PY
         uses: actions/upload-artifact@v4
         with:
           name: validation-abi-aab-reports
-          path: ${EXPR{ runner.temp }}/abi/*.json
+          path: ${{ runner.temp }}/abi/*.json
           if-no-files-found: ignore
           retention-days: 7
 
@@ -286,7 +286,7 @@ PY
         uses: actions/upload-artifact@v4
         with:
           name: validation-project-reports
-          path: ${EXPR{ runner.temp }}/projects/*.json
+          path: ${{ runner.temp }}/projects/*.json
           if-no-files-found: ignore
           retention-days: 7
 
@@ -390,7 +390,7 @@ PY
           test -s "$RUNNER_TEMP/bad-output.err"
           test -s "$RUNNER_TEMP/missing.err"
       - name: Prepare spaced artifact
-        run: cp tests/fixtures/minimal-release.apk "${EXPR{ runner.temp }}/artifact with spaces.apk"
+        run: cp tests/fixtures/minimal-release.apk "${{ runner.temp }}/artifact with spaces.apk"
       - name: Action interface extremes
         id: invalid
         continue-on-error: true
@@ -401,20 +401,20 @@ PY
           format: json
       - name: Validate invalid Action input
         env:
-          EXIT_CODE: ${EXPR{ steps.invalid.outputs.exit-code }}
+          EXIT_CODE: ${{ steps.invalid.outputs.exit-code }}
         run: test "$EXIT_CODE" = "2"
       - name: Action artifact path with spaces
         id: spaced
         continue-on-error: true
         uses: ./.github/actions/android-release-doctor
         with:
-          artifact: ${EXPR{ runner.temp }}/artifact with spaces.apk
+          artifact: ${{ runner.temp }}/artifact with spaces.apk
           format: json
-          output: ${EXPR{ runner.temp }}/spaced.json
+          output: ${{ runner.temp }}/spaced.json
       - name: Validate spaced path Action
         env:
-          EXIT_CODE: ${EXPR{ steps.spaced.outputs.exit-code }}
-          REPORT_PATH: ${EXPR{ steps.spaced.outputs.report-path }}
+          EXIT_CODE: ${{ steps.spaced.outputs.exit-code }}
+          REPORT_PATH: ${{ steps.spaced.outputs.report-path }}
         run: |
           set -euo pipefail
           test "$EXIT_CODE" = "0" || test "$EXIT_CODE" = "1"
@@ -424,7 +424,7 @@ PY
         uses: actions/upload-artifact@v4
         with:
           name: validation-malformed-stress
-          path: ${EXPR{ runner.temp }}/**
+          path: ${{ runner.temp }}/**
           if-no-files-found: ignore
           retention-days: 7
 
@@ -448,39 +448,39 @@ PY
       - uses: actions/checkout@v6
       - name: Download public artifact
         env:
-          URL: ${EXPR{ matrix.url }}
+          URL: ${{ matrix.url }}
         run: |
           set -euo pipefail
-          mkdir -p "${EXPR{ runner.temp }}/public"
-          curl --fail --location --retry 4 --retry-all-errors --output "${EXPR{ runner.temp }}/public/${EXPR{ matrix.id }}.bin" "$URL"
-          test -s "${EXPR{ runner.temp }}/public/${EXPR{ matrix.id }}.bin"
-          sha256sum "${EXPR{ runner.temp }}/public/${EXPR{ matrix.id }}.bin" | tee "${EXPR{ runner.temp }}/public/${EXPR{ matrix.id }}.sha256"
+          mkdir -p "${{ runner.temp }}/public"
+          curl --fail --location --retry 4 --retry-all-errors --output "${{ runner.temp }}/public/${{ matrix.id }}.bin" "$URL"
+          test -s "${{ runner.temp }}/public/${{ matrix.id }}.bin"
+          sha256sum "${{ runner.temp }}/public/${{ matrix.id }}.bin" | tee "${{ runner.temp }}/public/${{ matrix.id }}.sha256"
       - name: Verify pinned Session checksum
         if: matrix.expected_sha256 != ''
         env:
-          EXPECTED: ${EXPR{ matrix.expected_sha256 }}
+          EXPECTED: ${{ matrix.expected_sha256 }}
         run: |
           set -euo pipefail
-          printf '%s  %s\n' "$EXPECTED" "${EXPR{ runner.temp }}/public/${EXPR{ matrix.id }}.bin" | sha256sum --check -
+          printf '%s  %s\n' "$EXPECTED" "${{ runner.temp }}/public/${{ matrix.id }}.bin" | sha256sum --check -
       - name: Audit public artifact through Action
         id: doctor
         continue-on-error: true
         uses: ./.github/actions/android-release-doctor
         with:
-          artifact: ${EXPR{ runner.temp }}/public/${EXPR{ matrix.id }}.bin
+          artifact: ${{ runner.temp }}/public/${{ matrix.id }}.bin
           play: "true"
           play-platform: mobile
           format: json
-          output: ${EXPR{ runner.temp }}/public/${EXPR{ matrix.id }}.json
+          output: ${{ runner.temp }}/public/${{ matrix.id }}.json
       - name: Validate public report
         env:
-          EXIT_CODE: ${EXPR{ steps.doctor.outputs.exit-code }}
-          REPORT_PATH: ${EXPR{ steps.doctor.outputs.report-path }}
+          EXIT_CODE: ${{ steps.doctor.outputs.exit-code }}
+          REPORT_PATH: ${{ steps.doctor.outputs.report-path }}
         run: |
           set -euo pipefail
           test "$EXIT_CODE" = "0" || test "$EXIT_CODE" = "1" || test "$EXIT_CODE" = "2"
           test -s "$REPORT_PATH"
-          python3 - "$REPORT_PATH" "${EXPR{ matrix.id }}" <<'PY'
+          python3 - "$REPORT_PATH" "${{ matrix.id }}" <<'PY'
 import json, sys
 r=json.load(open(sys.argv[1], encoding="utf-8"))
 assert r["schema_version"] == "1.0"
@@ -491,7 +491,7 @@ PY
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: validation-public-${EXPR{ matrix.id }}
-          path: ${EXPR{ runner.temp }}/public/*
+          name: validation-public-${{ matrix.id }}
+          path: ${{ runner.temp }}/public/*
           if-no-files-found: ignore
           retention-days: 7
