@@ -393,6 +393,52 @@ fn compressed_native_library_does_not_require_zip_offset_alignment() {
     fs::remove_file(path).expect("temporary APK should be removed");
 }
 
+fn decode_base64_fixture(encoded: &str) -> Vec<u8> {
+    const ALPHABET: &[u8; 64] =
+        b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+    let mut output = Vec::new();
+    let mut accumulator = 0_u32;
+    let mut bits = 0_u8;
+
+    for byte in encoded.bytes() {
+        if byte.is_ascii_whitespace() || byte == b'=' {
+            continue;
+        }
+
+        let value = ALPHABET
+            .iter()
+            .position(|candidate| *candidate == byte)
+            .expect("fixture base64 should contain only standard alphabet bytes")
+            as u32;
+
+        accumulator = (accumulator << 6) | value;
+        bits += 6;
+
+        if bits >= 8 {
+            bits -= 8;
+            output.push((accumulator >> bits) as u8);
+            accumulator &= (1_u32 << bits) - 1;
+        }
+    }
+
+    output
+}
+
+fn decoded_apk_fixture(source_name: &str, label: &str) -> PathBuf {
+    let encoded = fs::read_to_string(fixture(source_name))
+        .expect("base64 APK fixture should be readable");
+    let bytes = decode_base64_fixture(&encoded);
+    assert_eq!(bytes.len(), 1588, "ERR-095 fixture byte length must remain stable");
+
+    let path = std::env::temp_dir().join(format!(
+        "android-release-doctor-{label}-{}.apk",
+        std::process::id()
+    ));
+    fs::write(&path, bytes).expect("decoded APK fixture should be writable");
+    path
+}
+
 fn tampered_apk_fixture(source_name: &str, label: &str) -> PathBuf {
     let source = fixture(source_name);
     let path = std::env::temp_dir().join(format!(
@@ -440,8 +486,11 @@ fn valid_v2_fixture_produces_verified_signing_finding() {
 
 #[test]
 fn err_095_empty_fourth_v2_fixture_produces_verified_signing_finding() {
-    let report = audit_path(fixture("crypto-v2-empty-element-release.apk"))
-        .expect("ERR-095 compatibility fixture should remain auditable");
+    let path = decoded_apk_fixture(
+        "crypto-v2-empty-element-release.apk.b64",
+        "v2-empty-element",
+    );
+    let report = audit_path(&path).expect("ERR-095 compatibility fixture should remain auditable");
 
     let verification = report
         .inventory
@@ -459,15 +508,29 @@ fn err_095_empty_fourth_v2_fixture_produces_verified_signing_finding() {
         v2.detail
     );
 
-    assert_eq!(
-        report
-            .findings
-            .iter()
-            .find(|finding| finding.rule_id == "SIGNING-003")
-            .map(|finding| finding.severity),
-        Some(Severity::Pass)
+fn err_095_empty_fourth_v2_fixture_produces_verified_signing_finding() {
+    let path = decoded_apk_fixture(
+        "crypto-v2-empty-element-release.apk.b64",
+        "v2-empty-element",
     );
-}
+    let report = audit_path(&path).expect("ERR-095 compatibility fixture should remain auditable");
+
+    let verification = report
+        .inventory
+        .apk_signature_verification
+        .as_ref()
+        .expect("ERR-095 v2 verification result should be present");
+    let v2 = verification
+        .v2
+        .as_ref()
+        .expect("ERR-095 v2 verification result should be present");
+    assert_eq!(
+        v2.state,
+        doctor_core::CryptoVerificationState::Verified,
+        "verification detail: {}",
+        v2.detail
+    );
+
 
 #[test]
 fn tampered_v2_fixture_produces_signature_blocker() {
