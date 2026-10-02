@@ -1151,16 +1151,22 @@ fn verify_extended_rsa_signature(
         ));
     }
 
-    let public_key = RsaPublicKey::new(
-        rsa::BigUint::from_bytes_be(modulus),
-        rsa::BigUint::from_bytes_be(exponent),
-    )
-    .map_err(|error| {
-        SignatureVerificationError(format!(
-            "RSA public key construction failed for {}-bit key: {error}",
-            key_size
-        ))
-    })?;
+    let modulus = rsa::BigUint::from_bytes_be(modulus);
+    let exponent = rsa::BigUint::from_bytes_be(exponent);
+    let public_key = if key_size == 16_384 {
+        // x509-parser has already parsed and validated this RSA public key.
+        // rsa 0.9.10's checked constructor rejects moduli above its built-in
+        // size limit, so only the explicitly supported 16384-bit boundary
+        // uses the unchecked constructor.
+        RsaPublicKey::new_unchecked(modulus, exponent)
+    } else {
+        RsaPublicKey::new(modulus, exponent).map_err(|error| {
+            SignatureVerificationError(format!(
+                "RSA public key construction failed for {}-bit key: {error}",
+                key_size
+            ))
+        })?
+    };
 
     let result = match algorithm_id {
         0x0101 => {
