@@ -327,7 +327,11 @@ fn attr_primitive<'a>(
 fn attr_u32(attributes: &[ProtoAttribute], name: &str) -> Option<u32> {
     attr_primitive(attributes, ANDROID_NAMESPACE, name)
         .and_then(|primitive| primitive.data)
-        .or_else(|| attr_string(attributes, ANDROID_NAMESPACE, name)?.parse().ok())
+        .or_else(|| {
+            attr_string(attributes, ANDROID_NAMESPACE, name)?
+                .parse()
+                .ok()
+        })
 }
 
 fn attr_bool(attributes: &[ProtoAttribute], name: &str) -> Option<bool> {
@@ -349,7 +353,11 @@ fn collect_manifest_info(element: &ProtoElement, info: &mut ManifestInfo, in_app
     match name {
         "manifest" => {
             if let Some(value) = element.attributes.iter().find_map(|attribute| {
-                if attribute.namespace_uri.as_deref().unwrap_or_default().is_empty()
+                if attribute
+                    .namespace_uri
+                    .as_deref()
+                    .unwrap_or_default()
+                    .is_empty()
                     && attribute.name.as_deref() == Some("package")
                 {
                     attr_string(std::slice::from_ref(attribute), "", "package")
@@ -385,10 +393,12 @@ fn collect_manifest_info(element: &ProtoElement, info: &mut ManifestInfo, in_app
 
     let application_scope = in_application || name == "application";
 
-    if application_scope && matches!(
-        name,
-        "activity" | "activity-alias" | "service" | "receiver" | "provider"
-    ) {
+    if application_scope
+        && matches!(
+            name,
+            "activity" | "activity-alias" | "service" | "receiver" | "provider"
+        )
+    {
         let component_name =
             attr_string(&element.attributes, ANDROID_NAMESPACE, "name").unwrap_or("<unnamed>");
         let has_intent_filters = element.children.iter().any(|child| {
@@ -416,9 +426,9 @@ fn collect_manifest_info(element: &ProtoElement, info: &mut ManifestInfo, in_app
 
 pub fn parse_manifest(data: &[u8]) -> Result<ManifestInfo, ProtoManifestError> {
     let root = parse_node(data)?;
-    let element = root
-        .element
-        .ok_or(ProtoManifestError::Invalid("manifest root node is not an element"))?;
+    let element = root.element.ok_or(ProtoManifestError::Invalid(
+        "manifest root node is not an element",
+    ))?;
 
     if element.name.as_deref() != Some("manifest") {
         return Err(ProtoManifestError::Invalid(
@@ -466,7 +476,12 @@ mod tests {
         item
     }
 
-    fn attribute(namespace: &str, name: &str, value: &str, primitive: Option<(u32, u32)>) -> Vec<u8> {
+    fn attribute(
+        namespace: &str,
+        name: &str,
+        value: &str,
+        primitive: Option<(u32, u32)>,
+    ) -> Vec<u8> {
         let mut output = Vec::new();
         encode_string(1, namespace, &mut output);
         encode_string(2, name, &mut output);
@@ -553,10 +568,7 @@ mod tests {
         assert_eq!(report.min_sdk, Some(24));
         assert_eq!(report.target_sdk, Some(35));
         assert_eq!(report.debuggable, Some(false));
-        assert_eq!(
-            report.permissions,
-            vec!["android.permission.INTERNET"]
-        );
+        assert_eq!(report.permissions, vec!["android.permission.INTERNET"]);
         assert_eq!(report.components.len(), 1);
         assert_eq!(report.components[0].kind, "activity");
         assert_eq!(report.components[0].name, "com.example.MainActivity");
