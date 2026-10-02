@@ -394,8 +394,7 @@ fn compressed_native_library_does_not_require_zip_offset_alignment() {
 }
 
 fn decode_base64_fixture(encoded: &str) -> Vec<u8> {
-    const ALPHABET: &[u8; 64] =
-        b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
     let mut output = Vec::new();
     let mut accumulator = 0_u32;
@@ -426,10 +425,14 @@ fn decode_base64_fixture(encoded: &str) -> Vec<u8> {
 }
 
 fn decoded_apk_fixture(source_name: &str, label: &str) -> PathBuf {
-    let encoded = fs::read_to_string(fixture(source_name))
-        .expect("base64 APK fixture should be readable");
+    let encoded =
+        fs::read_to_string(fixture(source_name)).expect("base64 APK fixture should be readable");
     let bytes = decode_base64_fixture(&encoded);
-    assert_eq!(bytes.len(), 1588, "ERR-095 fixture byte length must remain stable");
+    assert_eq!(
+        bytes.len(),
+        1588,
+        "ERR-095 fixture byte length must remain stable"
+    );
 
     let path = std::env::temp_dir().join(format!(
         "android-release-doctor-{label}-{}.apk",
