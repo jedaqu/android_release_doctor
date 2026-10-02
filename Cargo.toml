@@ -8,7 +8,7 @@ members = [
 [workspace.package]
 edition = "2021"
 license = "Apache-2.0"
-version = "0.1.1"
+version = "0.1.2"
 
 [workspace.dependencies]
 ring = "0.17.14"
