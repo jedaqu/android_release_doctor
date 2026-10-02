@@ -49,7 +49,7 @@ The signature verification test module contains support for:
 
 ## ERR-095 public compatibility fixture
 
-The ERR-095 implementation adds `tests/fixtures/crypto-v2-empty-element-release.apk`, a public, generic v2 compatibility fixture. Its SHA-256 is `596db1d5efe23cf8a5227e430123595464c319f673cfc37f275f04c09efabdc5`.
+The ERR-095 implementation adds `tests/fixtures/crypto-v2-empty-element-release.apk.b64`, a public, generic v2 compatibility fixture. The decoded APK SHA-256 is `596db1d5efe23cf8a5227e430123595464c319f673cfc37f275f04c09efabdc5`.
 
 The UTF-8 fixture stores the canonical APK bytes as standard base64. Tests decode it to the original 1,588-byte APK before auditing. The decoded fixture demonstrates the structure in which valid v2 `signedData` contains:
 
