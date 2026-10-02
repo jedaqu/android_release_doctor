@@ -1,23 +1,21 @@
 # Changelog
 
-## [0.1.1] — Publication checksum correction
-
-Status: Corrected public release for the ERR-093 publication workflow defect.
+## [0.1.2] — Publication integrity correction
 
 ### Correction
-The distribution workflow now excludes the generated `SHA256SUMS` file from its own checksum input set. This removes the nondeterministic self-inclusion race reproduced during the ERR-093 post-closure audit.
+The distribution workflow excludes the generated `SHA256SUMS` file from its own checksum input set, preventing checksum self-inclusion during publication.
+
+The release binary engine version now derives directly from the Cargo package version, keeping the CLI `--version` output aligned with the published package version.
 
 ### Distribution
 
 The release package matrix remains unchanged:
 
-- Linux x86_64 — `android-release-doctor-v0.1.1-linux-x86_64.tar.gz`
-- Windows x86_64 — `android-release-doctor-v0.1.1-windows-x86_64.zip`
-- macOS Intel x86_64 — `android-release-doctor-v0.1.1-macos-x86_64.tar.gz`
+- Linux x86_64 — `android-release-doctor-v0.1.2-linux-x86_64.tar.gz`
+- Windows x86_64 — `android-release-doctor-v0.1.2-windows-x86_64.zip`
+- macOS Intel x86_64 — `android-release-doctor-v0.1.2-macos-x86_64.tar.gz`
 
 Published release artifacts are accompanied by `SHA256SUMS`.
-
-All notable user-facing changes to Android Release Doctor are documented here.
 
 ## [0.1.0] — First public release
 
