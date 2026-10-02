@@ -9,6 +9,7 @@ use zip::ZipArchive;
 
 pub mod axml;
 pub mod elf;
+pub mod manifest_proto;
 pub mod play;
 pub mod project;
 pub mod report;
@@ -487,9 +488,18 @@ pub fn audit_path(path: impl AsRef<Path>) -> Result<AuditReport, AuditError> {
             let mut bytes = Vec::new();
             entry.read_to_end(&mut bytes)?;
 
-            match axml::parse_manifest(&bytes) {
+            let parsed = match kind {
+                ArtifactKind::Apk => {
+                    axml::parse_manifest(&bytes).map_err(|error| error.to_string())
+                }
+                ArtifactKind::Aab => {
+                    manifest_proto::parse_manifest(&bytes).map_err(|error| error.to_string())
+                }
+            };
+
+            match parsed {
                 Ok(manifest) => (Some(manifest), None),
-                Err(error) => (None, Some(error.to_string())),
+                Err(error) => (None, Some(error)),
             }
         }
         None => (None, None),

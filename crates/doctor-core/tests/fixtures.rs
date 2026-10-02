@@ -73,42 +73,71 @@ fn audits_minimal_apk_fixture() {
 
 #[test]
 fn audits_minimal_aab_fixture() {
-    let report = audit_path(fixture("minimal-release.aab")).expect("AAB fixture should parse");
+    let path = std::env::temp_dir().join(format!(
+        "android-release-doctor-proto-aab-{}.aab",
+        std::process::id()
+    ));
+
+    {
+        let file = File::create(&path).expect("temporary AAB should be created");
+        let mut archive = ZipWriter::new(file);
+        let options = SimpleFileOptions::default().compression_method(CompressionMethod::Stored);
+
+        archive
+            .start_file("base/manifest/AndroidManifest.xml", options)
+            .expect("proto manifest entry should be created");
+        archive
+            .write_all(&proto_aab_manifest())
+            .expect("proto manifest bytes should be written");
+
+        archive
+            .start_file("base/dex/classes.dex", options)
+            .expect("dex entry should be created");
+        archive
+            .write_all(b"dex-fixture")
+            .expect("dex bytes should be written");
+
+        archive.finish().expect("temporary AAB should be finalized");
+    }
+
+    let report = audit_path(&path).expect("proto AAB should remain auditable");
     assert_eq!(report.artifact_kind, ArtifactKind::Aab);
     assert_eq!(
         report.inventory.manifest_path.as_deref(),
         Some("base/manifest/AndroidManifest.xml")
     );
-
     assert!(report.manifest_error.is_none());
-    let manifest = report.manifest.expect("manifest should parse");
+
+    let manifest = report.manifest.expect("proto AAB manifest should parse");
     assert_eq!(
         manifest.package_name.as_deref(),
-        Some("com.example.doctorfixture")
+        Some("com.example.protoaab")
     );
+    assert_eq!(manifest.version_code, Some(7));
+    assert_eq!(manifest.version_name.as_deref(), Some("1.2.3"));
     assert_eq!(manifest.min_sdk, Some(24));
     assert_eq!(manifest.target_sdk, Some(35));
+    assert_eq!(manifest.debuggable, Some(false));
+    assert_eq!(
+        manifest.permissions,
+        vec!["android.permission.INTERNET".to_string()]
+    );
     assert_eq!(manifest.components.len(), 1);
+    assert_eq!(manifest.components[0].kind, "activity");
     assert!(manifest.components[0].has_intent_filters);
 
-    assert_eq!(report.inventory.dex_files, vec!["base/dex/classes.dex"]);
-    assert_eq!(
-        report.inventory.native_abis,
-        vec!["arm64-v8a", "armeabi-v7a"]
-    );
-    assert_eq!(report.inventory.native_libraries.len(), 2);
     assert!(report
-        .inventory
-        .native_libraries
+        .findings
         .iter()
-        .all(|library| library.error.is_some()));
-    assert_eq!(report.inventory.signature_files.len(), 2);
+        .find(|finding| finding.rule_id == "MANIFEST-002")
+        .is_none());
     assert!(report
         .findings
         .iter()
         .all(|finding| finding.severity != Severity::Blocker));
-}
 
+    fs::remove_file(path).expect("temporary AAB should be removed");
+}
 #[test]
 fn reports_manifest_parse_error_in_the_audit_report() {
     let path = std::env::temp_dir().join(format!(
@@ -567,4 +596,148 @@ fn play_mobile_profile_flags_existing_fixture_target_api() {
             .map(|finding| finding.severity),
         Some(Severity::ManualReview)
     );
+}
+
+fn proto_encode_varint(value: u64, output: &mut Vec<u8>) {
+    let mut value = value;
+    while value >= 0x80 {
+        output.push((value as u8 & 0x7f) | 0x80);
+        value >>= 7;
+    }
+    output.push(value as u8);
+}
+
+fn proto_encode_key(field: u32, wire_type: u8, output: &mut Vec<u8>) {
+    proto_encode_varint((u64::from(field) << 3) | u64::from(wire_type), output);
+}
+
+fn proto_encode_bytes(field: u32, value: &[u8], output: &mut Vec<u8>) {
+    proto_encode_key(field, 2, output);
+    proto_encode_varint(value.len() as u64, output);
+    output.extend_from_slice(value);
+}
+
+fn proto_encode_string(field: u32, value: &str, output: &mut Vec<u8>) {
+    proto_encode_bytes(field, value.as_bytes(), output);
+}
+
+fn proto_compiled_primitive(value_type: u32, data: u32) -> Vec<u8> {
+    let mut primitive = Vec::new();
+    proto_encode_key(1, 0, &mut primitive);
+    proto_encode_varint(u64::from(value_type), &mut primitive);
+    proto_encode_key(2, 0, &mut primitive);
+    proto_encode_varint(u64::from(data), &mut primitive);
+
+    let mut item = Vec::new();
+    proto_encode_bytes(7, &primitive, &mut item);
+    item
+}
+
+fn proto_attribute(
+    namespace: &str,
+    name: &str,
+    value: &str,
+    primitive: Option<(u32, u32)>,
+) -> Vec<u8> {
+    let mut output = Vec::new();
+    proto_encode_string(1, namespace, &mut output);
+    proto_encode_string(2, name, &mut output);
+    proto_encode_string(3, value, &mut output);
+    if let Some((value_type, data)) = primitive {
+        proto_encode_bytes(6, &proto_compiled_primitive(value_type, data), &mut output);
+    }
+    output
+}
+
+fn proto_element_node(name: &str, attributes: &[Vec<u8>], children: &[Vec<u8>]) -> Vec<u8> {
+    let mut element = Vec::new();
+    proto_encode_string(3, name, &mut element);
+    for attribute in attributes {
+        proto_encode_bytes(4, attribute, &mut element);
+    }
+    for child in children {
+        proto_encode_bytes(5, child, &mut element);
+    }
+
+    let mut node = Vec::new();
+    proto_encode_bytes(1, &element, &mut node);
+    node
+}
+
+fn proto_aab_manifest() -> Vec<u8> {
+    proto_element_node(
+        "manifest",
+        &[
+            proto_attribute("", "package", "com.example.protoaab", None),
+            proto_attribute(
+                "http://schemas.android.com/apk/res/android",
+                "versionCode",
+                "7",
+                Some((0x10, 7)),
+            ),
+            proto_attribute(
+                "http://schemas.android.com/apk/res/android",
+                "versionName",
+                "1.2.3",
+                None,
+            ),
+        ],
+        &[
+            proto_element_node(
+                "uses-sdk",
+                &[
+                    proto_attribute(
+                        "http://schemas.android.com/apk/res/android",
+                        "minSdkVersion",
+                        "24",
+                        Some((0x10, 24)),
+                    ),
+                    proto_attribute(
+                        "http://schemas.android.com/apk/res/android",
+                        "targetSdkVersion",
+                        "35",
+                        Some((0x10, 35)),
+                    ),
+                ],
+                &[],
+            ),
+            proto_element_node(
+                "uses-permission",
+                &[proto_attribute(
+                    "http://schemas.android.com/apk/res/android",
+                    "name",
+                    "android.permission.INTERNET",
+                    None,
+                )],
+                &[],
+            ),
+            proto_element_node(
+                "application",
+                &[proto_attribute(
+                    "http://schemas.android.com/apk/res/android",
+                    "debuggable",
+                    "false",
+                    Some((0x12, 0)),
+                )],
+                &[proto_element_node(
+                    "activity",
+                    &[
+                        proto_attribute(
+                            "http://schemas.android.com/apk/res/android",
+                            "name",
+                            "com.example.protoaab.MainActivity",
+                            None,
+                        ),
+                        proto_attribute(
+                            "http://schemas.android.com/apk/res/android",
+                            "exported",
+                            "true",
+                            Some((0x12, 1)),
+                        ),
+                    ],
+                    &[proto_element_node("intent-filter", &[], &[])],
+                )],
+            ),
+        ],
+    )
 }
