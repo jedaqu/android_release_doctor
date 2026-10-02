@@ -86,10 +86,32 @@ Build → Test → Format → Clippy
 
 After merge, main CI must pass the same four gates.
 
-## 8. Second-audit conclusion
+## 8. Correction chain reviewed by second audit
 
-ERR-038-B SECOND AUDIT: PASS — pending terminal GitHub Actions validation.
+The implementation required bounded corrections during CI:
 
-The implementation is bounded to the approved RSA 1024/16384 public-verification capability and does not replace the validated 2048–8192 ring backend.
+- ERR-108 — test-only x509-parser API correction.
+- ERR-109 — rsa 0.9.10 checked-constructor boundary at 16384 bits.
+- ERR-110 — replacement of mismatched RSA-16384 signature fixtures with a verified AOSP key-pair-derived set.
+- ERR-111 — test-only scoping of the PEM parser import.
+
+No correction changed the approved cryptographic scope or the existing 2048–8192 `ring` path.
+
+## 9. Terminal validation
+
+PR #40 terminal Rust CI #163 / `37052651036`:
+
+- Build: PASS
+- Test: PASS
+- Format: PASS
+- Clippy: PASS
+
+The final head is therefore eligible for merge.
+
+## 10. Second-audit conclusion
+
+**ERR-038-B SECOND AUDIT: PASS.**
+
+The final implementation is bounded to the approved RSA 1024/16384 public-verification capability, preserves the validated 2048–8192 `ring` backend, and has repository-contained cryptographic fixtures verified against a matching AOSP RSA-16384 certificate/key pair.
 
 ERR-038 parent remains active after ERR-038-B because DSA 1024/2048/3072 is deliberately separate.
