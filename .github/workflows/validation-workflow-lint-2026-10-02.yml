@@ -22,3 +22,5 @@ jobs:
           test -x actionlint
       - name: Lint campaign workflow
         run: ./actionlint .github/workflows/validation-campaign-2026-10-02.yml
+
+# trigger lint after workflow creation
