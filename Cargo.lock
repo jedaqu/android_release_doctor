@@ -371,14 +371,14 @@ dependencies = [
 
 [[package]]
 name = "doctor-cli"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "doctor-core",
 ]
 
 [[package]]
 name = "doctor-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "p384",
  "ring",
