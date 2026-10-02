@@ -2589,8 +2589,8 @@ mod tests {
                 .join("../../tests/fixtures/err-038-b/rsa-16384/rsa-16384.x509.pem"),
         )
         .expect("RSA-16384 certificate fixture should be readable");
-        let (_, pem) = parse_x509_pem(certificate_pem.as_bytes())
-            .expect("AOSP RSA-16384 PEM should parse");
+        let (_, pem) =
+            parse_x509_pem(certificate_pem.as_bytes()).expect("AOSP RSA-16384 PEM should parse");
         let certificate = pem.contents.as_ref();
         let (_, cert) =
             X509Certificate::from_der(certificate).expect("AOSP RSA-16384 certificate should parse");
@@ -2601,8 +2601,7 @@ mod tests {
         };
         assert_eq!(rsa.key_size(), 16_384);
 
-        let signed_data =
-            b"Android Release Doctor ERR-038-B RSA-16384 deterministic test message";
+        let signed_data = b"Android Release Doctor ERR-038-B RSA-16384 deterministic test message";
         let vectors = [
             (
                 0x0103_u32,
@@ -2623,11 +2622,11 @@ mod tests {
         ];
 
         for (algorithm_id, fixture) in vectors {
-            let signature =
-                std::fs::read(std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(
-                    format!("../../{fixture}"),
-                ))
-                .expect("RSA-16384 signature fixture should be readable");
+            let signature = std::fs::read(
+                std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                    .join(format!("../../{fixture}")),
+            )
+            .expect("RSA-16384 signature fixture should be readable");
 
             verify_extended_rsa_signature(
                 algorithm_id,
