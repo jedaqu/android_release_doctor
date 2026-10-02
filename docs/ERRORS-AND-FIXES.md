@@ -1105,10 +1105,14 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Type:** Cryptographic verification / compatibility defect
 - **Observed:** A real APK audit reported SIGNING-003 with `v2 signed data contains trailing bytes`.
 - **Independent evidence:** The same APK was accepted by the Android SDK apksigner verifier for APK Signature Scheme v2 and v3.
-- **Problem:** ADR's v2 parser can classify a valid real-world signature as invalid.
-- **Correction:** Pending focused audit of length-delimited v2 signed-data parsing, including certificate-chain and additional-attribute handling. No relaxation of malformed-input rejection without evidence.
-- **Validation target:** Valid real-world v2/v3 APK verification plus negative tests proving malformed/trailing data remains rejected.
-- **Status:** OPEN
+- **Root cause:** Byte-level reproduction demonstrated a concrete compatible v2 `signedData` structure in which the three known length-prefixed fields are followed by exactly one additional empty length-prefixed element encoded as `00 00 00 00`. Those four bytes are part of the signed `signedData` and are accepted by the Android signing/reference-verifier path. ADR currently requires complete consumption immediately after the three known fields and therefore reports the valid structure as trailing bytes.
+- **Correction boundary:** Accept only that exact fourth empty element after the three known fields, then require complete consumption. Preserve strict rejection of short residuals, non-empty fourth elements, multiple residual elements, malformed lengths, and arbitrary trailing bytes. Preserve cryptographic verification over the complete `signedData`.
+- **Out of scope:** v3/v3.1/v3.2/v4 behavior, certificate/public-key binding, content digest verification, SIGNING-001/002 semantics, and ERR-096.
+- **Implementation:** Not started. No production code has been changed by the delimitation movement.
+- **Regression target:** Conventional three-field v2 data remains Verified; the compatible fourth-empty-element structure becomes Verified; malformed/truncated/non-empty/multiple residual variants remain Invalid.
+- **Public-boundary note:** The real-world artifact and private evidence remain private. The public regression will encode the demonstrated structural contract rather than publish the external artifact.
+- **Status:** OPEN — root cause demonstrated; correction delimited.
+- **Delimitation:** docs/AUDIT-ERR-095-DELIMITATION.md
 - **Roadmap:** docs/ROADMAP-ERR-094-096.md
 
 ## ERR-096 — Android application plugin alias discovery gap
