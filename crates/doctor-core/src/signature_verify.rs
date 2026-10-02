@@ -956,7 +956,7 @@ fn verify_signature_bytes(
         if matches!(curve_oid, Some(oid) if oid == OID_NIST_EC_P521) {
             return verify_p521_ecdsa_signature(
                 0x0202,
-                cert,
+                &cert,
                 signed_data,
                 signature_bytes,
                 DigestAlgorithm::Sha512,
@@ -1071,7 +1071,7 @@ fn verify_signature_bytes(
                 Some(oid) if oid == OID_NIST_EC_P521 => {
                     return verify_p521_ecdsa_signature(
                         0x0201,
-                        cert,
+                        &cert,
                         signed_data,
                         signature_bytes,
                         DigestAlgorithm::Sha256,
@@ -1140,9 +1140,9 @@ fn verify_p521_ecdsa_signature(
         ))
     })?;
 
-    let prehash = match digest_algorithm {
-        DigestAlgorithm::Sha256 => Sha256::digest(signed_data),
-        DigestAlgorithm::Sha512 => Sha512::digest(signed_data),
+    let prehash: Vec<u8> = match digest_algorithm {
+        DigestAlgorithm::Sha256 => Sha256::digest(signed_data).to_vec(),
+        DigestAlgorithm::Sha512 => Sha512::digest(signed_data).to_vec(),
     };
 
     P521PrehashVerifier::<P521Signature>::verify_prehash(
