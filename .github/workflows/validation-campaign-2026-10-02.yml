@@ -284,9 +284,10 @@ jobs:
           import json
           for n in ("missing","bad"):
               r=json.load(open("validation-output/"+n+".json",encoding="utf-8"))
-              f=next(x for x in r["findings"] if x["rule_id"]=="MANIFEST-002")
+              rule = "MANIFEST-001" if n == "missing" else "MANIFEST-002"
+              f=next(x for x in r["findings"] if x["rule_id"]==rule)
               assert f["severity"]=="BLOCKER"
-              print(n,f["severity"])
+              print(n,rule,f["severity"])
           PY
       - name: Validate scale and weird-path corpora
         shell: bash
