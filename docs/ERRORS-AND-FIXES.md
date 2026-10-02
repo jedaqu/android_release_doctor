@@ -1180,6 +1180,17 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Validation:** Required in the next Actions execution.
 - **Status:** CORRECTION APPLIED — pending validation
 
+## ERR-103 — ERR-096 resolver rustfmt layout mismatch
+
+- **Milestone:** ERR-096 implementation / Actions run #92 / run `37018045982`
+- **Type:** CI formatting failure
+- **Problem:** The new version-catalog resolver compiled and all tests passed, but five deterministic rustfmt layout differences remained in `crates/doctor-core/src/project.rs`.
+- **Evidence:** Build PASS; Test PASS with 100 `doctor-core` unit tests and 17 integration tests; Format failed only on the formatter-indicated line wrapping. Clippy did not run because Format stopped the workflow.
+- **Correction:** Apply only the rustfmt-indicated formatting changes. No resolver semantics or tests changed.
+- **Scope:** ERR-096 implementation formatting only.
+- **Validation:** Required in the next Actions execution.
+- **Status:** CORRECTION APPLIED — pending validation
+
 ## ERR-096 — Android application plugin alias discovery gap
 
 - **Milestone:** Post-release real-world artifact validation
