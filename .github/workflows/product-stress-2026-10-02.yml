@@ -105,7 +105,7 @@ jobs:
           assert report["schema_version"] == "1.0"
           assert "findings" in report
           assert "summary" in report
-          assert all(key in report["summary"] for key in ("blockers", "warnings", "manual_review", "info"))
+          assert all(key in report["summary"] for key in ("passed", "warnings", "blockers", "manual_review"))
           print(f"{case_id}: exit={exit_code} blockers={report['summary']['blockers']} warnings={report['summary']['warnings']} manual_review={report['summary']['manual_review']}")
           PY
 
@@ -175,11 +175,11 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/malformed"
-          cp tests/fixtures/minimal-release.apk "$RUNNER_TEMP/malformed/truncated.apk"
+          cp tests/fixtures/crypto-v2-release.apk "$RUNNER_TEMP/malformed/truncated.apk"
           truncate -s 64 "$RUNNER_TEMP/malformed/truncated.apk"
           : > "$RUNNER_TEMP/malformed/empty.apk"
           head -c 4096 /dev/urandom > "$RUNNER_TEMP/malformed/random.apk"
-          cp tests/fixtures/minimal-release.apk "$RUNNER_TEMP/malformed/flipped-byte.apk"
+          cp tests/fixtures/crypto-v2-release.apk "$RUNNER_TEMP/malformed/flipped-byte.apk"
           python3 - "$RUNNER_TEMP/malformed/flipped-byte.apk" <<'PY'
           import sys
           path=sys.argv[1]
@@ -235,9 +235,10 @@ jobs:
         run: |
           set -euo pipefail
           for value in "$TRUNCATED" "$EMPTY" "$RANDOM" "$FLIPPED"; do
-            test "$value" = "1" || test "$value" = "2"
+            test "$value" = "0" || test "$value" = "1" || test "$value" = "2"
           done
-          printf 'truncated=%s empty=%s random=%s flipped=%s\n' "$TRUNCATED" "$EMPTY" "$RANDOM" "$FLIPPED"
+          test "$FLIPPED" != "0"
+          printf 'truncated=%s empty=%s random=%s flipped-signed=%s\n' "$TRUNCATED" "$EMPTY" "$RANDOM" "$FLIPPED"
 
       - name: Upload malformed reports
         if: always()
