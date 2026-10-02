@@ -1066,5 +1066,5 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Reference:** https://cli.github.com/manual/gh_release_create
 - **Correction branch:** `fix/audit-005-publish-repo-context`
 - **Correction commit:** `a3f9ffd1f0c2124415133d7c19004b15d065c1ae`
-- **Validation:** Pending second audit and CI.
-- **Status:** OPEN
+- **Validation:** Second audit `docs/AUDIT-005-SECOND-AUDIT.md` passed; PR #12 CI run `36948346937` passed Build, Test, Format, and Clippy; PR #12 merged as `4d14ae288882667f23fdd241d26481e215163318`; main CI run `36948475354` passed Build, Test, Format, and Clippy.
+- **Status:** RESOLVED
