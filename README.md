@@ -6,6 +6,35 @@ Open-source, local-first tool for auditing Android APK and AAB releases before p
 
 Android Release Doctor inspects the **artifact you are actually going to distribute**, can compare it with the Android application Gradle configuration, and can apply a versioned Google Play submission-readiness profile.
 
+## Current cryptographic coverage — post ERR-038-A / ERR-038-B
+
+The following matrix describes the **current validated implementation state** on `main`. The historical M0.7 sections below remain unchanged as milestone history and are not a current-state matrix.
+
+| Algorithm / variant | Current validated coverage |
+|---|---|
+| `0x0101` RSA-PSS / SHA-256 | RSA 1024, 2048–8192, and 16384 bits |
+| `0x0102` RSA-PSS / SHA-512 | RSA 2048–8192 and 16384 bits; RSA 1024 remains Unsupported because the required 64-byte salt does not fit the modulus boundary |
+| `0x0103` RSA PKCS#1 v1.5 / SHA-256 | RSA 1024, 2048–8192, and 16384 bits |
+| `0x0104` RSA PKCS#1 v1.5 / SHA-512 | RSA 1024, 2048–8192, and 16384 bits |
+| `0x0201` ECDSA / SHA-256 | NIST P-256, P-384, and P-521 |
+| `0x0202` ECDSA / SHA-512 | NIST P-384 and P-521; P-256 remains Unsupported |
+| `0x0301` DSA / SHA-256 | Cryptographic verification remains Unsupported and is explicitly deferred for a separate security/backend decision |
+| APK Signature Scheme v3.2 / PQC | v3.2 block presence is recorded separately; cryptographic PQC verification is not implemented |
+
+For v2/v3/v3.1, Release Doctor selects from the cryptographic algorithms it actually supports rather than treating an Android algorithm identifier alone as proof of verification capability.
+
+ERR-038-A added and validated ECDSA P-521 support. ERR-038-B added and validated the RSA 1024/16384 boundaries without replacing the existing 2048–8192 `ring` path.
+
+Android documents the broader v2/v3 algorithm matrix, including DSA and the larger RSA/EC key boundaries. Google Play App Signing currently uses RSA-based upload/app-signing keys; its quantum-ready option uses a hybrid RSA 4096 + ML-DSA-65 configuration. Those external capabilities do not automatically define Release Doctor's implementation scope.
+
+References:
+
+- https://source.android.com/docs/security/features/apksigning/v2
+- https://source.android.com/docs/security/features/apksigning/v3
+- https://source.android.com/docs/security/features/apksigning/v3-2
+- https://support.google.com/googleplay/android-developer/answer/9842756
+
+
 ## M0.1 scope
 
 The release artifact is inspected deeply enough to extract:
@@ -405,7 +434,9 @@ The initial distribution matrix intentionally excludes ARM64, package-manager in
 - full Gradle/variant evaluation;
 - product-flavor-aware expected-value resolution;
 - CI/generated version resolution;
-- full cryptographic coverage of every Android-supported v2/v3 signature algorithm and key size;
+- DSA (algorithm ID `0x0301`) cryptographic verification;
+- v3.2/PQC cryptographic verification;
+- AAB cryptographic signing verification;
 - current Google Play policy automation beyond the M0.3 readiness checks;
 - permission risk classification;
 - HTML/SARIF output.
