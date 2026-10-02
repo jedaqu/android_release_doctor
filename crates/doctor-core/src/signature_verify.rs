@@ -1175,6 +1175,16 @@ fn parse_signed_data_v2(bytes: &[u8]) -> Result<ParsedSignedData<'_>, SignatureV
     let digests = reader.read_sequence("v2 digests")?;
     let certificates = reader.read_sequence("v2 certificates")?;
     let _attributes = reader.read_sequence("v2 additional attributes")?;
+
+    if !reader.is_empty() {
+        let fourth = reader.read_sequence("v2 optional fourth signed-data element")?;
+        if !fourth.is_empty() {
+            return Err(SignatureVerificationError(
+                "v2 optional fourth signed-data element must be empty".to_string(),
+            ));
+        }
+    }
+
     reader.finish("v2 signed data")?;
 
     let (digest_algorithms, selected_digest) = parse_digest_sequence(digests)?;
