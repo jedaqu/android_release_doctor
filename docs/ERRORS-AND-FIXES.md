@@ -1175,7 +1175,30 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Type:** Project parser / Kotlin DSL compatibility
 - **Observed:** A real Android application project using build.gradle.kts and a version-catalog plugin alias was not recognized by project discovery.
 - **Problem:** Current discovery relies on finding the literal com.android.application in the module build file and therefore misses supported Kotlin DSL/version-catalog alias usage.
-- **Correction:** Pending focused audit of safe application-plugin detection for direct plugin IDs and version-catalog aliases, without introducing broad text heuristics.
-- **Validation target:** Representative Groovy/Kotlin DSL direct-ID fixtures, version-catalog alias fixtures, and negative cases that must remain non-application projects.
-- **Status:** OPEN
+- **Correction:** Resolve the standard root `gradle/libs.versions.toml` during directory discovery, inspect only `plugins { ... }` aliases, resolve `libs.plugins.<alias>` through the catalog `[plugins]` table, require the resolved ID to equal `com.android.application`, and ignore `apply false` declarations during application-module discovery. Direct plugin-ID behavior remains unchanged.
+- **Validation:** Actions run #94 / `37018187885` passed Build, Test, Format, and Clippy. The run executed 100 `doctor-core` unit tests and 17 integration tests; the new version-catalog fixture was accepted end-to-end.
+- **Second audit:** Confirmed production scope limited to `crates/doctor-core/src/project.rs`; public fixture additions and focused documentation only. Negative coverage includes non-application aliases, `apply false`, missing catalogs, alias text inside strings, aliases outside `plugins {}`, and dashed alias accessors.
+- **Status:** RESOLVED
 - **Roadmap:** docs/ROADMAP-ERR-094-096.md
+## ERR-102 — ERR-096 helper newline literal syntax error
+
+- **Milestone:** ERR-096 implementation / Actions run #91 / run `37017902525`
+- **Type:** Implementation compile failure
+- **Problem:** The new `line_end()` helper contained `'\\\\n'` in source instead of the single newline character literal `'\\n'`.
+- **Evidence:** Build failed with Rust error E0762-equivalent character-literal diagnostics at `crates/doctor-core/src/project.rs:385`. Test, Format, and Clippy did not run.
+- **Correction:** Replace only the malformed character literal with `'\\n'`. No discovery semantics changed.
+- **Scope:** ERR-096 helper implementation only.
+- **Validation:** Required in the next Actions execution.
+- **Status:** RESOLVED — Actions run #94 / run `37018187885` passed Build, Test, Format, and Clippy.
+
+## ERR-103 — ERR-096 resolver rustfmt layout mismatch
+
+- **Milestone:** ERR-096 implementation / Actions run #92 / run `37018045982`
+- **Type:** CI formatting failure
+- **Problem:** The new version-catalog resolver compiled and all tests passed, but five deterministic rustfmt layout differences remained in `crates/doctor-core/src/project.rs`.
+- **Evidence:** Build PASS; Test PASS with 100 `doctor-core` unit tests and 17 integration tests; Format failed only on the formatter-indicated line wrapping. Clippy did not run because Format stopped the workflow.
+- **Correction:** Apply only the rustfmt-indicated formatting changes. No resolver semantics or tests changed.
+- **Scope:** ERR-096 implementation formatting only.
+- **Validation:** Required in the next Actions execution.
+- **Status:** RESOLVED — Actions run #94 / run `37018187885` passed Build, Test, Format, and Clippy.
+

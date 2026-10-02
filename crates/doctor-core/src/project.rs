@@ -156,11 +156,13 @@ fn discover_application_build_file(input: &Path) -> Result<PathBuf, ProjectError
         )));
     }
 
+    let version_catalog = read_version_catalog(input)?;
+
     for name in ["build.gradle", "build.gradle.kts"] {
         let candidate = input.join(name);
         if candidate.is_file() {
             let source = fs::read_to_string(&candidate)?;
-            if looks_like_android_application(&source) {
+            if looks_like_android_application(&source, version_catalog.as_deref()) {
                 return Ok(candidate);
             }
         }
@@ -179,7 +181,7 @@ fn discover_application_build_file(input: &Path) -> Result<PathBuf, ProjectError
                 continue;
             }
             let source = fs::read_to_string(&candidate)?;
-            if looks_like_android_application(&source) {
+            if looks_like_android_application(&source, version_catalog.as_deref()) {
                 candidates.push(candidate);
             }
         }
@@ -193,9 +195,187 @@ fn discover_application_build_file(input: &Path) -> Result<PathBuf, ProjectError
     }
 }
 
-fn looks_like_android_application(source: &str) -> bool {
+fn read_version_catalog(project_root: &Path) -> Result<Option<String>, ProjectError> {
+    let path = project_root.join("gradle").join("libs.versions.toml");
+    if !path.is_file() {
+        return Ok(None);
+    }
+
+    Ok(Some(fs::read_to_string(path)?))
+}
+
+fn looks_like_android_application(source: &str, version_catalog: Option<&str>) -> bool {
     let sanitized = strip_comments(source);
-    sanitized.contains("com.android.application")
+    if sanitized.contains("com.android.application") {
+        return true;
+    }
+
+    let plugins = match find_named_block(&sanitized, "plugins") {
+        Some(block) => block,
+        None => return false,
+    };
+
+    find_android_application_plugin_alias(&plugins, version_catalog)
+}
+
+fn find_android_application_plugin_alias(plugins: &str, version_catalog: Option<&str>) -> bool {
+    let catalog = match version_catalog {
+        Some(catalog) => catalog,
+        None => return false,
+    };
+
+    let bytes = plugins.as_bytes();
+    let mut index = 0;
+    let mut quote = None;
+
+    while index < bytes.len() {
+        let current = bytes[index] as char;
+
+        if let Some(active_quote) = quote {
+            if current == '\\' {
+                index += 2;
+                continue;
+            }
+            if current == active_quote {
+                quote = None;
+            }
+            index += 1;
+            continue;
+        }
+
+        if current == '\'' || current == '"' {
+            quote = Some(current);
+            index += 1;
+            continue;
+        }
+
+        if current == 'a'
+            && plugins[index..].starts_with("alias")
+            && is_word_boundary(bytes.get(index.wrapping_sub(1)).copied())
+            && is_word_boundary(bytes.get(index + 5).copied())
+        {
+            let mut cursor = index + 5;
+            cursor = skip_whitespace(plugins, cursor);
+            if bytes.get(cursor) == Some(&b'(') {
+                cursor = skip_whitespace(plugins, cursor + 1);
+            }
+
+            const PREFIX: &str = "libs.plugins.";
+            if plugins[cursor..].starts_with(PREFIX) {
+                let accessor_start = cursor + PREFIX.len();
+                let mut accessor_end = accessor_start;
+                while accessor_end < plugins.len() {
+                    let byte = plugins.as_bytes()[accessor_end];
+                    if byte.is_ascii_alphanumeric() || byte == b'_' || byte == b'.' {
+                        accessor_end += 1;
+                    } else {
+                        break;
+                    }
+                }
+
+                if accessor_end > accessor_start
+                    && !plugins[cursor..line_end(plugins, accessor_end)].contains("apply false")
+                    && catalog_declares_plugin(
+                        catalog,
+                        &plugins[accessor_start..accessor_end],
+                        "com.android.application",
+                    )
+                {
+                    return true;
+                }
+            }
+
+            index = cursor;
+            continue;
+        }
+
+        index += 1;
+    }
+
+    false
+}
+
+fn catalog_declares_plugin(catalog: &str, accessor: &str, expected_plugin_id: &str) -> bool {
+    let mut in_plugins = false;
+
+    for raw_line in catalog.lines() {
+        let line = strip_toml_comment(raw_line);
+        let trimmed = line.trim();
+
+        if trimmed.starts_with('[') {
+            in_plugins = trimmed == "[plugins]";
+            continue;
+        }
+
+        if !in_plugins || trimmed.is_empty() {
+            continue;
+        }
+
+        let Some((raw_key, value)) = trimmed.split_once('=') else {
+            continue;
+        };
+
+        let key = raw_key.trim().trim_matches('"');
+        let key_matches = key == accessor
+            || key.replace('-', ".") == accessor
+            || key.replace('_', ".") == accessor;
+
+        if key_matches && extract_string_value(value, "id").as_deref() == Some(expected_plugin_id) {
+            return true;
+        }
+    }
+
+    false
+}
+
+fn strip_toml_comment(source: &str) -> String {
+    let mut out = String::with_capacity(source.len());
+    let mut quote = None;
+    let chars: Vec<char> = source.chars().collect();
+    let mut index = 0;
+
+    while index < chars.len() {
+        let current = chars[index];
+
+        if let Some(active_quote) = quote {
+            out.push(current);
+            if current == '\\' && index + 1 < chars.len() {
+                index += 1;
+                out.push(chars[index]);
+            } else if current == active_quote {
+                quote = None;
+            }
+            index += 1;
+            continue;
+        }
+
+        if current == '\'' || current == '"' {
+            quote = Some(current);
+            out.push(current);
+            index += 1;
+            continue;
+        }
+
+        if current == '#' {
+            break;
+        }
+
+        out.push(current);
+        index += 1;
+    }
+
+    out
+}
+
+fn line_end(source: &str, offset: usize) -> usize {
+    source[offset..]
+        .find('\n')
+        .map(|relative| offset + relative)
+        .unwrap_or(source.len())
+}
+
+fn is_word_boundary(byte: Option<u8>) -> bool {
+    byte.is_none() || !byte.unwrap().is_ascii_alphanumeric() && byte != Some(b'_')
 }
 
 fn is_gradle_build_file(path: &Path) -> bool {
@@ -561,6 +741,118 @@ android {
             ),
             Some(false)
         );
+    }
+
+    #[test]
+    fn discovers_android_application_from_version_catalog_alias() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures/project-release-version-catalog");
+
+        let project = parse_project(root).expect("version-catalog project should be discovered");
+
+        assert_eq!(project.module_name, "app");
+        assert_eq!(project.syntax, GradleSyntax::Kotlin);
+        assert_eq!(
+            project.application_id.as_deref(),
+            Some("com.example.catalogfixture")
+        );
+        assert_eq!(project.target_sdk, Some(35));
+        assert_eq!(project.version_code, Some(8));
+        assert_eq!(project.version_name.as_deref(), Some("2.0.0"));
+        assert_eq!(project.release_debuggable, Some(false));
+    }
+
+    #[test]
+    fn direct_application_plugin_id_remains_an_application_match() {
+        assert!(looks_like_android_application(
+            "plugins { id(\"com.android.application\") }",
+            None
+        ));
+    }
+
+    #[test]
+    fn resolves_only_android_application_plugin_aliases() {
+        let catalog = r#"
+[versions]
+agp = "8.9.1"
+
+[plugins]
+androidApplication = { id = "com.android.application", version.ref = "agp" }
+androidLibrary = { id = "com.android.library", version.ref = "agp" }
+"#;
+
+        assert!(looks_like_android_application(
+            "plugins { alias(libs.plugins.androidApplication) }",
+            Some(catalog)
+        ));
+        assert!(!looks_like_android_application(
+            "plugins { alias(libs.plugins.androidLibrary) }",
+            Some(catalog)
+        ));
+    }
+
+    #[test]
+    fn resolves_dashed_version_catalog_plugin_alias() {
+        let catalog = r#"
+[plugins]
+android-application = { id = "com.android.application", version = "8.9.1" }
+"#;
+
+        assert!(looks_like_android_application(
+            "plugins { alias(libs.plugins.android.application) }",
+            Some(catalog)
+        ));
+    }
+
+    #[test]
+    fn ignores_apply_false_application_alias_during_discovery() {
+        let catalog = r#"
+[plugins]
+androidApplication = { id = "com.android.application", version = "8.9.1" }
+"#;
+
+        assert!(!looks_like_android_application(
+            "plugins { alias(libs.plugins.androidApplication) apply false }",
+            Some(catalog)
+        ));
+    }
+
+    #[test]
+    fn ignores_application_alias_text_inside_plugin_strings() {
+        let catalog = r#"
+[plugins]
+androidApplication = { id = "com.android.application", version = "8.9.1" }
+"#;
+
+        assert!(!looks_like_android_application(
+            r#"plugins { id("example") println("alias(libs.plugins.androidApplication)") }"#,
+            Some(catalog)
+        ));
+    }
+
+    #[test]
+    fn ignores_alias_without_a_version_catalog() {
+        assert!(!looks_like_android_application(
+            "plugins { alias(libs.plugins.androidApplication) }",
+            None
+        ));
+    }
+
+    #[test]
+    fn ignores_aliases_in_non_plugin_blocks() {
+        let catalog = r#"
+[plugins]
+androidApplication = { id = "com.android.application", version = "8.9.1" }
+"#;
+
+        assert!(!looks_like_android_application(
+            r#"
+            dependencies {
+                println("alias(libs.plugins.androidApplication)")
+            }
+            "#,
+            Some(catalog)
+        ));
     }
 
     #[test]
