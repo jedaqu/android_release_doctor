@@ -27,7 +27,6 @@ use subtle::ConstantTimeEq;
 use x509_parser::{
     certificate::X509Certificate,
     oid_registry::{OID_EC_P256, OID_NIST_EC_P384, OID_NIST_EC_P521},
-    pem::parse_x509_pem,
     prelude::FromDer,
     public_key::PublicKey,
 };
