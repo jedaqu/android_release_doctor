@@ -27,6 +27,7 @@ use subtle::ConstantTimeEq;
 use x509_parser::{
     certificate::X509Certificate,
     oid_registry::{OID_EC_P256, OID_NIST_EC_P384, OID_NIST_EC_P521},
+    pem::parse_x509_pem,
     prelude::FromDer,
     public_key::PublicKey,
 };
@@ -2670,19 +2671,19 @@ llqs0zhvTf52H8siwaO83Cui78iamqv7jVatB3JYW71S5cOyZ/x5Z5FYqKi8/wjO
 L4OyUs54kfcJllsxAmS014UgcTrJpbMNw7jSzLX6FxT4MEbyARK8wWQfEZQ2tCeo
 IOzfcYvlY05mG0KSzs6ZGBrWRZQDPcbJ0CKNSLTFbQ==
 -----END CERTIFICATE-----"#;
-        let certificate = decode_pem_certificate(CERTIFICATE_PEM);
+        let (_, pem) =
+            parse_x509_pem(CERTIFICATE_PEM.as_bytes()).expect("AOSP RSA-16384 PEM should parse");
+        let certificate = pem.contents;
         let (_, cert) =
             X509Certificate::from_der(&certificate).expect("AOSP RSA-16384 certificate should parse");
-        assert_eq!(cert.public_key().parsed().unwrap().key_size(), 16_384);
 
         let tbs = cert.tbs_certificate.raw;
         let signature = cert.signature_value.data;
-        let (_, parsed_public_key) = X509Certificate::from_der(&certificate)
-            .expect("AOSP RSA-16384 certificate should parse");
-        let rsa = match parsed_public_key.public_key().parsed().unwrap() {
+        let rsa = match cert.public_key().parsed().unwrap() {
             PublicKey::RSA(rsa) => rsa,
             _ => panic!("expected RSA public key"),
         };
+        assert_eq!(rsa.key_size(), 16_384);
         verify_extended_rsa_signature(
             0x0103,
             16_384,
