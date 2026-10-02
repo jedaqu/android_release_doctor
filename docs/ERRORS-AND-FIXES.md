@@ -1202,3 +1202,20 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Validation:** Required in the next Actions execution.
 - **Status:** RESOLVED — Actions run #94 / run `37018187885` passed Build, Test, Format, and Clippy; post-merge main run #100 / `37018610760` also passed all four gates.
 
+
+
+## ERR-104 — Release binary engine version drift from workspace package version
+
+- **Milestone:** M0.9 / AUDIT-005 real release publication validation
+- **Type:** Release/version-propagation defect
+- **Observed in:** Distribution run `37022419003`, tag `v0.1.1`
+- **Observed head:** `a00529824f61795e97979d9289ad54b1e504c662`
+- **Problem:** The tag-driven distribution workflow accepted the workspace/tag version `0.1.1`, built the release binary on all three package runners, and then rejected each packaged binary because `--version` did not equal the workspace version.
+- **Evidence:** Linux x86_64, Windows x86_64, and macOS x86_64 all failed at their binary-version consistency checks. The `validate` job passed Test, Format, and Clippy. The `publish` job was skipped because the package matrix did not complete.
+- **Root cause:** `crates/doctor-core/src/lib.rs` contains the independent hard-coded `ENGINE_VERSION = "0.1.0"` while the workspace/package version is `0.1.1`. `crates/doctor-cli/src/main.rs` prints `ENGINE_VERSION` for `--version`.
+- **Impact:** A release can reach successful compilation on every supported platform while still producing binaries that self-report a stale version. The existing distribution guard correctly blocks publication.
+- **Correction boundary:** Replace the independent literal version source with the Cargo package version while preserving the existing public constant, CLI output, report rendering, and release workflow contract. Keep package/archive/checksum/publication behavior unchanged.
+- **Important release-state consequence:** The remote annotated tag `v0.1.1` already exists and points to the failed release commit, while no GitHub Release exists for `v0.1.1`. The correction must not move or rewrite that tag. The next successful publication therefore requires a new release version/tag and a corresponding release-documentation rebaseline.
+- **Documentation consistency note:** `README.md` and `CHANGELOG.md` currently describe `v0.1.1` as published, but GitHub currently has no `v0.1.1` Release. This must be corrected during release preparation.
+- **Status:** OPEN
+- **Pre-audit:** `docs/AUDIT-ERR-104-PRE-AUDIT.md`
