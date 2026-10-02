@@ -1346,3 +1346,17 @@ From this point forward, a historical `OPEN` entry is not considered an active w
 - **Correction:** Scope `parse_x509_pem` to `#[cfg(test)] mod tests` instead of retaining it in production module scope.
 - **Validation:** Rust CI run #163 / `37052651036` passed Build, Test, Format, and Clippy.
 - **Status:** RESOLVED
+
+## ERR-112 — LIMITACIÓN CONOCIDA — CERRADO SIN CORRECCIÓN
+
+- **Milestone:** M0.8 Block 4 / v0.1.3 Distribution
+- **Type:** Known distribution limitation / lockfile reproducibility gate
+- **Observed:** The normal CI gates for Build, Test, Format, and Clippy passed for the v0.1.3 baseline. The M0.8 Block 4 Distribution workflow failed during `cargo test --workspace --locked`.
+- **Problem:** Cargo reported that it needed to update `Cargo.lock`; `--locked` prevented that update and the command failed.
+- **Investigation result:** The investigation confirmed the `Cargo.lock` reproducibility limitation under strict `--locked` validation. Cargo 1.98.1 proposed `spin 0.9.9`; the complete resolution also introduced transitive changes, including `digest → const-oid` and `num-traits → libm`.
+- **Resolution attempts:** Directed, offline, and lockfile-regeneration methods did not produce a focused delta. Regeneration produced 255 insertions and 246 deletions.
+- **Candidate status:** The approximately 11-line manual candidate was rejected because it was not validated with the required `cargo test --workspace --locked`, `cargo clippy --workspace --all-targets --locked -- -D warnings`, and `cargo build --workspace --locked` commands. Therefore, no validated correction exists.
+- **Correction:** NOT MADE. The original `Cargo.lock` was restored. No technical product files or `Cargo.lock` were modified; the changes made are limited to documentation and the checkpoint.
+- **Classification:** LIMITACIÓN CONOCIDA — CERRADO SIN CORRECCIÓN. This is localized to lockfile reproducibility under Distribution’s strict `--locked` validation; it is not evidence of a general product, source-code, GitHub Action, or tag failure.
+- **Release state:** No tag or release was modified.
+- **Investigation status:** CLOSED AS KNOWN LIMITATION, WITHOUT A CORRECTION.
