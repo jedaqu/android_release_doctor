@@ -953,7 +953,7 @@ fn verify_signature_bytes(
             .as_ref()
             .and_then(|value| value.as_oid().ok());
 
-        if matches!(curve_oid, Some(oid) if oid == OID_NIST_EC_P521) {
+        if matches!(curve_oid.as_ref(), Some(oid) if oid == &OID_NIST_EC_P521) {
             return verify_p521_ecdsa_signature(
                 0x0202,
                 &cert,
@@ -963,7 +963,7 @@ fn verify_signature_bytes(
             );
         }
 
-        if !matches!(curve_oid, Some(oid) if oid == OID_NIST_EC_P384) {
+        if !matches!(curve_oid.as_ref(), Some(oid) if oid == &OID_NIST_EC_P384) {
             return Err(SignatureVerificationError(
                 "UNSUPPORTED: ECDSA SHA-512 signer curve is neither P-384 nor P-521".to_string(),
             ));
