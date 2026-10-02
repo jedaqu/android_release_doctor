@@ -204,10 +204,7 @@ fn read_version_catalog(project_root: &Path) -> Result<Option<String>, ProjectEr
     Ok(Some(fs::read_to_string(path)?))
 }
 
-fn looks_like_android_application(
-    source: &str,
-    version_catalog: Option<&str>,
-) -> bool {
+fn looks_like_android_application(source: &str, version_catalog: Option<&str>) -> bool {
     let sanitized = strip_comments(source);
     if sanitized.contains("com.android.application") {
         return true;
@@ -221,10 +218,7 @@ fn looks_like_android_application(
     find_android_application_plugin_alias(&plugins, version_catalog)
 }
 
-fn find_android_application_plugin_alias(
-    plugins: &str,
-    version_catalog: Option<&str>,
-) -> bool {
+fn find_android_application_plugin_alias(plugins: &str, version_catalog: Option<&str>) -> bool {
     let catalog = match version_catalog {
         Some(catalog) => catalog,
         None => return false,
@@ -280,8 +274,7 @@ fn find_android_application_plugin_alias(
                 }
 
                 if accessor_end > accessor_start
-                    && !plugins[cursor..line_end(plugins, accessor_end)]
-                        .contains("apply false")
+                    && !plugins[cursor..line_end(plugins, accessor_end)].contains("apply false")
                     && catalog_declares_plugin(
                         catalog,
                         &plugins[accessor_start..accessor_end],
@@ -302,11 +295,7 @@ fn find_android_application_plugin_alias(
     false
 }
 
-fn catalog_declares_plugin(
-    catalog: &str,
-    accessor: &str,
-    expected_plugin_id: &str,
-) -> bool {
+fn catalog_declares_plugin(catalog: &str, accessor: &str, expected_plugin_id: &str) -> bool {
     let mut in_plugins = false;
 
     for raw_line in catalog.lines() {
@@ -331,9 +320,7 @@ fn catalog_declares_plugin(
             || key.replace('-', ".") == accessor
             || key.replace('_', ".") == accessor;
 
-        if key_matches
-            && extract_string_value(value, "id").as_deref() == Some(expected_plugin_id)
-        {
+        if key_matches && extract_string_value(value, "id").as_deref() == Some(expected_plugin_id) {
             return true;
         }
     }
