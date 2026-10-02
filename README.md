@@ -2,7 +2,7 @@
 
 Open-source, local-first tool for auditing Android APK and AAB releases before publication.
 
-> **Status:** M0.9 Block 1 public-release onboarding validated and closed; the first public release remains a separate tag-driven publication operation.
+> **Status:** M0.9 Block 1 public-release onboarding validated and closed. The first public release, `v0.1.0`, is published on [GitHub Releases](https://github.com/jedaqu/android_release_doctor/releases/tag/v0.1.0); distribution is tag-driven.
 
 Android Release Doctor inspects the **artifact you are actually going to distribute**, can compare it with the Android application Gradle configuration, and can apply a versioned Google Play submission-readiness profile.
 
@@ -456,11 +456,11 @@ Apache License 2.0.
 
 ## Getting started
 
-Android Release Doctor is distributed as native x86_64 packages for Linux, Windows, and Intel macOS. The first public release is prepared as **v0.1.0**. Publication is tag-driven: the release tag must match the workspace version exactly.
+Android Release Doctor is distributed as native x86_64 packages for Linux, Windows, and Intel macOS. The published release is **v0.1.0**. Publication is tag-driven: the release tag must match the workspace version exactly.
 
 ### Supported downloads
 
-The first release package names are:
+The published `v0.1.0` package names are:
 
 | Platform | Package |
 |---|---|
@@ -578,11 +578,11 @@ The reusable action is available from:
     output: android-release-doctor-report.json
 ```
 
-The first-release example is intended for the `v0.1.0` release tag after publication.
+This example pins the Action to the published `v0.1.0` release tag.
 
 The current action executes the validated CLI through Cargo on the runner, so the runner must provide a usable Rust/Cargo toolchain. Its inputs are `artifact`, `project`, `play`, `play-platform`, `format`, and `output`; its outputs are `exit-code` and `report-path`.
 
-A future binary-backed Action distribution is a separate M0.9 scope and is not implied by this release.
+A future binary-backed Action distribution is outside the current `v0.1.0` release boundary.
 
 ### What the tool does not claim
 
