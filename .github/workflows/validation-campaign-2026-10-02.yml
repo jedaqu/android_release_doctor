@@ -121,6 +121,7 @@ PY
           set -euo pipefail
           python3 <<'PY'
 from pathlib import Path
+import os
 from zipfile import ZipFile, ZIP_DEFLATED, ZIP_STORED
 base_apk = Path("tests/fixtures/minimal-release.apk")
 base_aab = Path("tests/fixtures/minimal-release.aab")
@@ -274,7 +275,7 @@ assert f["severity"] == severity, f"{case_id}: expected {severity}, got {f['seve
 print(case_id, rule_id, f["severity"])
 PY
           }
-          make_case appid-mismatch "com.example.doctorfixture=>com.example.otherapp" CROSSCHECK-001 BLOCKER
+          make_case appid-mismatch "applicationId 'com.example.doctorfixture'=>applicationId 'com.example.otherapp'" CROSSCHECK-001 BLOCKER
           make_case target-mismatch "targetSdk 35=>targetSdk 36" CROSSCHECK-002 BLOCKER
           make_case minsdk-mismatch "minSdk 24=>minSdk 23" CROSSCHECK-003 WARNING
           make_case versioncode-mismatch "versionCode 7=>versionCode 8" CROSSCHECK-004 WARNING
@@ -304,7 +305,7 @@ PY
 from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED, ZIP_STORED
 base=Path("tests/fixtures/minimal-release.apk")
-out=Path("$RUNNER_TEMP")
+out=Path(os.environ["RUNNER_TEMP"])
 out.mkdir(parents=True, exist_ok=True)
 with ZipFile(base, "r") as src:
     entries=[(info, src.read(info.filename)) for info in src.infolist()]
