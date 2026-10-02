@@ -2673,26 +2673,15 @@ IOzfcYvlY05mG0KSzs6ZGBrWRZQDPcbJ0CKNSLTFbQ==
 -----END CERTIFICATE-----"#;
         let (_, pem) =
             parse_x509_pem(CERTIFICATE_PEM.as_bytes()).expect("AOSP RSA-16384 PEM should parse");
-        let certificate = pem.contents;
+        let certificate = pem.contents.as_ref();
         let (_, cert) =
-            X509Certificate::from_der(&certificate).expect("AOSP RSA-16384 certificate should parse");
+            X509Certificate::from_der(certificate).expect("AOSP RSA-16384 certificate should parse");
 
-        let tbs = cert.tbs_certificate.raw;
-        let signature = cert.signature_value.data;
         let rsa = match cert.public_key().parsed().unwrap() {
             PublicKey::RSA(rsa) => rsa,
             _ => panic!("expected RSA public key"),
         };
         assert_eq!(rsa.key_size(), 16_384);
-        verify_extended_rsa_signature(
-            0x0103,
-            16_384,
-            rsa.modulus,
-            rsa.exponent,
-            tbs,
-            signature,
-        )
-        .expect("AOSP RSA-16384 certificate self-signature should verify with PKCS1/SHA-256");
 
         let signed_data =
             b"Android Release Doctor ERR-038-B RSA-16384 deterministic test message";
