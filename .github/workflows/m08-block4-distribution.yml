@@ -190,7 +190,7 @@ jobs:
           set -euo pipefail
           cd dist
           test "$(find . -maxdepth 1 -type f | wc -l | tr -d " ")" = "3"
-          find . -maxdepth 1 -type f -print | sed 's#^./##' | sort | xargs sha256sum > SHA256SUMS
+          find . -maxdepth 1 -type f ! -name SHA256SUMS -print | sed 's#^./##' | sort | xargs sha256sum > SHA256SUMS
           sha256sum -c SHA256SUMS
           grep -F "android-release-doctor-v$VERSION-linux-x86_64.tar.gz" SHA256SUMS
           grep -F "android-release-doctor-v$VERSION-windows-x86_64.zip" SHA256SUMS
