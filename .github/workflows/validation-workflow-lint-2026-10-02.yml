@@ -1,0 +1,24 @@
+name: Validation Workflow Lint
+
+on:
+  push:
+    branches:
+      - test/validation-campaign-2026-10-02
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install actionlint
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 4 --retry-all-errors -o actionlint-install.sh https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash
+          bash actionlint-install.sh
+          test -x actionlint
+      - name: Lint campaign workflow
+        run: ./actionlint .github/workflows/validation-campaign-2026-10-02.yml
