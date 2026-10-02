@@ -2,7 +2,7 @@
 
 Open-source, local-first tool for auditing Android APK and AAB releases before publication.
 
-> **Status:** M0.9 Block 1 public-release onboarding validated and closed. The corrected release, `v0.1.1`, is published on [GitHub Releases](https://github.com/jedaqu/android_release_doctor/releases/tag/v0.1.1); distribution is tag-driven.
+> **Status:** M0.9 Block 1 public-release onboarding validated and closed. The corrected release target is `v0.1.2`; publication is tag-driven.
 
 Android Release Doctor inspects the **artifact you are actually going to distribute**, can compare it with the Android application Gradle configuration, and can apply a versioned Google Play submission-readiness profile.
 
@@ -456,11 +456,11 @@ Apache License 2.0.
 
 ## Getting started
 
-Android Release Doctor is distributed as native x86_64 packages for Linux, Windows, and Intel macOS. The published release is **v0.1.1**. Publication is tag-driven: the release tag must match the workspace version exactly.
+Android Release Doctor is distributed as native x86_64 packages for Linux, Windows, and Intel macOS. The corrected release target is **v0.1.2**. Publication is tag-driven: the release tag must match the workspace version exactly.
 
 ### Supported downloads
 
-The published `v0.1.1` package names are:
+The `v0.1.2` package names are:
 
 | Platform | Package |
 |---|---|
@@ -468,7 +468,7 @@ The published `v0.1.1` package names are:
 | Windows x86_64 | `android-release-doctor-v0.1.1-windows-x86_64.zip` |
 | macOS Intel x86_64 | `android-release-doctor-v0.1.1-macos-x86_64.tar.gz` |
 
-The published release also includes `SHA256SUMS`.
+The release also includes `SHA256SUMS`.
 
 ARM64 packages, installers, package-manager integrations, and OS signing/notarization are not part of this release boundary.
 
@@ -493,7 +493,7 @@ Windows PowerShell:
 The version command should report:
 
 ```text
-android-release-doctor 0.1.1
+android-release-doctor 0.1.2
 ```
 
 To verify the downloaded archive with SHA-256:
@@ -513,7 +513,7 @@ shasum -a 256 -c SHA256SUMS
 Windows PowerShell:
 
 ```powershell
-Get-FileHash .\android-release-doctor-v0.1.1-windows-x86_64.zip -Algorithm SHA256
+Get-FileHash .\android-release-doctor-v0.1.2-windows-x86_64.zip -Algorithm SHA256
 ```
 
 Compare the calculated hash with the corresponding entry in `SHA256SUMS`.
@@ -571,18 +571,18 @@ The reusable action is available from:
 
 - name: Audit Android release
   id: release-doctor
-  uses: jedaqu/android-release-doctor/.github/actions/android-release-doctor@v0.1.1
+  uses: jedaqu/android-release-doctor/.github/actions/android-release-doctor@v0.1.2
   with:
     artifact: app/build/outputs/apk/release/app-release.apk
     format: json
     output: android-release-doctor-report.json
 ```
 
-This example pins the Action to the published `v0.1.0` release tag.
+This example pins the Action to release tag `v0.1.2`.
 
 The current action executes the validated CLI through Cargo on the runner, so the runner must provide a usable Rust/Cargo toolchain. Its inputs are `artifact`, `project`, `play`, `play-platform`, `format`, and `output`; its outputs are `exit-code` and `report-path`.
 
-A future binary-backed Action distribution is outside the current `v0.1.1` release boundary.
+A future binary-backed Action distribution is outside the current `v0.1.2` release boundary.
 
 ### What the tool does not claim
 
