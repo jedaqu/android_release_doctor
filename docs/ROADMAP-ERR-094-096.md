@@ -4,6 +4,12 @@
 
 **Public-boundary rule:** This roadmap contains only technical problem statements, scope, acceptance criteria, and engineering order. It intentionally does not identify the external application or expose private test material.
 
+## Current status
+
+- **ERR-094:** RESOLVED — implementation, repository-level validation, and real-world AAB validation completed.
+- **ERR-095:** OPEN — APK v2 verification false-negative investigation pending.
+- **ERR-096:** OPEN — Android application plugin alias discovery investigation pending.
+
 ## Resolution order
 
 ### 1. ERR-094 — AAB manifest parsing
