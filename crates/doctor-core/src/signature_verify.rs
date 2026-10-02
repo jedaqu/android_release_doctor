@@ -2693,6 +2693,68 @@ IOzfcYvlY05mG0KSzs6ZGBrWRZQDPcbJ0CKNSLTFbQ==
             signature,
         )
         .expect("AOSP RSA-16384 certificate self-signature should verify with PKCS1/SHA-256");
+
+        let signed_data =
+            b"Android Release Doctor ERR-038-B RSA-16384 deterministic test message";
+        let vectors = [
+            (
+                0x0101_u32,
+                "tests/fixtures/err-038-b/rsa-16384/sig-pss-sha256.bin",
+            ),
+            (
+                0x0102_u32,
+                "tests/fixtures/err-038-b/rsa-16384/sig-pss-sha512.bin",
+            ),
+            (
+                0x0103_u32,
+                "tests/fixtures/err-038-b/rsa-16384/sig-pkcs1-sha256.bin",
+            ),
+            (
+                0x0104_u32,
+                "tests/fixtures/err-038-b/rsa-16384/sig-pkcs1-sha512.bin",
+            ),
+        ];
+
+        for (algorithm_id, fixture) in vectors {
+            let signature =
+                std::fs::read(std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(
+                    format!("../../{fixture}"),
+                ))
+                .expect("RSA-16384 signature fixture should be readable");
+
+            verify_extended_rsa_signature(
+                algorithm_id,
+                16_384,
+                rsa.modulus,
+                rsa.exponent,
+                signed_data,
+                &signature,
+            )
+            .unwrap_or_else(|error| {
+                panic!(
+                    "RSA-16384 algorithm 0x{algorithm_id:04x} should verify: {error}"
+                )
+            });
+        }
+
+        let mut tampered =
+            std::fs::read(std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(
+                "../../tests/fixtures/err-038-b/rsa-16384/sig-pss-sha256.bin",
+            ))
+            .expect("RSA-16384 signature fixture should be readable");
+        *tampered.last_mut().expect("signature must not be empty") ^= 0x01;
+        assert!(
+            verify_extended_rsa_signature(
+                0x0101,
+                16_384,
+                rsa.modulus,
+                rsa.exponent,
+                signed_data,
+                &tampered,
+            )
+            .is_err(),
+            "tampered RSA-16384 PSS/SHA-256 signature must fail"
+        );
     }
 
     #[test]
