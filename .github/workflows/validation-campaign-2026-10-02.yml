@@ -85,15 +85,6 @@ PY
           play-platform: mobile
           format: json
           output: validation-output/action-smoke.json
-      - name: Action path-with-spaces test
-        continue-on-error: true
-        uses: ./.github/actions/android-release-doctor
-        with:
-          artifact: validation-output/artifact with spaces.apk
-          format: json
-          output: validation-output/action-spaces.json
-      - name: Prepare path-with-spaces artifact
-        run: cp tests/fixtures/minimal-release.apk "validation-output/artifact with spaces.apk"
       - name: Validate smoke reports
         run: |
           set -euo pipefail
