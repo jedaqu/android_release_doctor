@@ -81,8 +81,7 @@ fn audits_minimal_aab_fixture() {
     {
         let file = File::create(&path).expect("temporary AAB should be created");
         let mut archive = ZipWriter::new(file);
-        let options =
-            SimpleFileOptions::default().compression_method(CompressionMethod::Stored);
+        let options = SimpleFileOptions::default().compression_method(CompressionMethod::Stored);
 
         archive
             .start_file("base/manifest/AndroidManifest.xml", options)
@@ -651,11 +650,7 @@ fn proto_attribute(
     output
 }
 
-fn proto_element_node(
-    name: &str,
-    attributes: &[Vec<u8>],
-    children: &[Vec<u8>],
-) -> Vec<u8> {
+fn proto_element_node(name: &str, attributes: &[Vec<u8>], children: &[Vec<u8>]) -> Vec<u8> {
     let mut element = Vec::new();
     proto_encode_string(3, name, &mut element);
     for attribute in attributes {
@@ -727,18 +722,20 @@ fn proto_aab_manifest() -> Vec<u8> {
                 )],
                 &[proto_element_node(
                     "activity",
-                    &[proto_attribute(
-                        "http://schemas.android.com/apk/res/android",
-                        "name",
-                        "com.example.protoaab.MainActivity",
-                        None,
-                    ),
-                    proto_attribute(
-                        "http://schemas.android.com/apk/res/android",
-                        "exported",
-                        "true",
-                        Some((0x12, 1)),
-                    )],
+                    &[
+                        proto_attribute(
+                            "http://schemas.android.com/apk/res/android",
+                            "name",
+                            "com.example.protoaab.MainActivity",
+                            None,
+                        ),
+                        proto_attribute(
+                            "http://schemas.android.com/apk/res/android",
+                            "exported",
+                            "true",
+                            Some((0x12, 1)),
+                        ),
+                    ],
                     &[proto_element_node("intent-filter", &[], &[])],
                 )],
             ),
