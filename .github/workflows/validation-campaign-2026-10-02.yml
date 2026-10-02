@@ -105,42 +105,42 @@ jobs:
         run: |
           set -euo pipefail
           python3 <<'PY'
-            from pathlib import Path
-            from zipfile import ZipFile,ZIP_DEFLATED,ZIP_STORED
-            base_apk=Path("tests/fixtures/minimal-release.apk")
-            base_aab=Path("tests/fixtures/minimal-release.aab")
-            out=Path("validation-output")
-            out.mkdir(parents=True,exist_ok=True)
+          from pathlib import Path
+          from zipfile import ZipFile,ZIP_DEFLATED,ZIP_STORED
+          base_apk=Path("tests/fixtures/minimal-release.apk")
+          base_aab=Path("tests/fixtures/minimal-release.aab")
+          out=Path("validation-output")
+          out.mkdir(parents=True,exist_ok=True)
             
-            def elf64(a):
-                b=bytearray(120); b[0:4]=b"\x7fELF"; b[4]=2; b[5]=1
-                b[32:40]=(64).to_bytes(8,"little"); b[54:56]=(56).to_bytes(2,"little"); b[56:58]=(1).to_bytes(2,"little")
-                b[64:68]=(1).to_bytes(4,"little"); b[112:120]=a.to_bytes(8,"little")
-                return bytes(b)
+          def elf64(a):
+              b=bytearray(120); b[0:4]=b"\x7fELF"; b[4]=2; b[5]=1
+              b[32:40]=(64).to_bytes(8,"little"); b[54:56]=(56).to_bytes(2,"little"); b[56:58]=(1).to_bytes(2,"little")
+              b[64:68]=(1).to_bytes(4,"little"); b[112:120]=a.to_bytes(8,"little")
+              return bytes(b)
             
-            def elf32(a):
-                b=bytearray(84); b[0:4]=b"\x7fELF"; b[4]=1; b[5]=1
-                b[28:32]=(52).to_bytes(4,"little"); b[42:44]=(32).to_bytes(2,"little"); b[44:46]=(1).to_bytes(2,"little")
-                b[52:56]=(1).to_bytes(4,"little"); b[80:84]=a.to_bytes(4,"little")
-                return bytes(b)
+          def elf32(a):
+              b=bytearray(84); b[0:4]=b"\x7fELF"; b[4]=1; b[5]=1
+              b[28:32]=(52).to_bytes(4,"little"); b[42:44]=(32).to_bytes(2,"little"); b[44:46]=(1).to_bytes(2,"little")
+              b[52:56]=(1).to_bytes(4,"little"); b[80:84]=a.to_bytes(4,"little")
+              return bytes(b)
             
-            def apk(name,libs):
-                with ZipFile(base_apk,"r") as src, ZipFile(out/name,"w",ZIP_DEFLATED) as dst:
-                    for i in src.infolist():
-                        if not i.filename.startswith("lib/"):
-                            dst.writestr(i,src.read(i.filename))
-                    for p,d in libs.items():
-                        dst.writestr(p,d)
+          def apk(name,libs):
+              with ZipFile(base_apk,"r") as src, ZipFile(out/name,"w",ZIP_DEFLATED) as dst:
+                  for i in src.infolist():
+                      if not i.filename.startswith("lib/"):
+                          dst.writestr(i,src.read(i.filename))
+                  for p,d in libs.items():
+                      dst.writestr(p,d)
             
-            apk("abi-good64.apk",{"lib/arm64-v8a/libgood.so":elf64(16384),"lib/x86_64/libgood.so":elf64(16384)})
-            apk("abi-bad64.apk",{"lib/arm64-v8a/libbad.so":elf64(4096)})
-            apk("abi-mixed-32bad.apk",{"lib/arm64-v8a/libgood.so":elf64(16384),"lib/x86_64/libgood.so":elf64(16384),"lib/armeabi-v7a/liblegacy.so":elf32(4096)})
-            with ZipFile(base_aab,"r") as src, ZipFile(out/"complex-native.aab","w",ZIP_DEFLATED) as dst:
-                for i in src.infolist():
-                    dst.writestr(i,src.read(i.filename))
-                dst.writestr("feature/manifest/AndroidManifest.xml",b"feature-manifest-intentionally-not-base")
-                dst.writestr("base/lib/arm64-v8a/libaab.so",elf64(16384),compress_type=ZIP_STORED)
-                dst.writestr("base/assets/odd name/emoji-\U0001f680.txt",b"edge")
+          apk("abi-good64.apk",{"lib/arm64-v8a/libgood.so":elf64(16384),"lib/x86_64/libgood.so":elf64(16384)})
+          apk("abi-bad64.apk",{"lib/arm64-v8a/libbad.so":elf64(4096)})
+          apk("abi-mixed-32bad.apk",{"lib/arm64-v8a/libgood.so":elf64(16384),"lib/x86_64/libgood.so":elf64(16384),"lib/armeabi-v7a/liblegacy.so":elf32(4096)})
+          with ZipFile(base_aab,"r") as src, ZipFile(out/"complex-native.aab","w",ZIP_DEFLATED) as dst:
+              for i in src.infolist():
+                  dst.writestr(i,src.read(i.filename))
+              dst.writestr("feature/manifest/AndroidManifest.xml",b"feature-manifest-intentionally-not-base")
+              dst.writestr("base/lib/arm64-v8a/libaab.so",elf64(16384),compress_type=ZIP_STORED)
+              dst.writestr("base/assets/odd name/emoji-\U0001f680.txt",b"edge")
           PY
       - name: Validate controlled PLAY-005 semantics
         shell: bash
@@ -176,14 +176,14 @@ jobs:
           set -e
           test "$code" = "0" || test "$code" = "1"
           python3 <<'PY'
-            import json
-            r=json.load(open("validation-output/complex-native.json",encoding="utf-8"))
-            assert r["artifact"]["kind"]=="AAB"
-            assert r["application"]["package_name"]=="com.example.protoaab"
-            f=next(x for x in r["findings"] if x["rule_id"]=="PLAY-005")
-            assert f["severity"]=="MANUAL-REVIEW",f["severity"]
-            assert any(x["path"]=="feature/manifest/AndroidManifest.xml" for x in r["inventory"]["entries"])
-            print("AAB boundary ok")
+          import json
+          r=json.load(open("validation-output/complex-native.json",encoding="utf-8"))
+          assert r["artifact"]["kind"]=="AAB"
+          assert r["application"]["package_name"]=="com.example.protoaab"
+          f=next(x for x in r["findings"] if x["rule_id"]=="PLAY-005")
+          assert f["severity"]=="MANUAL-REVIEW",f["severity"]
+          assert any(x["path"]=="feature/manifest/AndroidManifest.xml" for x in r["inventory"]["entries"])
+          print("AAB boundary ok")
           PY
 
   project-mismatch:
@@ -245,28 +245,28 @@ jobs:
         run: |
           set -euo pipefail
           python3 <<'PY'
-            from pathlib import Path
-            from zipfile import ZipFile,ZIP_DEFLATED,ZIP_STORED
-            base=Path("tests/fixtures/minimal-release.apk")
-            out=Path("validation-output")
-            out.mkdir(parents=True,exist_ok=True)
-            with ZipFile(base,"r") as src:
-                entries=[(i,src.read(i.filename)) for i in src.infolist()]
-            with ZipFile(out/"missing-manifest.apk","w",ZIP_DEFLATED) as dst:
-                for i,d in entries:
-                    if i.filename!="AndroidManifest.xml": dst.writestr(i,d)
-            with ZipFile(out/"bad-manifest.apk","w",ZIP_DEFLATED) as dst:
-                for i,d in entries: dst.writestr(i,b"\x03\x00\x08" if i.filename=="AndroidManifest.xml" else d)
-            with ZipFile(out/"large-central-directory.apk","w",ZIP_STORED) as dst:
-                for i,d in entries: dst.writestr(i,d)
-                for n in range(25000): dst.writestr(f"assets/stress/{n:05d}-"+("x"*80)+".bin",b"x")
-            with ZipFile(out/"weird-paths.apk","w",ZIP_DEFLATED) as dst:
-                for i,d in entries: dst.writestr(i,d)
-                dst.writestr("../outside.txt",b"edge")
-                dst.writestr("assets/../normalized.txt",b"edge")
-                dst.writestr("assets/space name.txt",b"edge")
-                dst.writestr("assets/emoji-\U0001f680.txt",b"edge")
-                dst.writestr("assets/"+"y"*240+".txt",b"edge")
+          from pathlib import Path
+          from zipfile import ZipFile,ZIP_DEFLATED,ZIP_STORED
+          base=Path("tests/fixtures/minimal-release.apk")
+          out=Path("validation-output")
+          out.mkdir(parents=True,exist_ok=True)
+          with ZipFile(base,"r") as src:
+              entries=[(i,src.read(i.filename)) for i in src.infolist()]
+          with ZipFile(out/"missing-manifest.apk","w",ZIP_DEFLATED) as dst:
+              for i,d in entries:
+                  if i.filename!="AndroidManifest.xml": dst.writestr(i,d)
+          with ZipFile(out/"bad-manifest.apk","w",ZIP_DEFLATED) as dst:
+              for i,d in entries: dst.writestr(i,b"\x03\x00\x08" if i.filename=="AndroidManifest.xml" else d)
+          with ZipFile(out/"large-central-directory.apk","w",ZIP_STORED) as dst:
+              for i,d in entries: dst.writestr(i,d)
+              for n in range(25000): dst.writestr(f"assets/stress/{n:05d}-"+("x"*80)+".bin",b"x")
+          with ZipFile(out/"weird-paths.apk","w",ZIP_DEFLATED) as dst:
+              for i,d in entries: dst.writestr(i,d)
+              dst.writestr("../outside.txt",b"edge")
+              dst.writestr("assets/../normalized.txt",b"edge")
+              dst.writestr("assets/space name.txt",b"edge")
+              dst.writestr("assets/emoji-\U0001f680.txt",b"edge")
+              dst.writestr("assets/"+"y"*240+".txt",b"edge")
           PY
       - name: Validate malformed findings
         shell: bash
@@ -281,12 +281,12 @@ jobs:
           test "$missing" = "1"
           test "$bad" = "1"
           python3 <<'PY'
-            import json
-            for n in ("missing","bad"):
-                r=json.load(open("validation-output/"+n+".json",encoding="utf-8"))
-                f=next(x for x in r["findings"] if x["rule_id"]=="MANIFEST-002")
-                assert f["severity"]=="BLOCKER"
-                print(n,f["severity"])
+          import json
+          for n in ("missing","bad"):
+              r=json.load(open("validation-output/"+n+".json",encoding="utf-8"))
+              f=next(x for x in r["findings"] if x["rule_id"]=="MANIFEST-002")
+              assert f["severity"]=="BLOCKER"
+              print(n,f["severity"])
           PY
       - name: Validate scale and weird-path corpora
         shell: bash
