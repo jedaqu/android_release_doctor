@@ -1175,9 +1175,10 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Type:** Project parser / Kotlin DSL compatibility
 - **Observed:** A real Android application project using build.gradle.kts and a version-catalog plugin alias was not recognized by project discovery.
 - **Problem:** Current discovery relies on finding the literal com.android.application in the module build file and therefore misses supported Kotlin DSL/version-catalog alias usage.
-- **Correction:** Pending focused audit of safe application-plugin detection for direct plugin IDs and version-catalog aliases, without introducing broad text heuristics.
-- **Validation target:** Representative Groovy/Kotlin DSL direct-ID fixtures, version-catalog alias fixtures, and negative cases that must remain non-application projects.
-- **Status:** OPEN
+- **Correction:** Resolve the standard root `gradle/libs.versions.toml` during directory discovery, inspect only `plugins { ... }` aliases, resolve `libs.plugins.<alias>` through the catalog `[plugins]` table, require the resolved ID to equal `com.android.application`, and ignore `apply false` declarations during application-module discovery. Direct plugin-ID behavior remains unchanged.
+- **Validation:** Actions run #94 / `37018187885` passed Build, Test, Format, and Clippy. The run executed 100 `doctor-core` unit tests and 17 integration tests; the new version-catalog fixture was accepted end-to-end.
+- **Second audit:** Confirmed production scope limited to `crates/doctor-core/src/project.rs`; public fixture additions and focused documentation only. Negative coverage includes non-application aliases, `apply false`, missing catalogs, alias text inside strings, aliases outside `plugins {}`, and dashed alias accessors.
+- **Status:** RESOLVED
 - **Roadmap:** docs/ROADMAP-ERR-094-096.md
 ## ERR-102 — ERR-096 helper newline literal syntax error
 
