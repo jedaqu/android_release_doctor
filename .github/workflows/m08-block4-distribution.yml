@@ -200,7 +200,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" \
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
             dist/android-release-doctor-v${{ needs.validate.outputs.version }}-linux-x86_64.tar.gz \
             dist/android-release-doctor-v${{ needs.validate.outputs.version }}-windows-x86_64.zip \
             dist/android-release-doctor-v${{ needs.validate.outputs.version }}-macos-x86_64.tar.gz \
