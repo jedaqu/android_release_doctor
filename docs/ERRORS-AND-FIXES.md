@@ -1271,3 +1271,20 @@ These historical entries are intentionally **not rewritten**. Their original chr
 From this point forward, a historical `OPEN` entry is not considered an active work item when a later validated checkpoint demonstrates that its scope was completed. New work must use the reconciled active disposition rather than the stale historical status.
 
 **Reconciliation result:** 10 historical OPEN entries superseded by later validated work; 1 historical OPEN entry remains an active future capability gap (ERR-038).
+
+
+## ERR-106 — ERR-038-A P-521 implementation compile corrections
+
+- **Milestone:** ERR-038-A / PR #37
+- **Type:** Implementation compile failure
+- **Observed:** Rust CI run #130 / `37046470041`, Build step.
+- **Problem:** The first P-521 implementation did not compile under the repository's current RustCrypto API set.
+- **Failures observed:**
+  - the new P-521 helper expected a borrowed `&X509Certificate` while callers passed the certificate value;
+  - SHA-256 and SHA-512 digest outputs have different concrete array types under the current `sha2 0.11` stack and could not be returned from one `match` without normalization;
+  - a second build exposed ownership of the non-`Copy` `Oid` value in consecutive `matches!` checks.
+- **Correction:** Borrow the parsed certificate at the P-521 call sites; normalize SHA-256/SHA-512 prehashes to `Vec<u8>`; borrow the EC OID during the P-521/P-384 capability checks.
+- **Scope:** ERR-038-A P-521 implementation only.
+- **No behavior change:** The supported algorithm IDs, curve matrix, cryptographic verification semantics, and unsupported boundaries remain unchanged.
+- **Validation:** Pending terminal CI after the corrections.
+- **Status:** OPEN — correction in progress.
