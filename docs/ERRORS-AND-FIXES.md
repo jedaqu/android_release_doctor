@@ -1271,3 +1271,33 @@ These historical entries are intentionally **not rewritten**. Their original chr
 From this point forward, a historical `OPEN` entry is not considered an active work item when a later validated checkpoint demonstrates that its scope was completed. New work must use the reconciled active disposition rather than the stale historical status.
 
 **Reconciliation result:** 10 historical OPEN entries superseded by later validated work; 1 historical OPEN entry remains an active future capability gap (ERR-038).
+
+
+## ERR-106 — ERR-038-A P-521 implementation compile corrections
+
+- **Milestone:** ERR-038-A / PR #37
+- **Type:** Implementation compile failure
+- **Observed:** Rust CI run #130 / `37046470041`, Build step.
+- **Problem:** The first P-521 implementation did not compile under the repository's current RustCrypto API set.
+- **Failures observed:**
+  - the new P-521 helper expected a borrowed `&X509Certificate` while callers passed the certificate value;
+  - SHA-256 and SHA-512 digest outputs have different concrete array types under the current `sha2 0.11` stack and could not be returned from one `match` without normalization;
+  - a second build exposed ownership of the non-`Copy` `Oid` value in consecutive `matches!` checks.
+- **Correction:** Borrow the parsed certificate at the P-521 call sites; normalize SHA-256/SHA-512 prehashes to `Vec<u8>`; borrow the EC OID during the P-521/P-384 capability checks.
+- **Scope:** ERR-038-A P-521 implementation only.
+- **No behavior change:** The supported algorithm IDs, curve matrix, cryptographic verification semantics, and unsupported boundaries remain unchanged.
+- **Validation:** Rust CI run #134 / `37046916708` passed Build, Test, Format, and Clippy after the corrections.
+- **Status:** RESOLVED
+
+
+## ERR-107 — ERR-038-A rustfmt layout after implementation correction
+
+- **Milestone:** ERR-038-A / PR #37
+- **Type:** CI formatting failure
+- **Observed:** Rust CI run #133 / `37046745804`
+- **Problem:** The P-521 helper's error-handling layout did not match the repository's deterministic rustfmt output.
+- **Evidence:** Build PASS; Test PASS; Format failed only on the formatter-indicated layout in `crates/doctor-core/src/signature_verify.rs`; Clippy was skipped by the workflow gate.
+- **Correction:** Apply only the rustfmt-indicated layout changes to the P-521 helper.
+- **Correction commit:** `1e9550533980cdd04d6c02e63e975a35327af45f`
+- **Validation:** Rust CI run #134 / `37046916708` passed Build, Test, Format, and Clippy.
+- **Status:** RESOLVED
