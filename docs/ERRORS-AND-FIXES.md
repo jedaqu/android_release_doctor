@@ -1081,8 +1081,9 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Relation to prior closure:** The prior AUDIT-005 closure recorded the original mismatch as a non-reproduced anomaly. The later rerun provides additional evidence that the mismatch is reproducible under the affected workflow, so this entry records a distinct post-closure workflow defect without rewriting the historical closure entry.
 - **Correction:** Exclude `SHA256SUMS` explicitly from the `find` input set. Preserve the existing three-package count, SHA-256 algorithm, verification command, and filename assertions.
 - **Correction commit:** `4c849b2a0e007270b32d53c4bd64a17da171ab5e`
-- **Validation:** Pending PR CI and post-correction distribution validation.
-- **Status:** OPEN
+- **Validation:** Distribution workflow run `37027265016` (run #6) for tag `v0.1.2` completed successfully. The `validate`, all three `package` jobs, and `publish` jobs reached terminal success. The `Generate and verify checksums` step and `Publish GitHub Release` step both passed. GitHub Release `v0.1.2` was published with the three platform packages and `SHA256SUMS`.
+- **Second audit:** `docs/AUDIT-ERR-093-SECOND-AUDIT.md` — PASS.
+- **Status:** RESOLVED
 
 
 ## ERR-094 — AAB manifest parsing compatibility gap
