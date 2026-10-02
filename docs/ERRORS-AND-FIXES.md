@@ -1240,3 +1240,34 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Status:** RESOLVED
 - **Pre-audit:** `docs/AUDIT-ERR-105-PRE-AUDIT.md`
 - **Second audit:** `docs/AUDIT-ERR-105-SECOND-AUDIT.md`
+
+---
+
+## 2026-10-02 — Historical OPEN reconciliation after M0.9 transition
+
+The transition audit reconciled the historical entries that were still marked `OPEN` even though later validated M0.7 checkpoints completed their corresponding work.
+
+**Historical entries reconciled as superseded by later validated checkpoints:**
+
+- ERR-037
+- ERR-039
+- ERR-040
+- ERR-041
+- ERR-042
+- ERR-043
+- ERR-047
+- ERR-049
+- ERR-057
+- ERR-070
+
+These historical entries are intentionally **not rewritten**. Their original chronology and observations remain immutable engineering history. Their later disposition is recorded in `docs/AUDIT-TRANSITION-RECONCILIATION-2026-10-02.md`.
+
+### Active entry retained
+
+- **ERR-038:** ACTIVE / PENDING — Android cryptographic/key coverage expansion remains outside the current bounded verifier matrix. No implementation is authorized by this reconciliation.
+
+### Reconciliation rule
+
+From this point forward, a historical `OPEN` entry is not considered an active work item when a later validated checkpoint demonstrates that its scope was completed. New work must use the reconciled active disposition rather than the stale historical status.
+
+**Reconciliation result:** 10 historical OPEN entries superseded by later validated work; 1 historical OPEN entry remains an active future capability gap (ERR-038).
