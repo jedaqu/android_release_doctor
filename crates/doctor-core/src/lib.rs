@@ -27,7 +27,7 @@ pub use signature_verify::{
 pub use signing::{inspect_apk_signing_block, ApkSigningInfo};
 pub use zip_alignment::{is_16kb_aligned, NativeZipCompression, ZIP_ALIGNMENT_16KB};
 
-pub const ENGINE_VERSION: &str = "0.1.0";
+pub const ENGINE_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Severity {
@@ -1444,6 +1444,11 @@ fn compare_sdk(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn engine_version_tracks_package_version() {
+        assert_eq!(ENGINE_VERSION, env!("CARGO_PKG_VERSION"));
+    }
 
     #[test]
     fn manual_review_is_first_class_and_does_not_count_as_blocker() {
