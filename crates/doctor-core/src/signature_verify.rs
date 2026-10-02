@@ -8,15 +8,19 @@ use p384::ecdsa::{
     signature::hazmat::PrehashVerifier, Signature as P384Signature,
     VerifyingKey as P384VerifyingKey,
 };
+use p521::ecdsa::{
+    signature::hazmat::PrehashVerifier as P521PrehashVerifier, Signature as P521Signature,
+    VerifyingKey as P521VerifyingKey,
+};
 use ring::{
     digest,
     signature::{self, UnparsedPublicKey},
 };
-use sha2::{Digest, Sha512};
+use sha2::{Digest, Sha256, Sha512};
 use subtle::ConstantTimeEq;
 use x509_parser::{
     certificate::X509Certificate,
-    oid_registry::{OID_EC_P256, OID_NIST_EC_P384},
+    oid_registry::{OID_EC_P256, OID_NIST_EC_P384, OID_NIST_EC_P521},
     prelude::FromDer,
     public_key::PublicKey,
 };
@@ -949,9 +953,19 @@ fn verify_signature_bytes(
             .as_ref()
             .and_then(|value| value.as_oid().ok());
 
+        if matches!(curve_oid, Some(oid) if oid == OID_NIST_EC_P521) {
+            return verify_p521_ecdsa_signature(
+                0x0202,
+                cert,
+                signed_data,
+                signature_bytes,
+                DigestAlgorithm::Sha512,
+            );
+        }
+
         if !matches!(curve_oid, Some(oid) if oid == OID_NIST_EC_P384) {
             return Err(SignatureVerificationError(
-                "UNSUPPORTED: ECDSA SHA-512 signer curve is not P-384".to_string(),
+                "UNSUPPORTED: ECDSA SHA-512 signer curve is neither P-384 nor P-521".to_string(),
             ));
         }
 
@@ -1054,9 +1068,18 @@ fn verify_signature_bytes(
             match curve_oid {
                 Some(oid) if oid == OID_EC_P256 => &signature::ECDSA_P256_SHA256_ASN1,
                 Some(oid) if oid == OID_NIST_EC_P384 => &signature::ECDSA_P384_SHA256_ASN1,
+                Some(oid) if oid == OID_NIST_EC_P521 => {
+                    return verify_p521_ecdsa_signature(
+                        0x0201,
+                        cert,
+                        signed_data,
+                        signature_bytes,
+                        DigestAlgorithm::Sha256,
+                    );
+                }
                 Some(_) => {
                     return Err(SignatureVerificationError(
-                        "UNSUPPORTED: ECDSA SHA-256 signer curve is not supported by the current ring verifier"
+                        "UNSUPPORTED: ECDSA SHA-256 signer curve is not supported by the current verifier"
                             .to_string(),
                     ))
                 }
@@ -1094,6 +1117,44 @@ fn verify_signature_bytes(
 
 fn ring_rsa_key_size_supported(bits: usize) -> bool {
     (2048..=8192).contains(&bits)
+}
+
+fn verify_p521_ecdsa_signature(
+    algorithm_id: u32,
+    cert: &X509Certificate<'_>,
+    signed_data: &[u8],
+    signature_bytes: &[u8],
+    digest_algorithm: DigestAlgorithm,
+) -> Result<(), SignatureVerificationError> {
+    let verifying_key =
+        P521VerifyingKey::from_sec1_bytes(&cert.public_key().subject_public_key.data).map_err(
+            |error| {
+                SignatureVerificationError(format!(
+                    "signer P-521 public key is not a valid SEC1 point: {error}"
+                ))
+            },
+        )?;
+    let signature = P521Signature::from_der(signature_bytes).map_err(|error| {
+        SignatureVerificationError(format!(
+            "ECDSA P-521 signature is not valid DER: {error}"
+        ))
+    })?;
+
+    let prehash = match digest_algorithm {
+        DigestAlgorithm::Sha256 => Sha256::digest(signed_data),
+        DigestAlgorithm::Sha512 => Sha512::digest(signed_data),
+    };
+
+    P521PrehashVerifier::<P521Signature>::verify_prehash(
+        &verifying_key,
+        prehash.as_ref(),
+        &signature,
+    )
+    .map_err(|_| {
+        SignatureVerificationError(format!(
+            "cryptographic signature verification failed for algorithm 0x{algorithm_id:08x}"
+        ))
+    })
 }
 
 fn encode_rsa_public_key(modulus: &[u8], exponent: &[u8]) -> Vec<u8> {
@@ -2243,6 +2304,46 @@ mod tests {
 
         verify_signature_bytes(0x0202, &certificate, signed_data, &signature)
             .expect("ECDSA/SHA-512 P-384 signature should verify");
+    }
+
+    #[test]
+    fn verifies_real_ecdsa_sha256_p521_signature() {
+        const CERTIFICATE_HEX: &str = "308201dd3082013ea003020102020101300a06082a8648ce3d04030230343132303006035504030c29416e64726f69642052656c6561736520446f63746f72204552522d30333820502d3532312054657374301e170d3236303130313030303030305a170d3336303130313030303030305a30343132303006035504030c29416e64726f69642052656c6561736520446f63746f72204552522d30333820502d353231205465737430819b301006072a8648ce3d020106052b810400230381860004015c3a5ace9aef63096b062372efa35b1f15bef8a48fb235ced04bddc95e672b5af569f5dafb1ece9c792c3f4a0aaf2a11770180915f49a0e712e2cb40d2acd7d1200192f3a581cd6d73f875a95404967b6338e89faead021eb531181749be978ff8d9fb27295e86fe23c0250ec162b70c1616fc376ed041753a4a3c96b8ab2a5889af74300a06082a8648ce3d04030203818c00308188024201131fde50b50fe958b8487a8641f2ca35ff6f36a8c0fbbd9117bcceb590b8826af0bb7f64d2dbda0880e773effad433bce43a4b7a69a08027895fb7882bb418705b02420187710b9840f04982b17e4e928beb3faa963f0ccebc2a1e413c36f2d7ec89e6cf9e52a18058a21e9b9c04967c4bbdee626596983330cdb46d9c88691c8a4eea580d";
+        const SIGNATURE_HEX: &str = "308188024201cc69ba15bf6fa014d34fa1baf48a00043d1074ab774d81aa50bc2394107d96058620db3ca7338c4dc652168e1a16429cbc1ec261fc454c3318fc51ce7688d37cc0024200f2cc1e308af867a798d6a8a73ebbbd75d0b9c9dacbe6b6007940acee375d220a88d02b31f83d9bd9faeac416c8e840f303d25f8ca396da3acc1ef9248d1d8c4708";
+        let certificate = decode_hex_bytes(CERTIFICATE_HEX);
+        let signature = decode_hex_bytes(SIGNATURE_HEX);
+        let signed_data = b"Android Release Doctor ERR-038 P-521 deterministic test message";
+
+        verify_signature_bytes(0x0201, &certificate, signed_data, &signature)
+            .expect("ECDSA/SHA-256 P-521 signature should verify");
+    }
+
+    #[test]
+    fn verifies_real_ecdsa_sha512_p521_signature() {
+        const CERTIFICATE_HEX: &str = "308201dd3082013ea003020102020101300a06082a8648ce3d04030230343132303006035504030c29416e64726f69642052656c6561736520446f63746f72204552522d30333820502d3532312054657374301e170d3236303130313030303030305a170d3336303130313030303030305a30343132303006035504030c29416e64726f69642052656c6561736520446f63746f72204552522d30333820502d353231205465737430819b301006072a8648ce3d020106052b810400230381860004015c3a5ace9aef63096b062372efa35b1f15bef8a48fb235ced04bddc95e672b5af569f5dafb1ece9c792c3f4a0aaf2a11770180915f49a0e712e2cb40d2acd7d1200192f3a581cd6d73f875a95404967b6338e89faead021eb531181749be978ff8d9fb27295e86fe23c0250ec162b70c1616fc376ed041753a4a3c96b8ab2a5889af74300a06082a8648ce3d04030203818c00308188024201131fde50b50fe958b8487a8641f2ca35ff6f36a8c0fbbd9117bcceb590b8826af0bb7f64d2dbda0880e773effad433bce43a4b7a69a08027895fb7882bb418705b02420187710b9840f04982b17e4e928beb3faa963f0ccebc2a1e413c36f2d7ec89e6cf9e52a18058a21e9b9c04967c4bbdee626596983330cdb46d9c88691c8a4eea580d";
+        const SIGNATURE_HEX: &str = "308188024200820e8b942ed533a751968195a64273bae0dffb747660fdfba18933d9fb64118d4c595ebffba69ff5397af4ef462084e7e2a18f63207f7e9917aa9273cb3528f9500242012aa53edf0a7c6b27500ea8c77fe8b7de02a352eb7b7c9c5f57e2fc5433da653ca0504112219208c113226b1ca6d0eab6b5cfa654494a07c255e13c811b34fdf991";
+        let certificate = decode_hex_bytes(CERTIFICATE_HEX);
+        let signature = decode_hex_bytes(SIGNATURE_HEX);
+        let signed_data = b"Android Release Doctor ERR-038 P-521 deterministic test message";
+
+        verify_signature_bytes(0x0202, &certificate, signed_data, &signature)
+            .expect("ECDSA/SHA-512 P-521 signature should verify");
+    }
+
+    #[test]
+    fn rejects_tampered_ecdsa_sha256_p521_signature() {
+        const CERTIFICATE_HEX: &str = "308201dd3082013ea003020102020101300a06082a8648ce3d04030230343132303006035504030c29416e64726f69642052656c6561736520446f63746f72204552522d30333820502d3532312054657374301e170d3236303130313030303030305a170d3336303130313030303030305a30343132303006035504030c29416e64726f69642052656c6561736520446f63746f72204552522d30333820502d353231205465737430819b301006072a8648ce3d020106052b810400230381860004015c3a5ace9aef63096b062372efa35b1f15bef8a48fb235ced04bddc95e672b5af569f5dafb1ece9c792c3f4a0aaf2a11770180915f49a0e712e2cb40d2acd7d1200192f3a581cd6d73f875a95404967b6338e89faead021eb531181749be978ff8d9fb27295e86fe23c0250ec162b70c1616fc376ed041753a4a3c96b8ab2a5889af74300a06082a8648ce3d04030203818c00308188024201131fde50b50fe958b8487a8641f2ca35ff6f36a8c0fbbd9117bcceb590b8826af0bb7f64d2dbda0880e773effad433bce43a4b7a69a08027895fb7882bb418705b02420187710b9840f04982b17e4e928beb3faa963f0ccebc2a1e413c36f2d7ec89e6cf9e52a18058a21e9b9c04967c4bbdee626596983330cdb46d9c88691c8a4eea580d";
+        const SIGNATURE_HEX: &str = "308188024201cc69ba15bf6fa014d34fa1baf48a00043d1074ab774d81aa50bc2394107d96058620db3ca7338c4dc652168e1a16429cbc1ec261fc454c3318fc51ce7688d37cc0024200f2cc1e308af867a798d6a8a73ebbbd75d0b9c9dacbe6b6007940acee375d220a88d02b31f83d9bd9faeac416c8e840f303d25f8ca396da3acc1ef9248d1d8c4708";
+        let certificate = decode_hex_bytes(CERTIFICATE_HEX);
+        let mut signature = decode_hex_bytes(SIGNATURE_HEX);
+        *signature.last_mut().expect("signature must not be empty") ^= 0x01;
+        let signed_data = b"Android Release Doctor ERR-038 P-521 deterministic test message";
+
+        let result = verify_signature_bytes(0x0201, &certificate, signed_data, &signature);
+        let error = result.expect_err("tampered ECDSA/SHA-256 P-521 signature must fail");
+        assert!(error
+            .to_string()
+            .contains("cryptographic signature verification failed for algorithm 0x00000201"));
     }
 
     #[test]
