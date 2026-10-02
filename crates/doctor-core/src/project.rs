@@ -382,7 +382,7 @@ fn strip_toml_comment(source: &str) -> String {
 
 fn line_end(source: &str, offset: usize) -> usize {
     source[offset..]
-        .find('\\n')
+        .find('\n')
         .map(|relative| offset + relative)
         .unwrap_or(source.len())
 }
