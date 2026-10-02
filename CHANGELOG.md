@@ -4,9 +4,11 @@ All notable user-facing changes to Android Release Doctor are documented here.
 
 ## [0.1.0] — First public release
 
-Status: M0.9 Block 1 onboarding checkpoint closed; GitHub Release publication remains a separate tag-driven operation.
+Status: First public release published as GitHub Release `v0.1.0`. Distribution is tag-driven.
 
 ### Highlights
+The published [GitHub Release `v0.1.0`](https://github.com/jedaqu/android_release_doctor/releases/tag/v0.1.0) contains the supported first-release packages and `SHA256SUMS`.
+
 
 - Local-first auditing of Android APK and AAB release artifacts.
 - Direct binary AndroidManifest inspection without invoking the Android SDK.
