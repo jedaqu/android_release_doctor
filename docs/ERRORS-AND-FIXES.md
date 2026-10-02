@@ -1178,7 +1178,7 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction:** Resolve the standard root `gradle/libs.versions.toml` during directory discovery, inspect only `plugins { ... }` aliases, resolve `libs.plugins.<alias>` through the catalog `[plugins]` table, require the resolved ID to equal `com.android.application`, and ignore `apply false` declarations during application-module discovery. Direct plugin-ID behavior remains unchanged.
 - **Validation:** Actions run #94 / `37018187885` passed Build, Test, Format, and Clippy. The run executed 100 `doctor-core` unit tests and 17 integration tests; the new version-catalog fixture was accepted end-to-end.
 - **Second audit:** Confirmed production scope limited to `crates/doctor-core/src/project.rs`; public fixture additions and focused documentation only. Negative coverage includes non-application aliases, `apply false`, missing catalogs, alias text inside strings, aliases outside `plugins {}`, and dashed alias accessors.
-- **Status:** RESOLVED
+- **Status:** RESOLVED — PR #23 merged as `97df5fba157e92757b0894cc110e09b93fbab5be`; post-merge Actions run #100 / `37018610760` passed Build, Test, Format, and Clippy.
 - **Roadmap:** docs/ROADMAP-ERR-094-096.md
 ## ERR-102 — ERR-096 helper newline literal syntax error
 
@@ -1189,7 +1189,7 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction:** Replace only the malformed character literal with `'\\n'`. No discovery semantics changed.
 - **Scope:** ERR-096 helper implementation only.
 - **Validation:** Required in the next Actions execution.
-- **Status:** RESOLVED — Actions run #94 / run `37018187885` passed Build, Test, Format, and Clippy.
+- **Status:** RESOLVED — Actions run #94 / run `37018187885` passed Build, Test, Format, and Clippy; post-merge main run #100 / `37018610760` also passed all four gates.
 
 ## ERR-103 — ERR-096 resolver rustfmt layout mismatch
 
@@ -1200,5 +1200,5 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction:** Apply only the rustfmt-indicated formatting changes. No resolver semantics or tests changed.
 - **Scope:** ERR-096 implementation formatting only.
 - **Validation:** Required in the next Actions execution.
-- **Status:** RESOLVED — Actions run #94 / run `37018187885` passed Build, Test, Format, and Clippy.
+- **Status:** RESOLVED — Actions run #94 / run `37018187885` passed Build, Test, Format, and Clippy; post-merge main run #100 / `37018610760` also passed all four gates.
 
