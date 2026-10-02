@@ -1312,5 +1312,37 @@ From this point forward, a historical `OPEN` entry is not considered an active w
 - **Correction:** Remove the redundant certificate-self-signature test path, retain the four deterministic RSA-16384 signature fixtures as the cryptographic evidence set, and use `pem.contents.as_ref()` when parsing the public certificate.
 - **Scope:** ERR-038-B tests only.
 - **No production behavior change:** The extended RSA verification helper and Android algorithm dispatch were unchanged.
-- **Validation:** Pending terminal CI after the correction.
-- **Status:** OPEN — correction in progress.
+- **Validation:** Rust CI run #163 / `37052651036` passed Build, Test, Format, and Clippy after the correction.
+- **Status:** RESOLVED
+
+
+## ERR-109 — ERR-038-B RSA-16384 public-key constructor boundary
+
+- **Milestone:** ERR-038-B / PR #40
+- **Type:** Backend capability boundary
+- **Observed:** RSA-16384 vector verification reached the RustCrypto backend, but `RsaPublicKey::new` rejected the valid 16384-bit public modulus because rsa 0.9.10 enforces a smaller checked-constructor size limit.
+- **Correction:** Preserve the checked constructor for RSA-1024 and use `RsaPublicKey::new_unchecked` only for the explicitly supported RSA-16384 public-verification boundary, after the existing x509-parser certificate/public-key parsing and certificate/SPKI binding checks have succeeded.
+- **Scope:** RSA-16384 public verification only.
+- **Security boundary:** No private-key operation was introduced.
+- **Validation:** Rust CI run #163 / `37052651036` passed Build, Test, Format, and Clippy.
+- **Status:** RESOLVED
+
+## ERR-110 — ERR-038-B initial RSA-16384 fixture signatures did not match the canonical AOSP key pair
+
+- **Milestone:** ERR-038-B / PR #40
+- **Type:** Test-vector integrity defect
+- **Observed:** After the implementation compiled, both PKCS#1 v1.5 and PSS RSA-16384 vectors failed against the canonical AOSP RSA-16384 certificate.
+- **Root cause:** The initial signature fixture set did not correspond to the certificate fixture used by the tests.
+- **Correction:** Reharvest the four RSA-16384 signatures from the matching AOSP private-key/certificate pair, verify the public-key hash equality first, verify all four signatures with OpenSSL, then publish only the signature/certificate fixtures; the private key was never committed.
+- **Validation:** Rust CI run #163 / `37052651036` passed all four gates using the corrected fixtures.
+- **Status:** RESOLVED
+
+## ERR-111 — ERR-038-B unused PEM parser import under Clippy
+
+- **Milestone:** ERR-038-B / PR #40
+- **Type:** CI lint failure
+- **Observed:** Rust CI run #161 / `37052312673`, Clippy.
+- **Problem:** The PEM parser import had been removed from production scope but was still required by the test module.
+- **Correction:** Scope `parse_x509_pem` to `#[cfg(test)] mod tests` instead of retaining it in production module scope.
+- **Validation:** Rust CI run #163 / `37052651036` passed Build, Test, Format, and Clippy.
+- **Status:** RESOLVED
