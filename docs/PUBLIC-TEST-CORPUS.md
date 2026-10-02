@@ -13,6 +13,7 @@ The corpus is designed to exercise Android Release Doctor without publishing rea
 | `tests/fixtures/minimal-release.apk` | APK | General manifest, inventory, project cross-check, Play-readiness, and unsigned/signing-absence controls |
 | `tests/fixtures/minimal-release.aab` | AAB | Minimal App Bundle artifact control |
 | `tests/fixtures/crypto-v2-release.apk` | APK | Conventional valid APK Signature Scheme v2 control |
+| `tests/fixtures/crypto-v2-empty-element-release.apk.b64` | APK | ERR-095 v2 compatibility control: valid signedData with exactly one additional empty length-prefixed element |
 | `tests/fixtures/crypto-v3-release.apk` | APK | Conventional valid APK Signature Scheme v3 control |
 | `tests/fixtures/crypto-v31-release.apk` | APK | Valid v3.1 and proof-of-rotation control |
 | `tests/fixtures/crypto-v31-no-v3.apk` | APK | Invalid v3.1 without a v3.0 base block |
@@ -48,7 +49,9 @@ The signature verification test module contains support for:
 
 ## ERR-095 public compatibility fixture
 
-The ERR-095 implementation adds a public, generic v2 compatibility fixture for the demonstrated structure in which valid v2 `signedData` contains:
+The ERR-095 implementation adds `tests/fixtures/crypto-v2-empty-element-release.apk.b64`, a public, generic v2 compatibility fixture. The decoded APK SHA-256 is `596db1d5efe23cf8a5227e430123595464c319f673cfc37f275f04c09efabdc5`.
+
+The UTF-8 fixture stores the canonical APK bytes as standard base64. Tests decode it to the original 1,588-byte APK before auditing. The decoded fixture demonstrates the structure in which valid v2 `signedData` contains:
 
 1. digests;
 2. certificates;

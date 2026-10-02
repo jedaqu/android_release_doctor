@@ -1108,12 +1108,66 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Root cause:** Byte-level reproduction demonstrated a concrete compatible v2 `signedData` structure in which the three known length-prefixed fields are followed by exactly one additional empty length-prefixed element encoded as `00 00 00 00`. Those four bytes are part of the signed `signedData` and are accepted by the Android signing/reference-verifier path. ADR currently requires complete consumption immediately after the three known fields and therefore reports the valid structure as trailing bytes.
 - **Correction boundary:** Accept only that exact fourth empty element after the three known fields, then require complete consumption. Preserve strict rejection of short residuals, non-empty fourth elements, multiple residual elements, malformed lengths, and arbitrary trailing bytes. Preserve cryptographic verification over the complete `signedData`.
 - **Out of scope:** v3/v3.1/v3.2/v4 behavior, certificate/public-key binding, content digest verification, SIGNING-001/002 semantics, and ERR-096.
-- **Implementation:** Not started. No production code has been changed by the delimitation movement.
+- **Implementation:** Applied on the ERR-095 branch in `crates/doctor-core/src/signature_verify.rs`; focused parser and integration regressions added. Final validation remains pending.
 - **Regression target:** Conventional three-field v2 data remains Verified; the compatible fourth-empty-element structure becomes Verified; malformed/truncated/non-empty/multiple residual variants remain Invalid.
 - **Public-boundary note:** The real-world artifact and private evidence remain private. The public regression will encode the demonstrated structural contract rather than publish the external artifact.
-- **Status:** OPEN — root cause demonstrated; correction delimited.
+- **Status:** RESOLVED — root cause demonstrated, minimal correction applied, second audit completed, public-boundary audit passed, and Actions run #88 / run `37015630862` passed Build, Test, Format, and Clippy.
 - **Delimitation:** docs/AUDIT-ERR-095-DELIMITATION.md
 - **Roadmap:** docs/ROADMAP-ERR-094-096.md
+
+## ERR-097 — ERR-095 focused regression tests used `expect_err` on a non-Debug result type
+
+- **Milestone:** ERR-095 implementation / Actions run #371 / run `37013840670`
+- **Type:** Test-only validation failure
+- **Problem:** Three new ERR-095 parser-negative tests used `Result::expect_err`. Rust requires the `Ok` type to implement `Debug` for that method, but `ParsedSignedData` intentionally does not implement `Debug`.
+- **Evidence:** Build passed; the Test step failed to compile `doctor-core` with E0277 at the three new assertions. Format and Clippy were not executed because Test stopped the workflow.
+- **Correction:** Replace only those three `expect_err` assertions with explicit `match` expressions that extract the expected `Err` without adding a production `Debug` implementation or changing parser behavior.
+- **Scope:** Test code only. No production behavior, fixture bytes, workflow, or public API changes.
+- **Validation:** Required in the next Actions execution.
+- **Status:** RESOLVED — Actions run #85 / run `37015424258` passed Build, Test, Format, and Clippy.
+
+## ERR-098 — ERR-095 public compatibility fixture omitted the signer length prefix
+
+- **Milestone:** ERR-095 implementation / Actions run #74 / run `37014155122`
+- **Type:** Test fixture structural defect
+- **Problem:** The first public ERR-095 APK fixture encoded the v2 signers sequence as a length-prefixed signer body without the required length prefix around the signer itself. The fixture therefore did not represent a valid v2 signer structure.
+- **Evidence:** Build passed and all 92 `doctor-core` unit tests passed, but the integration fixture failed with `v2 signer contains trailing bytes; v2 signatures is truncated; v2 signed data exceeds its containing structure`. Byte-level inspection identified the missing signer length prefix.
+- **Correction:** Replace only the public fixture bytes with the correctly nested v2 structure: signedData + signatures + publicKey inside the signer, the signer length-prefixed inside the signers sequence, and the signers sequence length-prefixed in the v2 block. The corrected fixture contains exactly one empty fourth signed-data element (`00 00 00 00`) and has SHA-256 `596db1d5efe23cf8a5227e430123595464c319f673cfc37f275f04c09efabdc5`.
+- **Scope:** Test fixture bytes and checksum documentation only. No production behavior or workflow changes.
+- **Validation:** Required in the next Actions execution.
+- **Status:** RESOLVED — Actions run #85 / run `37015424258` passed Build, Test, Format, and Clippy.
+
+## ERR-099 — ERR-095 binary fixture did not survive public Git blob transport byte-for-byte
+
+- **Milestone:** ERR-095 implementation / Actions run #77 / run `37014683071`
+- **Type:** Test fixture publication / transport defect
+- **Problem:** The corrected local APK fixture is a valid 1,588-byte ZIP/APK, but the binary Git blob stored for the public fixture did not reproduce the canonical bytes. CI therefore reported `InvalidArchive("invalid Zip archive: Could not find EOCD")`.
+- **Evidence:** The failing run had 92 `doctor-core` unit tests passing; only the ERR-095 integration fixture failed during `audit_path`. The canonical local fixture SHA-256 is `596db1d5efe23cf8a5227e430123595464c319f673cfc37f275f04c09efabdc5`.
+- **Correction:** Replace the binary repository fixture with a UTF-8 base64 representation of the exact canonical APK bytes. The focused integration test decodes the text fixture to a temporary 1,588-byte APK before auditing it. No production behavior changes.
+- **Scope:** Public test fixture transport and test helper only.
+- **Validation:** Required in the next Actions execution.
+- **Status:** RESOLVED — Actions run #85 / run `37015424258` passed Build, Test, Format, and Clippy.
+
+## ERR-100 — ERR-095 fixture helper rustfmt failure
+
+- **Milestone:** ERR-095 implementation / Actions run #84 / run `37015265330`
+- **Type:** CI formatting failure
+- **Problem:** The corrected ERR-095 base64 fixture helper and its fixed-size assertion did not match the repository formatter's exact layout.
+- **Evidence:** Build passed; all 92 `doctor-core` unit tests passed; all 17 `doctor-core` fixture integration tests passed, including `err_095_empty_fourth_v2_fixture_produces_verified_signing_finding`. Format then failed only on three deterministic rustfmt differences in `crates/doctor-core/tests/fixtures.rs`. Clippy did not run because Format stopped the workflow.
+- **Correction:** Apply only the three rustfmt-indicated layout changes. No production logic, fixture bytes, or test semantics changed.
+- **Scope:** Test formatting only.
+- **Validation:** Required in the next Actions execution.
+- **Status:** RESOLVED — Actions run #85 / run `37015424258` passed Build, Test, Format, and Clippy.
+
+## ERR-101 — ERR-095 public corpus documentation retained a stale binary-fixture reference
+
+- **Milestone:** ERR-095 second audit / public corpus documentation
+- **Type:** Documentation consistency defect
+- **Problem:** The public corpus table had been migrated to the text-encoded `crypto-v2-empty-element-release.apk.b64` fixture, but one narrative sentence still named the removed binary `.apk` path.
+- **Correction:** Replace that stale path and describe the checksum as the SHA-256 of the decoded APK bytes. No product or test behavior changed.
+- **Scope:** Public documentation only.
+- **Validation:** Second-audit re-read required in the next Actions execution.
+- **Status:** RESOLVED — Actions run #88 / run `37015630862` passed Build, Test, Format, and Clippy.
 
 ## ERR-096 — Android application plugin alias discovery gap
 

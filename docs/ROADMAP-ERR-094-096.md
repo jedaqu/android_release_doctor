@@ -7,7 +7,7 @@
 ## Current status
 
 - **ERR-094:** RESOLVED — implementation, repository-level validation, and real-world AAB validation completed.
-- **ERR-095:** OPEN — APK v2 verification false-negative investigation pending.
+- **ERR-095:** RESOLVED — minimal v2 parser correction, public regression fixture, second audit, public-boundary audit, and four-gate CI validation completed.
 - **ERR-096:** OPEN — Android application plugin alias discovery investigation pending.
 
 ## Resolution order
