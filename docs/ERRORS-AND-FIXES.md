@@ -1230,5 +1230,8 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Root cause:** The rebaseline updated surrounding release references but missed the three literal package filename rows in the supported-download table.
 - **Scope:** Replace only those three stale filenames with their `v0.1.2` equivalents.
 - **Out of scope:** Product code, distribution workflow, checksum logic, package matrix, CLI/version logic, changelog, or historical tags/releases.
-- **Status:** OPEN
+- **Correction commit:** `f89294439c02ef0d2e6035eb9392888a03400a48`
+- **Validation:** PR #28 Rust CI run `37026086552` passed Build, Test, Format, and Clippy; second audit passed; post-merge main Rust CI run #113 / `37026310310` passed Build, Test, Format, and Clippy.
+- **Status:** RESOLVED
 - **Pre-audit:** `docs/AUDIT-ERR-105-PRE-AUDIT.md`
+- **Second audit:** `docs/AUDIT-ERR-105-SECOND-AUDIT.md`
