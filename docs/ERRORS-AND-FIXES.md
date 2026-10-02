@@ -1218,8 +1218,12 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Correction boundary:** Replace the independent literal version source with the Cargo package version while preserving the existing public constant, CLI output, report rendering, and release workflow contract. Keep package/archive/checksum/publication behavior unchanged.
 - **Important release-state consequence:** The remote annotated tag `v0.1.1` already exists and points to the failed release commit, while no GitHub Release exists for `v0.1.1`. The correction must not move or rewrite that tag. The next successful publication therefore requires a new release version/tag and a corresponding release-documentation rebaseline.
 - **Documentation consistency note:** `README.md` and `CHANGELOG.md` currently describe `v0.1.1` as published, but GitHub currently has no `v0.1.1` Release. This must be corrected during release preparation.
-- **Status:** OPEN
+- **Validation:** Distribution workflow run `37027265016` (run #6) for tag `v0.1.2` completed successfully. Linux, Windows, and macOS package jobs all passed their binary `--version` consistency checks against workspace/tag version `0.1.2`. GitHub Release `v0.1.2` was published successfully.
+- **Final audit:** `docs/AUDIT-ERR-104-FINAL-RELEASE-VALIDATION.md` — PASS.
+- **Status:** RESOLVED
 - **Pre-audit:** `docs/AUDIT-ERR-104-PRE-AUDIT.md`
+- **Implementation second audit:** `docs/AUDIT-ERR-104-SECOND-AUDIT.md` — PASS
+
 
 
 ## ERR-105 — README retained stale v0.1.1 package filenames
