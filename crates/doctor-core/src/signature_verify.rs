@@ -2554,7 +2554,11 @@ mod tests {
 
         let (_, cert) =
             X509Certificate::from_der(&certificate).expect("RSA-1024 certificate should parse");
-        let rsa = match cert.public_key().parsed().expect("RSA public key should parse") {
+        let rsa = match cert
+            .public_key()
+            .parsed()
+            .expect("RSA public key should parse")
+        {
             PublicKey::RSA(rsa) => rsa,
             _ => panic!("expected RSA public key"),
         };
