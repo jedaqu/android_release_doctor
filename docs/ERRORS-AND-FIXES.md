@@ -1093,9 +1093,10 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Problem:** The previous AAB path passed the protobuf manifest representation through the APK-specific Android Binary XML parser.
 - **Impact:** Manifest-derived evidence such as target SDK was unavailable for affected AAB audits and could cascade into downstream Play-readiness findings.
 - **Correction:** Added a focused protobuf manifest decoder for the AAPT2 `XmlNode`/`XmlElement`/`XmlAttribute` representation used by AAB manifests. APK manifests continue to use the existing binary-XML parser unchanged. The decoder extracts only the existing `ManifestInfo` fields and component evidence required by the current audit.
-- **Validation:** Public Rust CI run `36960802366` reached terminal success for Build, Test, Format, and Clippy. Focused parser tests and an end-to-end generated-protobuf AAB audit regression pass. Existing APK manifest tests also pass.
-- **Second audit:** Exact diff limited to `crates/doctor-core/src/lib.rs`, new `crates/doctor-core/src/manifest_proto.rs`, and the focused AAB fixture updates in `crates/doctor-core/tests/fixtures.rs`. No Play, project, signing, or APK AXML logic was changed.
-- **Status:** OPEN — code correction and public validation are complete; real-world AAB recheck remains pending before final closure.
+- **Validation:** Public Rust CI run `36960802366` and final post-merge Rust CI run `36961337709` both completed Build, Test, Format, and Clippy successfully. Focused parser tests, the generated-protobuf AAB regression, and existing APK manifest tests pass.
+- **Second audit:** Exact implementation diff remained limited to `crates/doctor-core/src/lib.rs`, new `crates/doctor-core/src/manifest_proto.rs`, and the focused AAB fixture updates in `crates/doctor-core/tests/fixtures.rs`. No Play, project, signing, or APK AXML logic was changed.
+- **Final real-world validation:** A real-world AAB regression check confirmed the corrected parser exposes the application manifest data, including targetSdk, with no `MANIFEST-002` finding.
+- **Status:** RESOLVED
 - **Roadmap:** docs/ROADMAP-ERR-094-096.md
 
 ## ERR-095 — APK v2 signature false negative
