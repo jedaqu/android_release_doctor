@@ -1115,6 +1115,17 @@ Every future Actions failure or audit-discovered defect must append a new ERR-NN
 - **Delimitation:** docs/AUDIT-ERR-095-DELIMITATION.md
 - **Roadmap:** docs/ROADMAP-ERR-094-096.md
 
+## ERR-097 — ERR-095 focused regression tests used `expect_err` on a non-Debug result type
+
+- **Milestone:** ERR-095 implementation / Actions run #371 / run `37013840670`
+- **Type:** Test-only validation failure
+- **Problem:** Three new ERR-095 parser-negative tests used `Result::expect_err`. Rust requires the `Ok` type to implement `Debug` for that method, but `ParsedSignedData` intentionally does not implement `Debug`.
+- **Evidence:** Build passed; the Test step failed to compile `doctor-core` with E0277 at the three new assertions. Format and Clippy were not executed because Test stopped the workflow.
+- **Correction:** Replace only those three `expect_err` assertions with explicit `match` expressions that extract the expected `Err` without adding a production `Debug` implementation or changing parser behavior.
+- **Scope:** Test code only. No production behavior, fixture bytes, workflow, or public API changes.
+- **Validation:** Required in the next Actions execution.
+- **Status:** CORRECTION APPLIED — pending validation
+
 ## ERR-096 — Android application plugin alias discovery gap
 
 - **Milestone:** Post-release real-world artifact validation
