@@ -435,10 +435,6 @@ pub fn parse_manifest(data: &[u8]) -> Result<ManifestInfo, ProtoManifestError> {
 mod tests {
     use super::*;
 
-    fn encode_key(field: u32, wire_type: u8, output: &mut Vec<u8>) {
-        output.extend_from_slice(&((u64::from(field) << 3) | u64::from(wire_type)).to_le_bytes()[..1]);
-    }
-
     fn encode_varint(value: u64, output: &mut Vec<u8>) {
         let mut value = value;
         while value >= 0x80 {
@@ -448,12 +444,8 @@ mod tests {
         output.push(value as u8);
     }
 
-    fn encode_key_varint(field: u32, output: &mut Vec<u8>) {
-        encode_varint((u64::from(field) << 3), output);
-    }
-
     fn encode_bytes(field: u32, value: &[u8], output: &mut Vec<u8>) {
-        encode_key_varint(field, output);
+        encode_varint((u64::from(field) << 3) | 2, output);
         encode_varint(value.len() as u64, output);
         output.extend_from_slice(value);
     }
