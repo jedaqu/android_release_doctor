@@ -53,6 +53,13 @@ jobs:
           printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([-.+][0-9A-Za-z.-]+)?$'
           echo "ENGINE_VERSION=$VERSION" >> "$GITHUB_ENV"
 
+      - name: Verify source version matches engine version
+        shell: bash
+        run: |
+          actual_version="$(cargo pkgid -p doctor-cli | sed 's/.*@//')"
+          test "$actual_version" = "$ENGINE_VERSION"
+          echo "engine source version=$actual_version"
+
       - name: Build release binary
         shell: bash
         run: cargo build --release --locked -p doctor-cli
@@ -66,15 +73,18 @@ jobs:
           mkdir -p dist
           source_file="target/release/android-release-doctor${EXT}"
           asset="dist/android-release-doctor-${ENGINE_VERSION}-${ASSET_KEY}${EXT}"
+          test -s "$source_file"
           cp "$source_file" "$asset"
+          test -s "$asset"
           ASSET_FILE="$asset" node - <<'NODE'
           const fs = require('node:fs');
           const crypto = require('node:crypto');
-          const path = process.env.ASSET_FILE;
-          const data = fs.readFileSync(path);
+          const filePath = process.env.ASSET_FILE;
+          const data = fs.readFileSync(filePath);
           const sha = crypto.createHash('sha256').update(data).digest('hex');
-          fs.writeFileSync(path + '.sha256', sha + '  ' + path.split(/[\\/]/).pop() + '\n');
+          fs.writeFileSync(filePath + '.sha256', sha + '  ' + filePath.split(/[\\/]/).pop() + '\n');
           NODE
+
       - name: Upload runtime build
         uses: actions/upload-artifact@v7
         with:
@@ -96,9 +106,29 @@ jobs:
           path: release-assets
           merge-multiple: true
 
+      - name: Verify all six runtime assets and SHA-256 values
+        env:
+          ENGINE_VERSION: ${{ github.ref_name }}
+          RUNTIME_ASSETS_DIR: release-assets
+        shell: bash
+        run: |
+          ENGINE_VERSION="${ENGINE_VERSION#engine-v}" node scripts/verify-engine-assets.cjs
+
       - name: Build checksum index
         shell: bash
-        run: cat release-assets/*.sha256 > release-assets/SHA256SUMS.txt
+        run: |
+          cat release-assets/*.sha256 > release-assets/SHA256SUMS.txt
+          test "$(wc -l < release-assets/SHA256SUMS.txt)" = "6"
+
+      - name: Reject duplicate technical release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "technical engine release already exists: $GITHUB_REF_NAME"
+            exit 1
+          fi
 
       - name: Create technical engine distribution
         env:
