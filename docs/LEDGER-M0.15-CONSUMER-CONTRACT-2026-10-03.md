@@ -49,9 +49,12 @@ This ledger records the assurance-only evidence and harness corrections for M0.1
 
 ### M015-007 — Final integration and post-merge validation
 - PR: #65.
-- Final main HEAD: `937fe5059c4535a407c962893646a0d0b64de036`.
-- Post-merge Action Validation Run `37141293283`: SUCCESS.
-- Post-merge Rust CI Run `37141293281`: SUCCESS.
+- Main after PR #65: `937fe5059c4535a407c962893646a0d0b64de036`.
+- Post-PR #65 Action Validation Run `37141293283`: SUCCESS.
+- Post-PR #65 Rust CI Run `37141293281`: SUCCESS.
+- PR #66 closure reconciliation merged to `7d630bb001141fa7f2880d9777c88b7f678d3b21`.
+- Post-PR #66 Action Validation Run `37141546195`: SUCCESS.
+- Post-PR #66 Rust CI Run `37141546206`: SUCCESS.
 - M0.15 status: CLOSED.
 
 ## Closing rule

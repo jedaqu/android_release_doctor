@@ -88,6 +88,10 @@ The private consumer repository is intentionally not named in the public product
 ## Final integration
 
 - PR #65 merged successfully to main at `937fe5059c4535a407c962893646a0d0b64de036`.
-- Post-merge Action Validation Run `37141293283`: SUCCESS.
-- Post-merge Rust CI Run `37141293281`: SUCCESS.
+- Post-PR #65 Action Validation Run `37141293283`: SUCCESS.
+- Post-PR #65 Rust CI Run `37141293281`: SUCCESS.
+- Post-PR #66 Action Validation Run `37141546195`: SUCCESS.
+- Post-PR #66 Rust CI Run `37141546206`: SUCCESS.
 - No production-code change was introduced by M0.15.
+
+After evidence collection, the temporary consumer workflow was removed from the private consumer branch; this cleanup does not alter any public product artifact.

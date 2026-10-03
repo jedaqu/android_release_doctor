@@ -7,9 +7,9 @@
 - Default branch: `main`
 - Milestone/block: M0.15 — Consumer Contract Validation
 - Status: CLOSED
-- Final main HEAD: `937fe5059c4535a407c962893646a0d0b64de036`
-- Integration PR: #65
-- Integration merge commit: `937fe5059c4535a407c962893646a0d0b64de036`
+- Final validated product HEAD before documentation-only closure reconciliation: `7d630bb001141fa7f2880d9777c88b7f678d3b21`
+- Integration PRs: #65 (M0.15 implementation/docs), #66 (closure reconciliation)
+- PR #66 merge commit: `7d630bb001141fa7f2880d9777c88b7f678d3b21`
 - Production-code changes: none
 
 ## Consumer evidence
@@ -54,4 +54,6 @@ M0.15 is closed because:
 4. second audit reconciled the evidence;
 5. public current-state documentation and this final checkpoint now record the final main HEAD and post-merge CI evidence.
 
-The temporary external consumer workflow is private and outside the public product repository. Its identity and private project material are intentionally not recorded in this public repository.
+The temporary external consumer workflow was removed from the private consumer branch after evidence collection. Its identity and private project material are intentionally not recorded in this public repository.
+
+This checkpoint records the last fully validated product-state commit after M0.15 and before any subsequent documentation-only reconciliation.
