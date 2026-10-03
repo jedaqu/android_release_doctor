@@ -32,9 +32,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ! grep -q 'v0\.1\.3' README.md
-          ! grep -qi 'tag-driven' README.md
-          ! grep -qi 'distribution workflow' README.md
+          if grep -q 'v0\.1\.3' README.md; then exit 1; fi
+          if grep -qi 'tag-driven' README.md; then exit 1; fi
+          if grep -qi 'distribution workflow' README.md; then exit 1; fi
           grep -q 'primary product surface is the reusable GitHub Action' README.md
           grep -q 'GitHub Action.*CLI.*audit engine\|GitHub Action interface' README.md
 
