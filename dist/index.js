@@ -7,7 +7,12 @@ const { spawn } = require("node:child_process");
 const REPOSITORY = "jedaqu/android_release_doctor";
 const TEST_RUNTIME_ENV = "ANDROID_RELEASE_DOCTOR_TEST_RUNTIME_PATH";
 
-function input(name) { const envName = "INPUT_" + name.toUpperCase().replace(/-/g, "_"); return (process.env[envName] || "").trim(); }
+function input(name) {
+  const canonical = "INPUT_" + name.toUpperCase().replace(/ /g, "_");
+  const fallback = "INPUT_" + name.toUpperCase().replace(/-/g, "_");
+  const value = process.env[canonical] !== undefined ? process.env[canonical] : process.env[fallback];
+  return (value || "").trim();
+}
 
 function setOutput(name, value) { const file = process.env.GITHUB_OUTPUT; if (!file) return; fs.appendFileSync(file, name + "=" + value + "\n", "utf8"); }
 
