@@ -5,7 +5,8 @@
 - Repository: `jedaqu/android_release_doctor`
 - Visibility: public
 - Default branch: `main`
-- Current validated main HEAD at M0.16 start: `1298c73d3019799e76cf7ace9706c8f880a98d72`
+- Current validated main HEAD: `e29e8d0d4b360f537413559e4ec0c5c1fd530c87`
+- M0.16 readiness-gate baseline: `1298c73d3019799e76cf7ace9704e3656995837f`
 - M0.11-A implementation integration baseline: `8e9f639ce71ce06e211718187d3079a5d68458f5`
 
 The exact moving `main` SHA is recorded by the latest validated checkpoint. This document records the current validated product state and is updated as validated work advances.
@@ -27,7 +28,7 @@ Android Release Doctor is currently the following product surface:
 7. `docs/ERRORS-AND-FIXES.md` as append-only engineering memory.
 
 
-Historical binary distribution, public-release packaging, and publication workflows are not part of the active product surface.
+Historical campaigns, temporary experiments, and superseded validation workflows are not part of the active product surface.
 
 ## Demonstrated current capabilities
 
