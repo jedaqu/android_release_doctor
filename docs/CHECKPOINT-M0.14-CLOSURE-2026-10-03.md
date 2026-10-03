@@ -7,7 +7,7 @@
 - Default branch: `main`
 - Milestone/block: M0.14 — Product Assurance Expansion
 - Status: CLOSED
-- Current main HEAD: `0478366db4c97924b0891a0c3538acbedb018f4b`
+- Current main HEAD: `b2baf2823d5bb5472a3c978ce092d75d81de94f0`
 - Integration PR: #62
 - Integration commit: `0478366db4c97924b0891a0c3538acbedb018f4b`
 
@@ -27,3 +27,13 @@ A separate consumer repository has not been created because the current connecte
 ## Closure rule
 
 M0.14 is closed because the implemented assurance expansion, second audit, integration evidence, and current product documentation are coherent.
+
+## Final post-merge coherence
+
+PR #63 closure documentation was integrated at `b2baf2823d5bb5472a3c978ce092d75d81de94f0`.
+
+Post-merge validation:
+- Action Validation Run `37135857960` — SUCCESS.
+- Rust CI Run `37135858051` — SUCCESS.
+
+M0.14 remains CLOSED.
