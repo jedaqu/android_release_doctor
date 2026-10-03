@@ -393,6 +393,233 @@ fn compressed_native_library_does_not_require_zip_offset_alignment() {
     fs::remove_file(path).expect("temporary APK should be removed");
 }
 
+fn native_zip_matrix_fixture(
+    name: &str,
+    kind: ArtifactKind,
+    entries: &[(&str, CompressionMethod, Option<u16>)],
+) -> PathBuf {
+    let extension = match kind {
+        ArtifactKind::Apk => "apk",
+        ArtifactKind::Aab => "aab",
+    };
+    let prefix = match kind {
+        ArtifactKind::Apk => "lib",
+        ArtifactKind::Aab => "base/lib",
+    };
+    let path = std::env::temp_dir().join(format!(
+        "android-release-doctor-{name}-{}.{}",
+        std::process::id(),
+        extension
+    ));
+
+    let file = File::create(&path).expect("temporary native ABI fixture should be created");
+    let mut archive = ZipWriter::new(file);
+
+    for (abi, compression, alignment) in entries {
+        let mut options = SimpleFileOptions::default().compression_method(*compression);
+        if let Some(alignment) = alignment {
+            options = options.with_alignment(*alignment);
+        }
+
+        archive
+            .start_file(format!("{prefix}/{abi}/libdemo-{abi}.so"), options)
+            .expect("native ABI entry should be created");
+        archive
+            .write_all(b"not-an-elf")
+            .expect("native ABI bytes should be written");
+    }
+
+    archive
+        .finish()
+        .expect("native ABI fixture should be finalized");
+
+    path
+}
+
+fn finding_severity(report: &doctor_core::AuditReport, rule_id: &str) -> Severity {
+    report
+        .findings
+        .iter()
+        .find(|finding| finding.rule_id == rule_id)
+        .map(|finding| finding.severity)
+        .expect("expected finding should exist")
+}
+
+#[test]
+fn native_zip_64_bit_stored_alignment_matrix() {
+    for (abi, name) in [("arm64-v8a", "arm64"), ("x86_64", "x86_64")] {
+        let bad = native_zip_matrix_fixture(
+            &format!("native-zip-{name}-bad"),
+            ArtifactKind::Apk,
+            &[(abi, CompressionMethod::Stored, Some(4096))],
+        );
+        let bad_report = audit_path(&bad).expect("misaligned 64-bit APK should be auditable");
+        assert_eq!(
+            finding_severity(&bad_report, "NATIVE-003"),
+            Severity::Warning,
+            "misaligned {abi} native ZIP entry must warn"
+        );
+        fs::remove_file(bad).expect("bad native ABI fixture should be removed");
+
+        let good = native_zip_matrix_fixture(
+            &format!("native-zip-{name}-good"),
+            ArtifactKind::Apk,
+            &[(abi, CompressionMethod::Stored, Some(
+                doctor_core::ZIP_ALIGNMENT_16KB as u16,
+            ))],
+        );
+        let good_report =
+            audit_path(&good).expect("aligned 64-bit APK should be auditable");
+        assert_eq!(
+            finding_severity(&good_report, "NATIVE-003"),
+            Severity::Pass,
+            "aligned {abi} native ZIP entry must pass"
+        );
+        fs::remove_file(good).expect("good native ABI fixture should be removed");
+    }
+}
+
+#[test]
+fn native_zip_32_bit_alignment_is_not_a_16kb_requirement() {
+    for (abi, name) in [("armeabi-v7a", "armeabi-v7a"), ("x86", "x86")] {
+        let path = native_zip_matrix_fixture(
+            &format!("native-zip-{name}-4k"),
+            ArtifactKind::Apk,
+            &[(abi, CompressionMethod::Stored, Some(4096))],
+        );
+        let report = audit_path(&path).expect("32-bit APK should be auditable");
+        assert_eq!(
+            finding_severity(&report, "NATIVE-003"),
+            Severity::Pass,
+            "4 KiB {abi} native ZIP entry must not trigger NATIVE-003"
+        );
+        fs::remove_file(path).expect("32-bit native ABI fixture should be removed");
+    }
+}
+
+#[test]
+fn native_zip_mixed_32_and_64_bit_matrix_uses_only_applicable_abis() {
+    let path = native_zip_matrix_fixture(
+        "native-zip-mixed-32-64",
+        ArtifactKind::Apk,
+        &[
+            ("armeabi-v7a", CompressionMethod::Stored, Some(4096)),
+            ("x86", CompressionMethod::Stored, Some(4096)),
+            ("arm64-v8a", CompressionMethod::Stored, Some(4096)),
+            ("x86_64", CompressionMethod::Stored, Some(
+                doctor_core::ZIP_ALIGNMENT_16KB as u16,
+            )),
+        ],
+    );
+
+    let report = audit_path(&path).expect("mixed ABI APK should be auditable");
+    assert_eq!(
+        finding_severity(&report, "NATIVE-003"),
+        Severity::Warning
+    );
+    let native_abis = report.inventory.native_abis;
+    assert_eq!(
+        native_abis,
+        vec![
+            "arm64-v8a".to_string(),
+            "armeabi-v7a".to_string(),
+            "x86".to_string(),
+            "x86_64".to_string()
+        ]
+    );
+
+    fs::remove_file(path).expect("mixed native ABI fixture should be removed");
+}
+
+#[test]
+fn native_zip_compressed_64_bit_libraries_pass_without_offset_alignment() {
+    let path = native_zip_matrix_fixture(
+        "native-zip-compressed-64",
+        ArtifactKind::Apk,
+        &[
+            ("arm64-v8a", CompressionMethod::Deflated, None),
+            ("x86_64", CompressionMethod::Deflated, None),
+        ],
+    );
+
+    let report = audit_path(&path).expect("compressed 64-bit APK should be auditable");
+    assert_eq!(finding_severity(&report, "NATIVE-003"), Severity::Pass);
+
+    fs::remove_file(path).expect("compressed native ABI fixture should be removed");
+}
+
+#[test]
+fn native_zip_aab_64_bit_stored_entries_require_manual_review() {
+    let path = native_zip_matrix_fixture(
+        "native-zip-aab-64-stored",
+        ArtifactKind::Aab,
+        &[("arm64-v8a", CompressionMethod::Stored, None)],
+    );
+
+    let report = audit_path(&path).expect("64-bit AAB should be auditable");
+    assert_eq!(
+        finding_severity(&report, "NATIVE-003"),
+        Severity::ManualReview
+    );
+
+    fs::remove_file(path).expect("AAB native ABI fixture should be removed");
+}
+
+#[test]
+fn native_zip_aab_32_bit_stored_entries_do_not_require_manual_review() {
+    let path = native_zip_matrix_fixture(
+        "native-zip-aab-32-stored",
+        ArtifactKind::Aab,
+        &[
+            ("armeabi-v7a", CompressionMethod::Stored, None),
+            ("x86", CompressionMethod::Stored, None),
+        ],
+    );
+
+    let report = audit_path(&path).expect("32-bit AAB should be auditable");
+    assert_eq!(finding_severity(&report, "NATIVE-003"), Severity::Pass);
+
+    fs::remove_file(path).expect("32-bit AAB native ABI fixture should be removed");
+}
+
+#[test]
+fn native_zip_aab_64_bit_compressed_entries_pass() {
+    let path = native_zip_matrix_fixture(
+        "native-zip-aab-64-compressed",
+        ArtifactKind::Aab,
+        &[
+            ("arm64-v8a", CompressionMethod::Deflated, None),
+            ("x86_64", CompressionMethod::Deflated, None),
+        ],
+    );
+
+    let report = audit_path(&path).expect("compressed 64-bit AAB should be auditable");
+    assert_eq!(finding_severity(&report, "NATIVE-003"), Severity::Pass);
+
+    fs::remove_file(path).expect("compressed 64-bit AAB fixture should be removed");
+}
+
+#[test]
+fn native_zip_aab_mixed_32_and_64_bit_keeps_manual_review_for_64_bit() {
+    let path = native_zip_matrix_fixture(
+        "native-zip-aab-mixed-32-64",
+        ArtifactKind::Aab,
+        &[
+            ("armeabi-v7a", CompressionMethod::Stored, None),
+            ("x86", CompressionMethod::Stored, None),
+            ("arm64-v8a", CompressionMethod::Stored, None),
+        ],
+    );
+
+    let report = audit_path(&path).expect("mixed ABI AAB should be auditable");
+    assert_eq!(
+        finding_severity(&report, "NATIVE-003"),
+        Severity::ManualReview
+    );
+
+    fs::remove_file(path).expect("mixed AAB native ABI fixture should be removed");
+}
+
 fn decode_base64_fixture(encoded: &str) -> Vec<u8> {
     const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
