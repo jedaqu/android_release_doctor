@@ -18,19 +18,13 @@ The technical engine distribution is an implementation transport mechanism. It i
 
 ## Technical tag
 
-The build workflow is intentionally tag-driven for production distribution.
+The production build is tag-driven and technical tags are immutable.
 
-From a checkout with the validated branch:
+`engine-v0.1.3` already exists and intentionally points to the earlier failed gate commit. It must not be moved or reused.
 
-```bash
-git fetch origin
-git checkout service/prebuilt-cli-runtime-2026-10-03
-git pull --ff-only origin service/prebuilt-cli-runtime-2026-10-03
-git tag -a engine-v0.1.3 0d879c179a02bac7c11c3b0090d982805299e13e -m "Android Release Doctor engine v0.1.3"
-git push origin engine-v0.1.3
-```
+The corrected immutable publication revision uses the technical tag `engine-v0.1.3-build2`. The tag suffix is a transport revision; the actual engine version remains the workspace version `0.1.3`.
 
-Do not reuse or move an existing technical engine tag.
+The runtime workflow validates that a technical tag is either exactly `engine-v<engine-version>` or `engine-v<engine-version>-build<N>`, while asset names and manifest keys remain based on the actual engine version.
 
 ## Expected workflow
 
@@ -55,7 +49,7 @@ The workflow:
 
 The next controlled block must:
 
-- record the six published asset hashes in `runtime/manifest.json`;
+- record the six published asset hashes in `runtime/manifest.json` with `release_tag` set to `engine-v0.1.3-build2`;
 - change the manifest status from `draft` to `published`;
 - validate real Action retrieval on at least the matching consumer runner path;
 - validate cached-runtime reuse and hash mismatch rejection;
