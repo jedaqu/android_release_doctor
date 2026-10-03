@@ -148,3 +148,20 @@ Automated Rust/CLI validation remains:
 - Build, Format and Clippy all passing.
 
 M0.13 was integrated by PR #60 at main commit `70fc650cfad15974f06e5b58b5ab3efcdfcf28f9`, followed by successful post-merge Rust CI Run `37132758711` and Action Validation Run `37132758674`.
+
+
+## M0.14 — Product Assurance Expansion (CLOSED)
+
+M0.14 moved validation beyond internal correctness into release-assurance evidence.
+
+Validated:
+- generated Report v1 documents are checked at runtime against the published `docs/report-schema-v1.0.json` Draft 2020-12 schema;
+- the reusable Action executes successfully through an immutable repository-SHA reference;
+- a deterministic 12-case APK/AAB corpus is audited through the CLI and its reports are schema-validated;
+- the existing 147-test Rust/CLI suite remains green.
+
+Post-merge validation on `main`:
+- Android Release Doctor — Action Validation Run `37135654381`: SUCCESS.
+- Rust CI Run `37135654379`: SUCCESS.
+
+The remaining assurance boundary is a genuinely separate consumer repository executing the Action from an immutable SHA. The current connected GitHub write surface does not provide repository-creation/write support needed to establish that separate consumer repository without modifying an unrelated repository, so no separate-consumer result is claimed.
