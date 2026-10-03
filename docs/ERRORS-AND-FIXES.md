@@ -1451,3 +1451,18 @@ From this point forward, a historical `OPEN` entry is not considered an active w
 - **No production behavior change:** Rust source, cryptographic implementation, NATIVE/16 KiB logic, GitHub Action implementation, and direct dependency declarations were not changed.
 - **Classification:** REPRODUCIBILITY — validated correction.
 - **Status:** RESOLVED LOCALLY / PENDING INTEGRATION
+
+
+## ERR-119 — Minimal manual Cargo.lock candidate insufficient under `--locked`
+
+- **Milestone:** M0.10 / GAP-1 Cargo reproducibility
+- **Type:** Audit validation / lockfile resolution
+- **Purpose:** Determine whether the historical minimum proposal (`lazy_static → spin` + `spin 0.9.9`) was sufficient for strict locked resolution.
+- **Controlled environment:** Isolated detached worktree at baseline `8c457a84697a6f571aee8fc5f9b1cb9afa89ebe6`. No public repository ref was modified by the experiment.
+- **Candidate:** Only the `lazy_static 1.5.1 → spin` edge and `spin 0.9.9` package were added.
+- **Observed:** `cargo test --workspace --locked` failed and reported that Cargo still needed to update the lockfile.
+- **Follow-up:** `cargo update --workspace` in the isolated worktree reconstructed the additional transitive entries and version-qualified references required by the active dependency graph.
+- **Resulting hash:** `3f967003fc962629edbdc8976cb821febf701b1ab7590275329d206b22910673`.
+- **PR #52 comparison:** The reconstructed lockfile was byte-identical to the `Cargo.lock` on PR #52.
+- **Classification:** AUDIT EVIDENCE — confirms the broader Cargo-generated lockfile is required; not a production code defect.
+- **Status:** RESOLVED / PR #52 lockfile independently reproduced.
