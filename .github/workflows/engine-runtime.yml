@@ -56,7 +56,8 @@ jobs:
       - name: Verify source version matches engine version
         shell: bash
         run: |
-          actual_version="$(cargo pkgid -p doctor-cli | sed 's/.*@//')"
+          actual_version="$(sed -n 's/^[[:space:]]*version[[:space:]]*=[[:space:]]*"\\([^"]*\\)".*/\\1/p' Cargo.toml | head -n 1)"
+          test -n "$actual_version"
           test "$actual_version" = "$ENGINE_VERSION"
           echo "engine source version=$actual_version"
 
