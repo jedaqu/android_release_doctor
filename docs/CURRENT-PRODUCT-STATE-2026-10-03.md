@@ -208,3 +208,15 @@ Validated:
 - public repository scan found no tested restricted commercial/private-boundary terms.
 
 M0.16 introduced no production-code changes. Its engineering disposition is READY FOR PRODUCT PREPARATION. Historical evidence remains preserved and the public/private boundary remains unchanged.
+
+
+## M0.17 — Product Preparation / v0.1.3 (PREPARED)
+
+M0.17 prepared the public product for a future manual publication review at version `0.1.3` without changing production behavior.
+
+Prepared public documents:
+- `docs/PRODUCT-MANIFEST-v0.1.3-CANDIDATE-2026-10-03.md`
+- `docs/RELEASE-NOTES-v0.1.3-CANDIDATE-2026-10-03.md`
+- `docs/CHECKLIST-M0.17-PRODUCT-PREPARATION-2026-10-03.md`
+
+M0.17 does not claim that a GitHub Release or tag has already been published. The publication step remains manual and must use the exact final validated main commit.
