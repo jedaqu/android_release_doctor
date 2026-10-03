@@ -194,3 +194,18 @@ The next engineering phase is **repository cleanup and product-definition normal
 - then re-audit the cleaned repository and run Actions again.
 
 No release/tag/publication change is part of this validation result.
+
+
+## Current-state reconciliation — 2026-10-03
+
+This validation campaign is a historical record of the state that existed before the later ABI-scope corrections and product-surface cleanup. Its `FINDING-001 — 16 KiB native ABI scope` is therefore retained as historical evidence, not as a current unresolved finding.
+
+Subsequent validated work resolved that finding through:
+
+- ERR-113 / PLAY-005 ABI restriction to `arm64-v8a` and `x86_64`;
+- ERR-114 / NATIVE-002 ABI restriction to `arm64-v8a` and `x86_64`;
+- ERR-115 / NATIVE-003 ABI restriction plus the explicit full ABI matrix.
+
+The later cleanup campaign then removed the former release/distribution product surface. Current product truth is maintained separately in `AUDIT-PRODUCT-CLEANUP-2026-10-03.md` and `CURRENT-PRODUCT-STATE-2026-10-03.md`.
+
+This document's earlier campaign results, baseline, and chronology remain unchanged.

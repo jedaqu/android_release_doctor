@@ -2,7 +2,7 @@
 
 Open-source, local-first tool for auditing Android APK and AAB releases before publication.
 
-> **Status:** Product validation completed. The primary product surface is the reusable GitHub Action and its underlying CLI/audit engine. Historical binary distribution and public-release packaging are not part of the active product surface.
+> **Status:** The active product surface is the reusable GitHub Action plus the CLI/audit engine. Current-state truth is maintained in [CURRENT-PRODUCT-STATE-2026-10-03.md](docs/CURRENT-PRODUCT-STATE-2026-10-03.md); historical milestone documents remain engineering history and are not the current product contract.
 
 Android Release Doctor inspects the **artifact you are actually going to distribute**, can compare it with the Android application Gradle configuration, and can apply a versioned Google Play submission-readiness profile.
 
@@ -370,7 +370,7 @@ steps:
 
   - name: Audit release
     id: release-doctor
-    uses: jedaqu/android-release-doctor/.github/actions/android-release-doctor@<ref>
+    uses: jedaqu/android_release_doctor/.github/actions/android-release-doctor@<ref>
     with:
       artifact: app/build/outputs/apk/release/app-release.apk
       format: json
@@ -398,6 +398,16 @@ When `output` is supplied, the report is written by the existing CLI. A blocking
 
 The Block 3 action executes the repository CLI through Cargo. The runner therefore needs a usable Rust/Cargo toolchain.
 
+
+## Documentation coherence
+
+The repository treats documentation as part of the product contract. A product change is not considered complete while the public documentation, examples, schemas, tests, and current-state description disagree with the implemented behavior. Historical audit records preserve their original chronology; later corrections are recorded through append-only reconciliation or an explicitly newer current-state document rather than rewriting engineering history.
+
+The working rule is:
+
+**implementation change → evidence update → documentation update → second audit → closure.**
+
+See [DOCUMENTATION-COHERENCE.md](docs/DOCUMENTATION-COHERENCE.md).
 
 ## Product boundary
 
@@ -437,10 +447,10 @@ Every newly discovered failure or audit finding that represents an error, defect
 ## Development
 
 ```bash
-cargo check --workspace
-cargo test --workspace
+cargo check --workspace --locked
+cargo test --workspace --locked
 cargo fmt --all -- --check
-cargo clippy --workspace --all-targets -- -D warnings
+cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo run -p doctor-cli -- tests/fixtures/minimal-release.apk
 cargo run -p doctor-cli -- --project tests/fixtures/project-release tests/fixtures/minimal-release.apk
 cargo run -p doctor-cli -- --play tests/fixtures/minimal-release.apk
@@ -478,10 +488,10 @@ cargo run -p doctor-cli -- --format json --output report.json tests/fixtures/min
 For a normal local development validation:
 
 ```bash
-cargo check --workspace
-cargo test --workspace
+cargo check --workspace --locked
+cargo test --workspace --locked
 cargo fmt --all -- --check
-cargo clippy --workspace --all-targets -- -D warnings
+cargo clippy --workspace --all-targets --locked -- -D warnings
 ```
 
 ### GitHub Action

@@ -1466,3 +1466,36 @@ From this point forward, a historical `OPEN` entry is not considered an active w
 - **PR #52 comparison:** The reconstructed lockfile was byte-identical to the `Cargo.lock` on PR #52.
 - **Classification:** AUDIT EVIDENCE — confirms the broader Cargo-generated lockfile is required; not a production code defect.
 - **Status:** RESOLVED / PR #52 lockfile independently reproduced.
+
+
+---
+
+## Current disposition reconciliation — 2026-10-03
+
+The ledger remains append-only. The historical entries above are not rewritten; the following notes record later dispositions so that current status is not inferred from an older snapshot.
+
+### ERR-112 — superseded by validated Cargo reproducibility correction
+
+ERR-112 originally closed the Cargo.lock issue as a known limitation without correction. That was the correct status at the time of the M0.8 distribution investigation.
+
+It was subsequently superseded by ERR-118 and the validated PR #52 correction. Current status of the underlying lockfile reproducibility problem is **RESOLVED AND INTEGRATED**.
+
+### ERR-118 — integration completed
+
+ERR-118 was originally recorded as `RESOLVED LOCALLY / PENDING INTEGRATION`.
+
+The correction was integrated by PR #52:
+
+- PR #52 merge commit: `b6e11c58b510af390bd35a6d4dcad20736311762`.
+
+The subsequent PR #53 merged at:
+
+- `4a41b80415b94ffe1748ec07a10a4cbe0224ee1a`
+
+and made the normal Rust CI Build/Test/Clippy commands enforce `--locked`.
+
+Current status of ERR-118: **RESOLVED AND INTEGRATED**.
+
+### Documentation rule
+
+From this point forward, a later validated disposition that changes the practical status of an older finding must be recorded here as an append-only reconciliation entry. Historical observations remain immutable; current status is determined by the latest validated disposition.
