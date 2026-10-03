@@ -7,9 +7,9 @@
 - Default branch: `main`
 - Milestone/block: M0.14 — Product Assurance Expansion
 - Status: CLOSED
-- Current main HEAD: `b2baf2823d5bb5472a3c978ce092d75d81de94f0`
-- Integration PR: #62
-- Integration commit: `0478366db4c97924b0891a0c3538acbedb018f4b`
+- Current main HEAD at final M0.14 reconciliation: `d1d681e46391c95fd77152779ff4e3656995837f`
+- Assurance integration PR: #62
+- Assurance integration commit: `0478366db4c97924b0891a0c3538acbedb018f4b`
 
 ## Validation evidence
 
@@ -32,8 +32,10 @@ M0.14 is closed because the implemented assurance expansion, second audit, integ
 
 PR #63 closure documentation was integrated at `b2baf2823d5bb5472a3c978ce092d75d81de94f0`.
 
-Post-merge validation:
-- Action Validation Run `37135857960` — SUCCESS.
-- Rust CI Run `37135858051` — SUCCESS.
+PR #64 reconciled the final M0.14 documentation/head relationship and merged to `main` at `d1d681e46391c95fd77152779ff4e3656995837f`.
 
-M0.14 remains CLOSED.
+Post-merge validation after the final head reconciliation:
+- Action Validation Run `37136081059` — SUCCESS.
+- Rust CI Run `37136081115` — SUCCESS.
+
+M0.14 remains CLOSED; this checkpoint now records the final main HEAD accurately.
