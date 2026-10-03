@@ -1,0 +1,107 @@
+name: "Android Release Doctor"
+author: "JEDAQU"
+description: "Audit Android APK and AAB artifacts in GitHub Actions with evidence-based checks."
+
+inputs:
+  artifact:
+    description: "Path to the APK or AAB to audit."
+    required: true
+  project:
+    description: "Optional Android application module path."
+    required: false
+    default: ""
+  play:
+    description: "Apply the Google Play readiness profile."
+    required: false
+    default: "false"
+  play-platform:
+    description: "Google Play platform passed to the CLI when play=true."
+    required: false
+    default: "mobile"
+  format:
+    description: "Report format: text or json."
+    required: false
+    default: "text"
+  output:
+    description: "Optional report output path."
+    required: false
+    default: ""
+
+outputs:
+  exit-code:
+    description: "Exact Android Release Doctor process exit code."
+    value: ${{ steps.doctor.outputs.exit-code }}
+  report-path:
+    description: "The supplied report output path, or empty when stdout is used."
+    value: ${{ steps.doctor.outputs.report-path }}
+
+branding:
+  icon: "shield"
+  color: "blue"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Run Android Release Doctor
+      id: doctor
+      shell: bash
+      working-directory: ${{ github.workspace }}
+      env:
+        GITHUB_ACTION_PATH: ${{ github.action_path }}
+        DOCTOR_ARTIFACT: ${{ inputs.artifact }}
+        DOCTOR_PROJECT: ${{ inputs.project }}
+        DOCTOR_PLAY: ${{ inputs.play }}
+        DOCTOR_PLAY_PLATFORM: ${{ inputs.play-platform }}
+        DOCTOR_FORMAT: ${{ inputs.format }}
+        DOCTOR_OUTPUT: ${{ inputs.output }}
+      run: |
+        set +e
+
+        if [[ "$DOCTOR_OUTPUT" == *$'\n'* || "$DOCTOR_OUTPUT" == *$'\r'* ]]; then
+          echo "Android Release Doctor: invalid output path; CR/LF characters are not allowed" >&2
+          echo "exit-code=2" >> "$GITHUB_OUTPUT"
+          echo "report-path=" >> "$GITHUB_OUTPUT"
+          exit 2
+        fi
+
+        if [[ "$DOCTOR_PLAY" != "true" && "$DOCTOR_PLAY" != "false" ]]; then
+          echo "Android Release Doctor: invalid play input; expected true or false" >&2
+          echo "exit-code=2" >> "$GITHUB_OUTPUT"
+          echo "report-path=" >> "$GITHUB_OUTPUT"
+          exit 2
+        fi
+
+        cmd=(
+          cargo run
+          --locked
+          --quiet
+          --manifest-path "$GITHUB_ACTION_PATH/Cargo.toml"
+          -p doctor-cli
+          --
+        )
+
+        if [[ -n "$DOCTOR_PROJECT" ]]; then
+          cmd+=(--project "$DOCTOR_PROJECT")
+        fi
+
+        if [[ "$DOCTOR_PLAY" == "true" ]]; then
+          cmd+=(--play --play-platform "$DOCTOR_PLAY_PLATFORM")
+        fi
+
+        if [[ -n "$DOCTOR_FORMAT" ]]; then
+          cmd+=(--format "$DOCTOR_FORMAT")
+        fi
+
+        if [[ -n "$DOCTOR_OUTPUT" ]]; then
+          cmd+=(--output "$DOCTOR_OUTPUT")
+        fi
+
+        cmd+=("$DOCTOR_ARTIFACT")
+
+        "${cmd[@]}"
+        status=$?
+
+        echo "exit-code=$status" >> "$GITHUB_OUTPUT"
+        echo "report-path=$DOCTOR_OUTPUT" >> "$GITHUB_OUTPUT"
+
+        exit "$status"
