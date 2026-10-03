@@ -47,6 +47,13 @@ This ledger records the assurance-only evidence and harness corrections for M0.1
 - Permanent Action workflow: unchanged.
 - Report schema: unchanged.
 
+### M015-007 — Final integration and post-merge validation
+- PR: #65.
+- Final main HEAD: `937fe5059c4535a407c962893646a0d0b64de036`.
+- Post-merge Action Validation Run `37141293283`: SUCCESS.
+- Post-merge Rust CI Run `37141293281`: SUCCESS.
+- M0.15 status: CLOSED.
+
 ## Closing rule
 
 M0.15 may close only after:
