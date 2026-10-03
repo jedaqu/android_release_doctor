@@ -1,12 +1,12 @@
 # Android Release Doctor
 
-Open-source, local-first tool for auditing Android APK and AAB releases before publication.
+GitHub Actions service for auditing Android APK and AAB artifacts in CI.
 
-> **Status:** The active product surface is the reusable GitHub Action plus the CLI/audit engine. Current-state truth is maintained in [CURRENT-PRODUCT-STATE-2026-10-03.md](docs/CURRENT-PRODUCT-STATE-2026-10-03.md); historical milestone documents remain engineering history and are not the current product contract.
+> **Status:** The primary service surface is the reusable GitHub Action. The Rust audit engine and CLI provide the service implementation and a local validation interface. Current-state truth is maintained in [CURRENT-PRODUCT-STATE-2026-10-03.md](docs/CURRENT-PRODUCT-STATE-2026-10-03.md); historical milestone documents remain engineering history and are not the current product contract.
 
 > **Validation status (2026-10-03):** The maintained Rust/CLI suite has 147 automated tests passing; the reusable Action is validated through normal, blocker, invalid-input, schema, deterministic-corpus, and external immutable-SHA consumer paths.
 
-Android Release Doctor inspects the **artifact you are actually going to distribute**, can compare it with the Android application Gradle configuration, and can apply a versioned Google Play submission-readiness profile.
+Android Release Doctor receives an Android APK or AAB as workflow input, can compare it with the Android application Gradle configuration, and can apply a versioned Google Play submission-readiness profile. The service returns structured evidence through a stable report contract and exit code.
 
 ## Current cryptographic coverage — post ERR-038-A / ERR-038-B
 
@@ -413,9 +413,11 @@ See [DOCUMENTATION-COHERENCE.md](docs/DOCUMENTATION-COHERENCE.md).
 
 ## Product boundary
 
-Android Release Doctor is the audit engine plus its reusable GitHub Action interface. The product is the evidence-producing workflow that inspects APK/AAB artifacts, optionally compares static Gradle configuration, applies the configured Play readiness profile, and returns a stable report and exit code.
+Android Release Doctor is a GitHub Actions service. Its primary consumer interface is the reusable GitHub Action. The Rust audit engine and CLI are the implementation and local validation surfaces behind that service.
 
-The maintained product surface is the local CLI, shared audit engine, reusable GitHub Action, Report v1 contract, public fixtures, and permanent validation workflows.
+The service consumes an APK or AAB plus optional static project configuration, applies the configured audit and Play readiness rules, and returns a stable Report v1 document with an exact exit code.
+
+The maintained technical surface is the reusable Action, shared audit engine, CLI, Report v1 contract, public fixtures, and permanent validation workflows.
 
 ## Still not implemented
 
@@ -474,7 +476,7 @@ Apache License 2.0.
 
 ## Getting started
 
-The primary product surfaces are the reusable GitHub Action and the local CLI, backed by the shared Rust audit engine.
+The primary service surface is the reusable GitHub Action. The local CLI is provided for local validation, development, and troubleshooting.
 
 ### Local CLI
 
@@ -512,9 +514,9 @@ The reusable action is available from:
     output: android-release-doctor-report.json
 ```
 
-For supply-chain pinning, replace `@main` with a reviewed commit SHA.
+For supply-chain control, pin the Action to a reviewed commit SHA.
 
-The action executes the validated CLI through Cargo on the runner, so the runner must provide a usable Rust/Cargo toolchain. Its inputs are `artifact`, `project`, `play`, `play-platform`, `format`, and `output`; its outputs are `exit-code` and `report-path`.
+The Action executes the validated CLI through Cargo on the runner, so the runner must provide a usable Rust/Cargo toolchain. Its inputs are `artifact`, `project`, `play`, `play-platform`, `format`, and `output`; its outputs are `exit-code` and `report-path`.
 
 ### What the tool does not claim
 

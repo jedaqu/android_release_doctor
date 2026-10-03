@@ -5,30 +5,31 @@
 - Repository: `jedaqu/android_release_doctor`
 - Visibility: public
 - Default branch: `main`
-- Current validated main HEAD: `e29e8d0d4b360f537413559e4ec0c5c1fd530c87`
-- M0.16 readiness-gate baseline: `1298c73d3019799e76cf7ace9704e3656995837f`
+- Current validated main HEAD: `6fec2fe8fe0eb71fd01cd59cba69f059dc1f5b91`
+- M0.16 readiness-gate baseline: `1298c73d3019799e76cf7ace9706c8f880a98d72`
 - M0.11-A implementation integration baseline: `8e9f639ce71ce06e211718187d3079a5d68458f5`
 
 The exact moving `main` SHA is recorded by the latest validated checkpoint. This document records the current validated product state and is updated as validated work advances.
 
 This document is the current-state companion to the historical milestone/audit records. It is not a replacement for them.
 
-## Active product boundary
+## Active service boundary
 
-Android Release Doctor is currently the following product surface:
+Android Release Doctor is a GitHub Actions service.
 
-1. CLI: `android-release-doctor`.
-2. Rust audit engine: `crates/doctor-core`.
-3. Reusable GitHub composite Action: `.github/actions/android-release-doctor/action.yml`.
-4. Report v1 machine-readable output:
-   `schema_version = "1.0"`
-   with the public JSON Schema at `docs/report-schema-v1.0.json`.
-5. Public technical fixtures and engineering evidence.
-6. Permanent CI validation for the maintained product surface.
-7. `docs/ERRORS-AND-FIXES.md` as append-only engineering memory.
+Its primary consumer interface is the reusable GitHub composite Action:
+`.github/actions/android-release-doctor/action.yml`.
 
+The service is backed by:
 
-Historical campaigns, temporary experiments, and superseded validation workflows are not part of the active product surface.
+1. Rust audit engine: `crates/doctor-core`.
+2. Local CLI interface: `crates/doctor-cli`.
+3. Report v1 machine-readable output with `schema_version = "1.0"` and the public JSON Schema at `docs/report-schema-v1.0.json`.
+4. Public technical fixtures and engineering evidence.
+5. Permanent CI validation for the maintained service surface.
+6. `docs/ERRORS-AND-FIXES.md` as append-only engineering memory.
+
+Historical campaigns, temporary experiments, and superseded validation workflows are not part of the active service surface.
 
 ## Demonstrated current capabilities
 
@@ -65,7 +66,7 @@ Report v1 output is validated against the published Draft 2020-12 schema in perm
 
 ### Remaining assurance breadth
 
-The current product evidence includes deterministic maintained fixtures plus independent public APK/AAB releases. Broader corpus expansion remains optional evidence work, not a missing product contract.
+The current service evidence includes deterministic maintained fixtures plus independent public APK/AAB artifacts. Broader corpus expansion remains optional evidence work, not a missing service contract.
 
 ## Current documentation hierarchy
 
@@ -89,9 +90,13 @@ When a validated change alters product behavior or scope, the corresponding curr
 
 Historical audit observations are preserved. Later status changes are recorded through append-only reconciliation or a newer current-state document; historical evidence is not silently rewritten.
 
+## Service contract boundary
+
+The public service contract is the Action input/output interface plus the Report v1 schema and exact exit semantics. Changes to these interfaces require controlled audit, validation, documentation, and second-audit closure.
+
 ## Public/private boundary
 
-Public repository documentation must contain only material appropriate for the public project surface. Private continuity, passwords, credentials, commercial strategy, pricing, private metrics, and internal conversations remain outside this repository.
+Public repository documentation must contain only material appropriate for the public service and engineering surface. Private continuity, passwords, credentials, commercial strategy, pricing, private metrics, and internal conversations remain outside this repository.
 
 
 
