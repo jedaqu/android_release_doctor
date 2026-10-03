@@ -67,17 +67,14 @@ jobs:
           source_file="target/release/android-release-doctor${EXT}"
           asset="dist/android-release-doctor-${ENGINE_VERSION}-${ASSET_KEY}${EXT}"
           cp "$source_file" "$asset"
-          node - <<'NODE'
+          ASSET_FILE="$asset" node - <<'NODE'
           const fs = require('node:fs');
           const crypto = require('node:crypto');
           const path = process.env.ASSET_FILE;
           const data = fs.readFileSync(path);
           const sha = crypto.createHash('sha256').update(data).digest('hex');
-          fs.writeFileSync(path + '.sha256', sha + '  ' + path.split(/[\\/]/).pop() + '\\n');
+          fs.writeFileSync(path + '.sha256', sha + '  ' + path.split(/[\\/]/).pop() + '\n');
           NODE
-        env:
-          ASSET_FILE: dist/android-release-doctor-${{ env.ENGINE_VERSION }}-${{ matrix.asset_key }}${{ matrix.ext }}
-
       - name: Upload runtime build
         uses: actions/upload-artifact@v7
         with:
