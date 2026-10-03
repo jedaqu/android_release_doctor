@@ -23,6 +23,10 @@ jobs:
           cargo --version
           rustc --version
 
+      - name: Install Report v1 JSON Schema validator
+        run: |
+          python3 -m pip install --disable-pip-version-check --quiet "jsonschema==4.25.1"
+
       - name: Success path
         id: success
         uses: ./.github/actions/android-release-doctor
@@ -259,6 +263,130 @@ jobs:
         run: |
           test "$EXIT_CODE" = "2"
           test -z "$REPORT_PATH"
+
+
+      - name: Validate generated reports against the published schema
+        env:
+          SCHEMA: ${{ github.workspace }}/docs/report-schema-v1.0.json
+          SUCCESS_REPORT: ${{ steps.success.outputs.report-path }}
+          AAB_REPORT: ${{ steps.aab.outputs.report-path }}
+          PROJECT_REPORT: ${{ steps.project.outputs.report-path }}
+          PROJECT_PLAY_REPORT: ${{ steps.project_play.outputs.report-path }}
+          AUTOMOTIVE_REPORT: ${{ steps.automotive.outputs.report-path }}
+        run: |
+          python3 - "$SCHEMA" "$SUCCESS_REPORT" "$AAB_REPORT" "$PROJECT_REPORT" "$PROJECT_PLAY_REPORT" "$AUTOMOTIVE_REPORT" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+          from jsonschema import Draft202012Validator
+
+          schema_path = Path(sys.argv[1])
+          schema = json.loads(schema_path.read_text(encoding="utf-8"))
+          validator = Draft202012Validator(schema)
+
+          for raw_path in sys.argv[2:]:
+              path = Path(raw_path)
+              if not path.is_file():
+                  raise SystemExit(f"missing report: {path}")
+              report = json.loads(path.read_text(encoding="utf-8"))
+              errors = sorted(validator.iter_errors(report), key=lambda error: list(error.path))
+              if errors:
+                  for error in errors:
+                      print(f"{path}: {error.message}", file=sys.stderr)
+                  raise SystemExit(f"schema validation failed: {path}")
+              print(f"schema PASS: {path}")
+          PY
+
+      - name: Consumer-style immutable SHA Action invocation
+        id: consumer
+        uses: jedaqu/android_release_doctor/.github/actions/android-release-doctor@8668b8defb30caae699e1aa134bc01d65a4737c3
+        with:
+          artifact: tests/fixtures/minimal-release.apk
+          format: json
+          output: ${{ runner.temp }}/android-release-doctor-consumer.json
+
+      - name: Validate consumer-style Action result
+        env:
+          EXIT_CODE: ${{ steps.consumer.outputs.exit-code }}
+          REPORT_PATH: ${{ steps.consumer.outputs.report-path }}
+        run: |
+          test "$EXIT_CODE" = "0"
+          test -s "$REPORT_PATH"
+          python3 - "$REPORT_PATH" "$GITHUB_WORKSPACE/docs/report-schema-v1.0.json" <<'PY'
+          import json
+          import sys
+          from jsonschema import Draft202012Validator
+
+          report = json.load(open(sys.argv[1], encoding="utf-8"))
+          schema = json.load(open(sys.argv[2], encoding="utf-8"))
+          errors = list(Draft202012Validator(schema).iter_errors(report))
+          if errors:
+              for error in errors:
+                  print(error.message, file=sys.stderr)
+              raise SystemExit(1)
+          assert report["schema_version"] == "1.0"
+          print("consumer-style Action + schema PASS")
+          PY
+
+      - name: Deterministic APK and AAB corpus
+        env:
+          SCHEMA: ${{ github.workspace }}/docs/report-schema-v1.0.json
+        run: |
+          python3 - "$SCHEMA" <<'PY'
+          import json
+          import subprocess
+          import sys
+          import tempfile
+          from pathlib import Path
+          from jsonschema import Draft202012Validator
+
+          root = Path("tests/fixtures")
+          schema = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          validator = Draft202012Validator(schema)
+
+          corpus = [
+              "minimal-release.apk",
+              "minimal-release.aab",
+              "crypto-v2-release.apk",
+              "crypto-v2-empty-element-release.apk",
+              "crypto-v3-release.apk",
+              "crypto-v31-release.apk",
+              "crypto-v31-lineage-mismatch.apk",
+              "crypto-v31-no-v3-attr.apk",
+              "crypto-v31-no-v3.apk",
+              "crypto-v31-wrong-rotation-min-sdk.apk",
+              "m07-crypto-v2-ecdsa-sha512-p384.apk",
+              "m07-crypto-v3-ecdsa-sha512-p384.apk",
+          ]
+
+          with tempfile.TemporaryDirectory() as tmp:
+              for name in corpus:
+                  artifact = root / name
+                  report_path = Path(tmp) / f"{artifact.stem}.json"
+                  result = subprocess.run(
+                      [
+                          "cargo", "run", "--locked", "--quiet",
+                          "--manifest-path", "Cargo.toml",
+                          "-p", "doctor-cli", "--",
+                          "--format", "json",
+                          "--output", str(report_path),
+                          str(artifact),
+                      ],
+                      text=True,
+                      capture_output=True,
+                  )
+                  if result.returncode not in (0, 1):
+                      print(result.stdout, file=sys.stdout)
+                      print(result.stderr, file=sys.stderr)
+                      raise SystemExit(f"unexpected CLI exit {result.returncode}: {name}")
+                  report = json.loads(report_path.read_text(encoding="utf-8"))
+                  errors = list(validator.iter_errors(report))
+                  if errors:
+                      for error in errors:
+                          print(f"{name}: {error.message}", file=sys.stderr)
+                      raise SystemExit(f"schema validation failed for corpus item: {name}")
+                  print(f"corpus PASS exit={result.returncode}: {name}")
+          PY
 
       - name: Operational error path
         id: error
