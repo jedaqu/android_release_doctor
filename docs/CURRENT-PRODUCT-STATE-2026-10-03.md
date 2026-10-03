@@ -5,7 +5,7 @@
 - Repository: `jedaqu/android_release_doctor`
 - Visibility: public
 - Default branch: `main`
-- Current main HEAD: `325154034f965de475d4214959d9608c60f82de8`
+- Current main HEAD: `508edc22c7111aaada06fe885b93f224a1780853`
 - M0.11-A implementation integration baseline: `8e9f639ce71ce06e211718187d3079a5d68458f5`
 
 The exact moving `main` SHA is recorded by the latest validated checkpoint. This document records the current validated product state and is updated as validated work advances.
@@ -72,7 +72,7 @@ For understanding the repository today, use this order:
 
 1. `README.md` — public product entry point.
 2. `docs/CURRENT-PRODUCT-STATE-2026-10-03.md` — current product truth.
-3. Latest checkpoint / validated audit for the active work block (`M0.12` Product Surface Consolidation).
+3. Latest checkpoint / validated audit for the closed M0.12 Product Surface Consolidation block.
 4. `docs/ERRORS-AND-FIXES.md` — append-only chronology plus later reconciliations.
 5. Historical milestone/pre-audit/second-audit documents — engineering history, not current product contract.
 
@@ -94,7 +94,7 @@ Public repository documentation must contain only material appropriate for the p
 
 
 
-## M0.12 — Consolidated product surface
+## M0.12 — Consolidated product surface (CLOSED)
 
 The maintained product surface is explicitly consolidated into:
 
@@ -106,3 +106,20 @@ The maintained product surface is explicitly consolidated into:
 - permanent CI validation through `.github/workflows/rust.yml` and `.github/workflows/android-release-doctor-action.yml`.
 
 Development campaigns, stress tests, temporary fixture-harvest workflows, and historical validation workflows are not current product interfaces.
+
+
+## M0.12 closure evidence
+
+The consolidated technical surface was integrated by PR #58 at main commit `508edc22c7111aaada06fe885b93f224a1780853`.
+
+Validated pre-merge on consolidation head `58449d35ce3e1b81025962f93d0d604cc3cf10ec`:
+
+- Rust CI Run `37129863362` — SUCCESS.
+- Action validation Run `37129863355` — SUCCESS.
+
+Permanent workflow files after consolidation:
+
+- `.github/workflows/rust.yml`
+- `.github/workflows/android-release-doctor-action.yml`
+
+The historical M0.8 workflow path is no longer present in the current repository tree. Historical execution records may still remain visible in GitHub Actions history.
