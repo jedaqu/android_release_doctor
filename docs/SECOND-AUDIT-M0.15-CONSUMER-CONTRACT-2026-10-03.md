@@ -3,7 +3,7 @@
 ## Baseline and audit head
 
 - Base main: `d1d681e46391c95fd77152779ff4e3656995837f`
-- M0.15 public validation branch audit head: `ec60f71f79291b2acb6c518ddaf8f6bdab95b601`
+- M0.15 public validation branch final head before merge: `768b7ac8e68cd7762a3c978ce092d75d81de94f0`
 - Scope on public product repository: documentation only
 - Production-code changes: none
 
@@ -67,7 +67,7 @@ Final corrected consumer execution:
 
 ## Public-repository diff audit
 
-Comparison of M0.15 public branch against base main shows only documentation changes:
+Comparison of M0.15 public branch against base main showed only documentation changes:
 - M0.14 closure checkpoint reconciliation;
 - M0.15 start checkpoint;
 - M0.15 pre-audit;
@@ -84,3 +84,10 @@ No reproducible product defect was exposed by M0.15.
 M0.15 objective is satisfied. The published Action contract has now been validated from a genuinely separate consumer repository at an immutable SHA across success, blocker, and invalid-input paths, with Report v1 schema validation.
 
 The private consumer repository is intentionally not named in the public product documentation.
+
+## Final integration
+
+- PR #65 merged successfully to main at `937fe5059c4535a407c962893646a0d0b64de036`.
+- Post-merge Action Validation Run `37141293283`: SUCCESS.
+- Post-merge Rust CI Run `37141293281`: SUCCESS.
+- No production-code change was introduced by M0.15.
