@@ -50,18 +50,33 @@ jobs:
           if [ "$GITHUB_EVENT_NAME" = "push" ] && [[ "$GITHUB_REF" == refs/tags/engine-v* ]]; then
             VERSION="${GITHUB_REF_NAME#engine-v}"
           elif [ "$GITHUB_EVENT_NAME" = "push" ]; then
-            VERSION="$(sed -n 's/^[[:space:]]*version[[:space:]]*=[[:space:]]*"\\([^"]*\\)".*/\\1/p' Cargo.toml | head -n 1)"
+            VERSION="$(awk '
+              /^\[workspace\.package\]$/ { in_workspace=1; next }
+              in_workspace && /^[[:space:]]*version[[:space:]]*=/ {
+                value=$3
+                gsub(/"/, "", value)
+                print value
+                exit
+              }
+            ' Cargo.toml)"
           else
             VERSION="${{ inputs.engine-version }}"
           fi
           test -n "$VERSION"
-          printf '%s' "$VERSION" | grep -Eq '^[0-9]+\\.[0-9]+\\.[0-9]+([-.+][0-9A-Za-z.-]+)?$'
+          printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([-.+][0-9A-Za-z.-]+)?$'
           echo "ENGINE_VERSION=$VERSION" >> "$GITHUB_ENV"
-
       - name: Verify source version matches engine version
         shell: bash
         run: |
-          actual_version="$(sed -n 's/^[[:space:]]*version[[:space:]]*=[[:space:]]*"\\([^"]*\\)".*/\\1/p' Cargo.toml | head -n 1)"
+          actual_version="$(awk '
+            /^\[workspace\.package\]$/ { in_workspace=1; next }
+            in_workspace && /^[[:space:]]*version[[:space:]]*=/ {
+              value=$3
+              gsub(/"/, "", value)
+              print value
+              exit
+            }
+          ' Cargo.toml)"
           test -n "$actual_version"
           test "$actual_version" = "$ENGINE_VERSION"
           echo "engine source version=$actual_version"
