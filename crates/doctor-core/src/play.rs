@@ -42,7 +42,6 @@ impl PlayPlatform {
     }
 }
 
-
 fn is_16kb_64_bit_abi(abi: &str) -> bool {
     matches!(abi, "arm64-v8a" | "x86_64")
 }
@@ -388,7 +387,6 @@ mod tests {
             );
         }
     }
-
 
     #[test]
     fn misaligned_32_bit_native_payload_does_not_trigger_play_005() {
