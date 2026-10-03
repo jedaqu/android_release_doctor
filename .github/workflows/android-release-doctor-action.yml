@@ -31,7 +31,7 @@ jobs:
           cmp src/action.js dist/index.js
 
       - name: Verify runtime manifest
-        run: node scripts/verify-runtime-manifest.mjs
+        run: node scripts/verify-runtime-manifest.cjs
 
       - name: Validate runtime manifest against its schema
         env:
