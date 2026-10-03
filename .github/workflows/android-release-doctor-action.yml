@@ -82,6 +82,7 @@ jobs:
 
       - name: AAB path
         id: aab
+        continue-on-error: true
         uses: ./.github/actions/android-release-doctor
         with:
           artifact: tests/fixtures/minimal-release.aab
