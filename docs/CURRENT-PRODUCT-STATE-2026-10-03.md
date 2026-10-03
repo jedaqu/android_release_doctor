@@ -58,13 +58,13 @@ The Play profile evaluates target API and 16 KiB evidence using deterministic ar
 
 Bundle contents can be inspected, but raw AAB ZIP offsets do not prove the final generated APK's native packaging alignment. This remains a manual-review boundary.
 
-### Report v1 schema validation
+### Report v1 runtime contract
 
-The product emits Report v1 JSON and maintains the published JSON Schema. Direct runtime validation of every generated report against the schema file is a future validation improvement.
+Report v1 output is validated against the published Draft 2020-12 schema in permanent assurance tests.
 
-### External consumer black-box coverage
+### Remaining assurance breadth
 
-The reusable Action is validated in-repository. A separate external consumer repository remains a future validation improvement.
+The current product evidence includes deterministic maintained fixtures plus independent public APK/AAB releases. Broader corpus expansion remains optional evidence work, not a missing product contract.
 
 ## Current documentation hierarchy
 
@@ -160,15 +160,9 @@ Validated:
 - a deterministic 12-case APK/AAB corpus is audited through the CLI and its reports are schema-validated;
 - the existing 147-test Rust/CLI suite remains green.
 
-Post-merge validation on `main`:
-- Android Release Doctor — Action Validation Run `37135654381`: SUCCESS.
-- Rust CI Run `37135654379`: SUCCESS.
+M0.14 assurance integration was followed by documentation/head reconciliation to final `main` at `d1d681e46391c95fd77152779ff4e3656995837f`. Post-merge Rust CI and Action Validation both completed successfully.
 
-The remaining assurance boundary is a genuinely separate consumer repository executing the Action from an immutable SHA. The current connected GitHub write surface does not provide repository-creation/write support needed to establish that separate consumer repository without modifying an unrelated repository, so no separate-consumer result is claimed.
-
-
-Post-closure coherence: M0.14 closure documentation was integrated by PR #63 at main commit `b2baf2823d5bb5472a3c978ce092d75d81de94f0`. Post-merge Rust CI and Action Validation both completed successfully.
-
+M0.15 subsequently resolved the remaining separate-consumer validation gap without changing production logic.
 
 ## M0.15 — Consumer Contract Validation (CLOSED)
 
