@@ -13,6 +13,8 @@ on:
 jobs:
   action:
     runs-on: ubuntu-latest
+    env:
+      ANDROID_RELEASE_DOCTOR_TEST_RUNTIME_PATH: ${{ github.workspace }}/target/release/android-release-doctor
 
     steps:
       - name: Checkout
@@ -21,10 +23,19 @@ jobs:
       - name: Verify repository-root Action metadata
         run: test -f action.yml
 
-      - name: Verify Rust toolchain
+      - name: Verify Node.js Action runtime
+        run: |
+          node --version
+          node --check src/action.js
+
+      - name: Verify runtime manifest
+        run: node scripts/verify-runtime-manifest.mjs
+
+      - name: Build prebuilt CLI for Action validation
         run: |
           cargo --version
           rustc --version
+          cargo build --release --locked -p doctor-cli
 
       - name: Install Report v1 JSON Schema validator
         run: |
@@ -300,9 +311,9 @@ jobs:
               print(f"schema PASS: {path}")
           PY
 
-      - name: Consumer-style immutable SHA Action invocation
+      - name: Consumer-style branch Action invocation during architecture migration
         id: consumer
-        uses: jedaqu/android_release_doctor@b590b7678cb7eb4ca5f64fe6b85d4cf301b327ec
+        uses: jedaqu/android_release_doctor@service/prebuilt-cli-runtime-2026-10-03
         with:
           artifact: tests/fixtures/minimal-release.apk
           format: json
