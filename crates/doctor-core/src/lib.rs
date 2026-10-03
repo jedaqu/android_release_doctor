@@ -1009,75 +1009,86 @@ fn evaluate(
             "No native .so libraries are present, so native ZIP packaging alignment is not applicable.",
         ));
     } else {
-        let packaging_errors = inventory
+        let applicable = inventory
             .native_zip_entries
             .iter()
-            .filter(|entry| entry.error.is_some())
-            .collect::<Vec<_>>();
-        let incompatible = inventory
-            .native_zip_entries
-            .iter()
-            .filter(|entry| entry.alignment_16kb == Some(false))
-            .collect::<Vec<_>>();
-        let stored = inventory
-            .native_zip_entries
-            .iter()
-            .filter(|entry| entry.compression == NativeZipCompression::Stored)
+            .filter(|entry| is_16kb_64_bit_abi(&entry.abi))
             .collect::<Vec<_>>();
 
-        if !incompatible.is_empty() {
-            let details = incompatible
-                .iter()
-                .map(|entry| {
-                    format!(
-                        "{} [{}] offset={}",
-                        entry.path, entry.abi, entry.data_offset
-                    )
-                })
-                .collect::<Vec<_>>()
-                .join("; ");
-            findings.push(Finding::warning(
-                "NATIVE-003",
-                "16 KB ZIP packaging alignment",
-                format!(
-                    "One or more uncompressed native libraries are not aligned to a 16 KB ZIP data boundary: {details}."
-                ),
-                "Repackage the affected uncompressed native libraries with 16 KB ZIP alignment, or use compressed native libraries.",
-            ));
-        } else if !packaging_errors.is_empty() {
-            let details = packaging_errors
-                .iter()
-                .map(|entry| {
-                    format!(
-                        "{} [{}]: {}",
-                        entry.path,
-                        entry.abi,
-                        entry
-                            .error
-                            .as_deref()
-                            .unwrap_or("alignment could not be verified")
-                    )
-                })
-                .collect::<Vec<_>>()
-                .join("; ");
-            findings.push(Finding::manual_review(
-                "NATIVE-003",
-                "16 KB ZIP packaging alignment unavailable",
-                format!("Native ZIP packaging alignment could not be proven: {details}"),
-                "For APKs, verify uncompressed native libraries with zipalign. For AABs, verify the bundle's ZIP alignment configuration and the generated APK before release.",
-            ));
-        } else if stored.is_empty() {
+        if applicable.is_empty() {
             findings.push(Finding::pass(
                 "NATIVE-003",
                 "16 KB ZIP packaging",
-                "All packaged native libraries are compressed, so uncompressed ZIP data alignment is not applicable.",
+                "Native libraries are present only for 32-bit or non-target ABIs; this 16 KB ZIP packaging check applies to arm64-v8a and x86_64.",
             ));
         } else {
-            findings.push(Finding::pass(
-                "NATIVE-003",
-                "16 KB ZIP packaging alignment",
-                "All inspected uncompressed native APK libraries have 16 KB-aligned ZIP data offsets.",
-            ));
+            let packaging_errors = applicable
+                .iter()
+                .filter(|entry| entry.error.is_some())
+                .collect::<Vec<_>>();
+            let incompatible = applicable
+                .iter()
+                .filter(|entry| entry.alignment_16kb == Some(false))
+                .collect::<Vec<_>>();
+            let stored = applicable
+                .iter()
+                .filter(|entry| entry.compression == NativeZipCompression::Stored)
+                .collect::<Vec<_>>();
+
+            if !incompatible.is_empty() {
+                let details = incompatible
+                    .iter()
+                    .map(|entry| {
+                        format!(
+                            "{} [{}] offset={}",
+                            entry.path, entry.abi, entry.data_offset
+                        )
+                    })
+                    .collect::<Vec<_>>()
+                    .join("; ");
+                findings.push(Finding::warning(
+                    "NATIVE-003",
+                    "16 KB ZIP packaging alignment",
+                    format!(
+                        "One or more applicable 64-bit uncompressed native libraries are not aligned to a 16 KB ZIP data boundary: {details}."
+                    ),
+                    "Repackage the affected uncompressed 64-bit native libraries with 16 KB ZIP alignment, or use compressed native libraries.",
+                ));
+            } else if !packaging_errors.is_empty() {
+                let details = packaging_errors
+                    .iter()
+                    .map(|entry| {
+                        format!(
+                            "{} [{}]: {}",
+                            entry.path,
+                            entry.abi,
+                            entry
+                                .error
+                                .as_deref()
+                                .unwrap_or("alignment could not be verified")
+                        )
+                    })
+                    .collect::<Vec<_>>()
+                    .join("; ");
+                findings.push(Finding::manual_review(
+                    "NATIVE-003",
+                    "16 KB ZIP packaging alignment unavailable",
+                    format!("Native ZIP packaging alignment could not be proven: {details}"),
+                    "For APKs, verify uncompressed 64-bit native libraries with zipalign. For AABs, verify the bundle's ZIP alignment configuration and the generated APK before release.",
+                ));
+            } else if stored.is_empty() {
+                findings.push(Finding::pass(
+                    "NATIVE-003",
+                    "16 KB ZIP packaging",
+                    "All applicable 64-bit native libraries are compressed, so uncompressed ZIP data alignment is not applicable.",
+                ));
+            } else {
+                findings.push(Finding::pass(
+                    "NATIVE-003",
+                    "16 KB ZIP packaging alignment",
+                    "All inspected applicable 64-bit uncompressed native APK libraries have 16 KB-aligned ZIP data offsets.",
+                ));
+            }
         }
     }
 
