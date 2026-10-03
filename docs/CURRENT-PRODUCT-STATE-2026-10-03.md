@@ -214,3 +214,24 @@ Validated:
 - public repository scan found no tested restricted commercial/private-boundary terms.
 
 M0.16 introduced no production-code changes. Its engineering disposition is CLOSED after the final readiness gate. Historical evidence remains preserved and the public/private boundary remains unchanged.
+
+
+## Service runtime migration — active branch state — 2026-10-03
+
+The current branch is migrating the public Action from consumer-side Cargo execution to a Node 24 Action that retrieves a prebuilt Rust engine runtime.
+
+Branch-local architecture:
+
+- repository-root `action.yml` using Node 24;
+- `runtime/manifest.json` selecting the engine version and exact platform asset;
+- SHA-256 verification before execution and on cached binaries;
+- runner-local runtime cache;
+- six declared runtime targets: Linux x64, Linux ARM64, macOS x64, macOS ARM64, Windows x64, and Windows ARM64;
+- technical engine distribution tags of the form `engine-v<version>` as transport/versioning mechanisms only;
+- `.github/workflows/engine-runtime.yml` builds the six native binaries and gates publication on asset and checksum validation.
+
+The six-target matrix is an intentional service architecture decision: the Action is designed to be multiplatform, while each consumer runner retrieves only the runtime matching its own operating system and architecture.
+
+The production runtime gate remains open until a real technical engine distribution is built, its six SHA-256 values are independently verified, the manifest leaves `draft`, and real consumer retrieval through the published runtime path is validated.
+
+This section describes branch-local active work. It does not retroactively rewrite the historical main-state sections above.
