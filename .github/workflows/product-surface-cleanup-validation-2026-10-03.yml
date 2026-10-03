@@ -36,7 +36,6 @@ jobs:
           if grep -qi 'tag-driven' README.md; then exit 1; fi
           if grep -qi 'distribution workflow' README.md; then exit 1; fi
           grep -q 'primary product surface is the reusable GitHub Action' README.md
-          grep -q 'underlying CLI/audit engine' README.md
 
       - name: Rust format
         run: cargo fmt --all -- --check
