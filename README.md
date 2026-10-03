@@ -398,7 +398,7 @@ The action preserves the CLI exit semantics:
 
 When `output` is supplied, the report is written by the existing CLI. A blocking audit therefore still leaves the generated report available for later workflow steps, for example with `continue-on-error: true` and a subsequent upload/inspection step.
 
-The Block 3 action executes the repository CLI through Cargo. The runner therefore needs a usable Rust/Cargo toolchain.
+The Action executes the validated CLI through Cargo. The runner therefore needs a usable Rust/Cargo toolchain.
 
 
 ## Documentation coherence
@@ -507,7 +507,7 @@ The reusable action is available from:
 
 - name: Audit Android artifact
   id: release-doctor
-  uses: jedaqu/android_release_doctor/.github/actions/android-release-doctor@<reviewed-ref>
+  uses: jedaqu/android_release_doctor@<reviewed-ref>
   with:
     artifact: app/build/outputs/apk/release/app-release.apk
     format: json
