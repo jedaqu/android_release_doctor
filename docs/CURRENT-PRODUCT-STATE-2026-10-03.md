@@ -5,12 +5,14 @@
 - Repository: `jedaqu/android_release_doctor`
 - Visibility: public
 - Default branch: `main`
-- Current main HEAD: `efa46e530cda020e50b7db3aecc017dae1c9e78a`
-- Current validated product/code baseline: `4dc8c27a3efbce45f5930d2b3b35baa33ffc39ea`
+- Current functional product/code baseline: `4dc8c27a3efbce45f5930d2b3b35baa33ffc39ea`
+- Final runtime-integration main commit: `4dc8c27a3efbce45f5930d2b3b35baa33ffc39ea`
+- Documentation-only reconciliation commits after runtime integration: PR #77 (`efa46e530cda020e50b7db3aecc017dae1c9e78a`) and PR #78 (`19c322e01e5e83099a814f926f36351a82be9135`).
+- This document is a state snapshot; documentation-only commits do not redefine the functional product/code baseline.
 - M0.16 readiness-gate baseline: `1298c73d3019799e76cf7ace9706c8f880a98d72`
 - M0.11-A implementation integration baseline: `8e9f639ce71ce06e211718187d3079a5d68458f5`
 
-The exact moving `main` SHA is recorded by the latest validated checkpoint. The validated product/code baseline is kept distinct from later docs-only reconciliation commits. This document records the current product state and is updated as validated work advances.
+The functional product/code baseline is kept distinct from later documentation-only commits. This document is a state snapshot and does not attempt to chase its own future documentation commits.
 
 This document is the current-state companion to the historical milestone/audit records. It is not a replacement for them.
 
