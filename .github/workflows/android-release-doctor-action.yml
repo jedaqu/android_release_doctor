@@ -348,7 +348,7 @@ jobs:
               "minimal-release.apk",
               "minimal-release.aab",
               "crypto-v2-release.apk",
-              "crypto-v2-empty-element-release.apk",
+              "crypto-v2-empty-element-release.apk.b64",
               "crypto-v3-release.apk",
               "crypto-v31-release.apk",
               "crypto-v31-lineage-mismatch.apk",
@@ -361,7 +361,12 @@ jobs:
 
           with tempfile.TemporaryDirectory() as tmp:
               for name in corpus:
-                  artifact = root / name
+                  source = root / name
+                  artifact = source
+                  if source.suffix == ".b64":
+                      import base64
+                      artifact = Path(tmp) / source.stem
+                      artifact.write_bytes(base64.b64decode(source.read_bytes()))
                   report_path = Path(tmp) / f"{artifact.stem}.json"
                   result = subprocess.run(
                       [
