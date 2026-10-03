@@ -1401,3 +1401,30 @@ From this point forward, a historical `OPEN` entry is not considered an active w
 - **Implementation commit:** `9e5f0d47932c0ab235f32e1e26f79245ee50b980`
 - **Validation:** Rust CI run `37085412571` on corrected head `9e3945fee5f2ee9c3dc4aaec5e227c70ddf8a282` passed Build, Test, Format, and Clippy. The explicit ABI matrix covered 64-bit good/bad, 32-bit 4 KiB, mixed APKs, compressed libraries, AAB stored/compressed, and mixed AAB cases.
 - **Status:** RESOLVED
+
+## ERR-116 — Crypto matrix fixture parser dropped the preamble message
+
+- **Milestone:** Complete classical crypto matrix validation
+- **Type:** Test harness defect
+- **Observed:** CI run `37086633173` failed three new crypto-matrix tests because the `MESSAGE=` line appeared before the first bracketed fixture section and the parser ignored it.
+- **Root cause:** The fixture parser only captured content after a section header.
+- **Correction:** Store the pre-section `MESSAGE=` line as the dedicated `MESSAGE` test section.
+- **Correction commit:** `07cecefa811d5e589067dcc51b52e758537f3d14`
+- **Validation:** Subsequent test run advanced to the actual RSA vector verification failure; all other new matrix tests passed.
+- **Classification:** TEST HARNESS — not a product cryptographic defect.
+- **Status:** RESOLVED
+
+## ERR-117 — Three public RSA matrix vectors were corrupted during manual fixture insertion
+
+- **Milestone:** Complete classical crypto matrix validation
+- **Type:** Test-data integrity defect
+- **Observed:** CI run `37086707555` failed the RSA 2048/4096/8192 matrix because three stored signature hex strings were incomplete:
+  - RSA-4096 `0x0102`
+  - RSA-8192 `0x0101`
+  - RSA-8192 `0x0104`
+- **Root cause:** Manual transfer of long generated signature strings into public fixture files introduced truncation/copy corruption. The local OpenSSL-generated source vectors were intact and had even byte lengths.
+- **Correction:** Restore the public fixture files from the authoritative locally generated vectors and re-run the complete matrix.
+- **Validation:** Final CI run `37086980714` on head `f19027efc783c1c4f9c8061332f39c1fbb9c82af` passed Build, Test, Format and Clippy.
+- **Classification:** TEST DATA — not a product cryptographic defect.
+- **Private-key handling:** No private key was committed to the repository.
+- **Status:** RESOLVED

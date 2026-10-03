@@ -190,18 +190,40 @@ v3.1 and v3.2 remain explicit manual-review boundaries and are not cryptographic
 
 ## M0.7 Block 1 scope — ECDSA/SHA-512 P-384 coverage
 
-M0.7 Block 1 extends the APK v2/v3 cryptographic verifier with real verification for signature algorithm `0x0202` (ECDSA with SHA-512) when the signer uses NIST P-384.
+M0.7 Block 1 originally introduced real verification for signature algorithm `0x0202` using P-384. That historical milestone description is superseded by the later classical cryptographic coverage documented below.
 
-The verifier now:
+### Current classical cryptographic verification matrix
 
-- selects `0x0202` as a supported signature algorithm;
-- verifies the actual ECDSA/SHA-512 signature over v2/v3 signed data;
-- preserves certificate-to-signer-public-key binding verification;
-- preserves the APK content-digest verification path;
-- reports cryptographic failures as `Invalid`;
-- reports non-P-384 `0x0202` cases as explicit `Unsupported` evidence.
+The current verifier supports and verifies these APK Signature Scheme v2/v3 algorithm families:
 
-M0.7 Block 1 does **not** claim support for ECDSA/SHA-512 P-256/P-521, DSA/SHA-256, RSA 1024/16384-bit expansion, v3.1/v3.2, or AAB cryptographic signing verification.
+| Algorithm | Key/curve | Current verifier state |
+|---|---|---|
+| `0x0101` RSA-PSS / SHA-256 | RSA 1024, 2048–8192, 16384 | Supported and verified |
+| `0x0102` RSA-PSS / SHA-512 | RSA 2048–8192, 16384 | Supported and verified |
+| `0x0102` RSA-PSS / SHA-512 | RSA 1024 | Unsupported: 64-byte PSS salt does not fit the 1024-bit modulus |
+| `0x0103` RSA-PKCS1-v1.5 / SHA-256 | RSA 1024, 2048–8192, 16384 | Supported and verified |
+| `0x0104` RSA-PKCS1-v1.5 / SHA-512 | RSA 1024, 2048–8192, 16384 | Supported and verified |
+| `0x0201` ECDSA / SHA-256 | P-256, P-384, P-521 | Supported and verified |
+| `0x0202` ECDSA / SHA-512 | P-384, P-521 | Supported and verified |
+| `0x0202` ECDSA / SHA-512 | P-256 | Unsupported |
+| `0x0301` DSA / SHA-256 | DSA | Unsupported by explicit product/backend boundary |
+
+The current matrix is covered by deterministic positive, tampered-signature, truncated-signature, and key-family-mismatch tests.
+
+The classical signature algorithm IDs and RSA/EC key-size matrix follow the Android v2/v3 signing documentation:
+
+- https://source.android.com/docs/security/features/apksigning/v2
+- https://source.android.com/docs/security/features/apksigning/v3
+
+### Current cryptographic scope boundaries
+
+The verifier does **not** cryptographically verify:
+
+- v3.2/PQC signing blocks;
+- AAB cryptographic signing, because v2/v3 signatures belong to generated APKs;
+- Android runtime trust decisions or PackageManager `SigningInfo` behavior.
+
+Unsupported or incomplete verification is reported explicitly as Unsupported/manual review rather than being guessed into a cryptographic pass.
 
 ### M0.7 Block 1 usage
 
@@ -210,38 +232,6 @@ The additional cryptographic evidence is collected automatically when auditing a
 ```text
 android-release-doctor --play app-release.apk
 ```
-
-### M0.6 Block 5 usage
-
-Proof-of-rotation evidence is collected automatically during APK signing verification:
-
-```text
-android-release-doctor --play app-release.apk
-```
-
-### M0.5 Block 2 usage
-
-Cryptographic verification is collected automatically when auditing an APK:
-
-```text
-android-release-doctor --play app-release.apk
-android-release-doctor --play --play-platform mobile app-release.apk
-```
-
-AABs are not cryptographically verified in this module because APK v2/v3 signatures live in the generated APK signing block rather than in the AAB artifact itself.
-
-The implementation follows Google's documented v2/v3 verification flow, including signer signature verification, digest verification and certificate/public-key binding.
-
-### M0.4 usage
-
-The existing CLI commands remain unchanged:
-
-```text
-android-release-doctor --play app-release.aab
-android-release-doctor --play app-release.apk
-```
-
-The native ELF and APK signing evidence is collected automatically as part of the artifact audit.
 
 ## M0.7 Block 2 scope — proof-of-rotation semantic evidence
 
