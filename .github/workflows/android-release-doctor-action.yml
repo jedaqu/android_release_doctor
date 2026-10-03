@@ -27,9 +27,18 @@ jobs:
         run: |
           node --version
           node --check src/action.js
+          node --check dist/index.js
+          cmp src/action.js dist/index.js
 
       - name: Verify runtime manifest
         run: node scripts/verify-runtime-manifest.mjs
+
+      - name: Verify Action does not invoke Cargo
+        run: |
+          if grep -R -nE '(^|[^A-Za-z])cargo([[:space:]]|$)' action.yml dist/index.js; then
+            echo 'Action runtime must not invoke Cargo'
+            exit 1
+          fi
 
       - name: Build prebuilt CLI for Action validation
         run: |

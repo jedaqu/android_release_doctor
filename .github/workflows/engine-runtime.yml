@@ -1,0 +1,115 @@
+name: Android Release Doctor — Engine Runtime Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      engine-version:
+        description: Technical engine version to build.
+        required: true
+        default: "0.1.3"
+  push:
+    tags:
+      - "engine-v*"
+
+jobs:
+  build:
+    name: Build ${{ matrix.asset_key }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            asset_key: linux-x64
+            ext: ""
+          - runner: ubuntu-24.04-arm
+            asset_key: linux-arm64
+            ext: ""
+          - runner: macos-15-intel
+            asset_key: macos-x64
+            ext: ""
+          - runner: macos-15
+            asset_key: macos-arm64
+            ext: ""
+          - runner: windows-2025
+            asset_key: windows-x64
+            ext: ".exe"
+          - runner: windows-11-arm
+            asset_key: windows-arm64
+            ext: ".exe"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Resolve engine version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            VERSION="${GITHUB_REF_NAME#engine-v}"
+          else
+            VERSION="${{ inputs.engine-version }}"
+          fi
+          printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([-.+][0-9A-Za-z.-]+)?$'
+          echo "ENGINE_VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Build release binary
+        shell: bash
+        run: cargo build --release --locked -p doctor-cli
+
+      - name: Package runtime asset
+        shell: bash
+        env:
+          ASSET_KEY: ${{ matrix.asset_key }}
+          EXT: ${{ matrix.ext }}
+        run: |
+          mkdir -p dist
+          source_file="target/release/android-release-doctor${EXT}"
+          asset="dist/android-release-doctor-${ENGINE_VERSION}-${ASSET_KEY}${EXT}"
+          cp "$source_file" "$asset"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const crypto = require('node:crypto');
+          const path = process.env.ASSET_FILE;
+          const data = fs.readFileSync(path);
+          const sha = crypto.createHash('sha256').update(data).digest('hex');
+          fs.writeFileSync(path + '.sha256', sha + '  ' + path.split(/[\\/]/).pop() + '\\n');
+          NODE
+        env:
+          ASSET_FILE: dist/android-release-doctor-${{ env.ENGINE_VERSION }}-${{ matrix.asset_key }}${{ matrix.ext }}
+
+      - name: Upload runtime build
+        uses: actions/upload-artifact@v7
+        with:
+          name: engine-${{ matrix.asset_key }}
+          path: dist/*
+
+  publish-technical-runtime:
+    name: Publish technical engine distribution
+    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/engine-v') }}
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download engine assets
+        uses: actions/download-artifact@v8
+        with:
+          pattern: engine-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Build checksum index
+        shell: bash
+        run: cat release-assets/*.sha256 > release-assets/SHA256SUMS.txt
+
+      - name: Create technical engine distribution
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh release create "$GITHUB_REF_NAME" release-assets/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --title "Android Release Doctor engine $GITHUB_REF_NAME" \
+            --notes "Technical engine distribution for the Android Release Doctor GitHub Actions service. This distribution is an internal service runtime mechanism, not an installable application."

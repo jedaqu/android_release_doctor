@@ -34,10 +34,8 @@ inputs:
 outputs:
   exit-code:
     description: "Exact Android Release Doctor process exit code."
-    value: ${{ steps.doctor.outputs.exit-code }}
   report-path:
     description: "The supplied report output path, or empty when stdout is used or runtime setup failed."
-    value: ${{ steps.doctor.outputs.report-path }}
 
 branding:
   icon: "shield"
