@@ -25,7 +25,7 @@ Android Release Doctor is a GitHub Actions service for auditing Android APK and 
 
 The primary consumer interface is:
 
-`.github/actions/android-release-doctor/action.yml`
+`action.yml` at the repository root
 
 The Action is backed by:
 
@@ -84,25 +84,13 @@ This means the consumer runner must provide a usable Rust/Cargo toolchain.
 
 This is a service-delivery dependency, not an audit-engine defect.
 
-### SVC-002 — Action metadata is nested inside the engineering repository
+### SVC-002 — Action metadata placement
 
-The public repository currently contains:
+The service previously exposed its Action metadata from `.github/actions/android-release-doctor/action.yml`. GitHub's Marketplace guidance requires the repository to contain a single `action.yml` or `action.yaml` at the repository root for automatic Marketplace listing.
 
-- engine;
-- CLI;
-- Action;
-- tests;
-- extensive engineering documentation.
+The controlled service-normalization implementation moves the canonical metadata to the repository root as `action.yml` and removes the nested metadata file.
 
-GitHub's current Marketplace guidance says an Action repository should contain the metadata, code, and files necessary for the Action, and that each repository must contain one Action metadata file at its root for automatic Marketplace listing. GitHub also recommends a single repository for an Action so it can be versioned and packaged as one unit.
-
-Current state:
-
-`.github/actions/android-release-doctor/action.yml`
-
-Therefore the current monorepo is not yet shaped as a dedicated Marketplace Action repository.
-
-No repository split is authorized by this audit.
+The engineering repository remains the service repository; no repository split is required by this finding.
 
 Source:
 https://docs.github.com/en/actions/how-tos/create-and-publish-actions/publish-in-github-marketplace
@@ -141,7 +129,7 @@ https://docs.github.com/en/apps/github-marketplace/selling-your-app-on-github-ma
 
 ### SVC-005 — Privacy/service-data contract needs to be explicit before external service expansion
 
-The current product is local-first and the Action does not upload audited artifacts or telemetry.
+The current service executes the audit locally on the GitHub runner and does not upload audited artifacts or telemetry.
 
 If a future service architecture introduces a hosted component, the project will need an explicit contract for:
 
