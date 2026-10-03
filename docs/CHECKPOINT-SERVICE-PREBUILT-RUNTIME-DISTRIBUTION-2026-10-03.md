@@ -116,3 +116,18 @@ The remaining work is not binary construction. It is technical distribution publ
 5. Run the second audit and final checkpoint before merge/closure.
 
 The controlled branch-only trigger used to execute the verification gate has been removed from the production workflow. The production workflow remains tag-driven for technical publication.
+
+
+## Production runtime closure reconciliation — 2026-10-03
+
+The production runtime gate is now closed.
+
+- Technical release engine-v0.1.3-build3 published successfully by Run 37155822288.
+- Manifest published=true and references build3.
+- Real production retrieval, cache recovery, and digest-mismatch rejection validated by Action Validation Run 37156477423.
+- Rust CI Run 37156477520 succeeded.
+- Branch head at closure evidence: 5096bc489f9046489b0fcf5acde82caad7745909.
+
+## Final checkpoint disposition before main integration — 2026-10-03
+
+No production runtime gate remains open. PR #76 is the remaining integration vehicle. The next controlled operation is merge into main, followed by post-merge CI and current-state reconciliation.
