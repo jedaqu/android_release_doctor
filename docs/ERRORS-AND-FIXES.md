@@ -1360,3 +1360,31 @@ From this point forward, a historical `OPEN` entry is not considered an active w
 - **Classification:** LIMITACIÓN CONOCIDA — CERRADO SIN CORRECCIÓN. This is localized to lockfile reproducibility under Distribution’s strict `--locked` validation; it is not evidence of a general product, source-code, GitHub Action, or tag failure.
 - **Release state:** No tag or release was modified.
 - **Investigation status:** CLOSED AS KNOWN LIMITATION, WITHOUT A CORRECTION.
+
+
+## ERR-113 — PLAY-005 applied 16 KB compatibility to 32-bit ABIs
+
+- **Milestone:** Post-stress real-artifact validation / 16 KB ABI scope
+- **Type:** Semantic specification defect
+- **Observed:** Session Android 1.33.5 contained 16 KB-aligned arm64-v8a/x86_64 libraries and 4 KB-aligned armeabi-v7a/x86 libraries. ADR reported the 32-bit libraries through PLAY-005 and classified the artifact as a blocker for targetSdk >= 35.
+- **Root cause:** PLAY-005 evaluated native ELF and ZIP alignment across all ABIs instead of limiting the Google Play 16 KB compatibility rule to the applicable 64-bit device ABI families.
+- **Authoritative verification:** Current Android Developers guidance states that Google Play's 16 KB compatibility requirement applies to 64-bit devices and specifically identifies arm64-v8a and x86_64 libraries for alignment checks.
+- **Correction:** Scope PLAY-005 16 KB compatibility evaluation to arm64-v8a and x86_64. Add a regression proving misaligned 32-bit native libraries do not trigger PLAY-005.
+- **Correction PR:** #47
+- **Correction commit on main:** 9a004e6e0b2b375d96e32406a24586f4e8ed2ecf
+- **Validation:** Actions run 37083962554 passed Build, 110 tests, Format, and Clippy. Second audit confirmed the correction was limited to `crates/doctor-core/src/play.rs`.
+- **Status:** RESOLVED
+- **Reference:** Android Developers 16 KB page-size guidance.
+
+## ERR-114 — NATIVE-002 applied 16 KB ELF compatibility to 32-bit ABIs
+
+- **Milestone:** Post-stress real-artifact validation / 16 KB ABI scope
+- **Type:** Semantic specification defect
+- **Observed:** After ERR-113 was corrected, NATIVE-002 still reported 4 KB-aligned armeabi-v7a/x86 ELF libraries as a 16 KB alignment warning.
+- **Root cause:** NATIVE-002 independently evaluated all native libraries without restricting the 16 KB ELF compatibility check to the applicable 64-bit ABI families.
+- **Correction:** Scope NATIVE-002 to arm64-v8a and x86_64. Add a regression proving misaligned 32-bit ELF libraries do not trigger NATIVE-002.
+- **Correction PR:** #48
+- **Correction commit on main:** f1bac649444b5d7154d7284d8d04cb32e236b045
+- **Validation:** Actions run 37084235187 passed Build, 110 tests, Format, and Clippy. Second audit confirmed the correction was limited to `crates/doctor-core/src/lib.rs`.
+- **Status:** RESOLVED
+- **Remaining related audit:** NATIVE-003 ZIP packaging semantics and a full mixed-ABI oracle matrix still require explicit validation.
