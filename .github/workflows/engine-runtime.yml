@@ -47,12 +47,15 @@ jobs:
       - name: Resolve engine version
         shell: bash
         run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [[ "$GITHUB_REF" == refs/tags/engine-v* ]]; then
             VERSION="${GITHUB_REF_NAME#engine-v}"
+          elif [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            VERSION="$(sed -n 's/^[[:space:]]*version[[:space:]]*=[[:space:]]*"\\([^"]*\\)".*/\\1/p' Cargo.toml | head -n 1)"
           else
             VERSION="${{ inputs.engine-version }}"
           fi
-          printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([-.+][0-9A-Za-z.-]+)?$'
+          test -n "$VERSION"
+          printf '%s' "$VERSION" | grep -Eq '^[0-9]+\\.[0-9]+\\.[0-9]+([-.+][0-9A-Za-z.-]+)?$'
           echo "ENGINE_VERSION=$VERSION" >> "$GITHUB_ENV"
 
       - name: Verify source version matches engine version
