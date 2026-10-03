@@ -134,9 +134,9 @@ For each packaged native `.so`, the audit now records:
 - whether an uncompressed APK native library starts on a 16 KB boundary;
 - explicit verification errors instead of guessing.
 
-For APKs, an uncompressed native library with a non-16 KB-aligned data offset is surfaced through `NATIVE-003`. Compressed native libraries do not require this ZIP-offset check.
+For APKs, `NATIVE-003` applies to the 64-bit device ABIs `arm64-v8a` and `x86_64`. An uncompressed native library in one of those ABIs with a non-16 KB-aligned data offset is surfaced through `NATIVE-003`. Compressed native libraries do not require this ZIP-offset check. 32-bit native libraries such as `armeabi-v7a` and `x86` remain inventoried but do not trigger this 16 KB packaging rule.
 
-For AABs, a raw entry offset inside the bundle is **not** treated as proof of the final APK's native-library alignment. An uncompressed native library in an AAB therefore remains a manual-review case unless the generated APK and bundle alignment configuration are separately verified.
+For AABs, a raw entry offset inside the bundle is **not** treated as proof of the final APK's native-library alignment. An uncompressed native library in an applicable 64-bit ABI therefore remains a manual-review case unless the generated APK and bundle alignment configuration are separately verified. AABs containing only 32-bit/non-target native libraries do not trigger `NATIVE-003`.
 
 The Play `PLAY-005` check now combines ELF PT_LOAD evidence from M0.4 with the package-alignment evidence from this block. For API 35+ targets, a confirmed ELF or applicable ZIP misalignment is a blocker; an unverifiable part remains a manual-review warning rather than a guessed pass.
 
