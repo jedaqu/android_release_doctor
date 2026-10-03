@@ -4,6 +4,8 @@ Open-source, local-first tool for auditing Android APK and AAB releases before p
 
 > **Status:** The active product surface is the reusable GitHub Action plus the CLI/audit engine. Current-state truth is maintained in [CURRENT-PRODUCT-STATE-2026-10-03.md](docs/CURRENT-PRODUCT-STATE-2026-10-03.md); historical milestone documents remain engineering history and are not the current product contract.
 
+> **Validation status (2026-10-03):** The maintained Rust/CLI suite has 147 automated tests passing; the reusable Action is validated through normal, blocker, invalid-input, schema, deterministic-corpus, and external immutable-SHA consumer paths.
+
 Android Release Doctor inspects the **artifact you are actually going to distribute**, can compare it with the Android application Gradle configuration, and can apply a versioned Google Play submission-readiness profile.
 
 ## Current cryptographic coverage — post ERR-038-A / ERR-038-B

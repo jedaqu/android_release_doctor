@@ -5,7 +5,7 @@
 - Repository: `jedaqu/android_release_doctor`
 - Visibility: public
 - Default branch: `main`
-- Current validated main HEAD: `7d630bb001141fa7f2880d9777c88b7f678d3b21`
+- Current validated main HEAD at M0.16 start: `1298c73d3019799e76cf7ace9706c8f880a98d72`
 - M0.11-A implementation integration baseline: `8e9f639ce71ce06e211718187d3079a5d68458f5`
 
 The exact moving `main` SHA is recorded by the latest validated checkpoint. This document records the current validated product state and is updated as validated work advances.
@@ -192,3 +192,19 @@ Final M0.15 integration:
 - Post-PR #66 Rust CI Run `37141546206`: SUCCESS.
 
 M0.15 is CLOSED. The next work should begin with a fresh checkpoint and pre-audit rather than modifying this closed milestone.
+
+
+## M0.16 — Final Product Readiness Gate (READY FOR PRODUCT PREPARATION)
+
+M0.16 performed the final engineering readiness gate against main `1298c73d3019799e76cf7ace9706c8f880a98d72`.
+
+Validated:
+- 147 automated Rust/CLI tests: 7 CLI + 115 unit + 25 integration, all passing;
+- current permanent Rust CI and Action Validation both passing;
+- Action Validation complete graph including Report v1 schema validation, immutable-SHA consumer-style path, deterministic corpus, and operational error path;
+- external consumer Run `37141021253` successful across exit codes 0, 1, and 2;
+- independent public APK/AAB evidence from Meshtastic, Reticulum, and Ventoid;
+- exactly two maintained workflow files remain active;
+- public repository scan found no tested restricted commercial/private-boundary terms.
+
+M0.16 introduced no production-code changes. Its engineering disposition is READY FOR PRODUCT PREPARATION. Historical evidence remains preserved and the public/private boundary remains unchanged.
