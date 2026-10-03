@@ -5,7 +5,7 @@
 - Repository: `jedaqu/android_release_doctor`
 - Visibility: public
 - Default branch: `main`
-- Current main HEAD: `b2baf2823d5bb5472a3c978ce092d75d81de94f0`
+- Current main HEAD: `d1d681e46391c95fd77152779ff4e3656995837f`
 - M0.11-A implementation integration baseline: `8e9f639ce71ce06e211718187d3079a5d68458f5`
 
 The exact moving `main` SHA is recorded by the latest validated checkpoint. This document records the current validated product state and is updated as validated work advances.
@@ -72,7 +72,7 @@ For understanding the repository today, use this order:
 
 1. `README.md` — public product entry point.
 2. `docs/CURRENT-PRODUCT-STATE-2026-10-03.md` — current product truth.
-3. Latest checkpoint / validated audit for the closed M0.12 Product Surface Consolidation block.
+3. Latest checkpoint / validated audit for the current closed milestone.
 4. `docs/ERRORS-AND-FIXES.md` — append-only chronology plus later reconciliations.
 5. Historical milestone/pre-audit/second-audit documents — engineering history, not current product contract.
 
@@ -147,7 +147,7 @@ Automated Rust/CLI validation remains:
 - 7 CLI integration tests;
 - Build, Format and Clippy all passing.
 
-M0.13 was integrated by PR #60 at main commit `70fc650cfad15974f06e5b58b5ab3efcdfcf28f9`, followed by successful post-merge Rust CI Run `37132758711` and Action Validation Run `37132758674`.
+M0.13 implementation was integrated by PR #60 at `70fc650cfad15974f06e5b58b5ab3efcdfcf28f9`; closure documentation was reconciled by PR #61 at final M0.13 main `8668b8defb30caae699e1aa134bc01d65a4737c3`. Post-merge Rust CI and Action Validation both completed successfully.
 
 
 ## M0.14 — Product Assurance Expansion (CLOSED)
@@ -168,3 +168,23 @@ The remaining assurance boundary is a genuinely separate consumer repository exe
 
 
 Post-closure coherence: M0.14 closure documentation was integrated by PR #63 at main commit `b2baf2823d5bb5472a3c978ce092d75d81de94f0`. Post-merge Rust CI and Action Validation both completed successfully.
+
+
+## M0.15 — Consumer Contract Validation (CLOSED)
+
+M0.15 validated the published reusable GitHub Action from a genuinely separate consumer repository using the immutable current product revision:
+
+`jedaqu/android_release_doctor/.github/actions/android-release-doctor@d1d681e46391c95fd77152779ff4e3656995837f`
+
+Consumer validation evidence:
+- a real third-party Meshtastic v2.8.1 APK was processed through the immutable Action reference;
+- the artifact SHA-256 observed by the consumer workflow was `7f42735fd1c17c7e6a64d3a48ae1e4baf22cab778e994eb8331d3b993e42eb00`;
+- successful path: Action output `exit-code=0`;
+- blocking Play path: Action output `exit-code=1`;
+- invalid format path: Action output `exit-code=2`;
+- success and blocker Report v1 outputs both validated against the published schema;
+- consumer-visible `report-path` and `exit-code` outputs were verified for each exercised path.
+
+The consumer repository remains outside the public product repository; its identity and private project material are intentionally not recorded in this public document.
+
+M0.15 introduced no production-code changes.
