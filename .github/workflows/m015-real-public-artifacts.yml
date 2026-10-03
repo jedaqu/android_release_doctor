@@ -99,6 +99,10 @@ jobs:
               assert "findings" in data
               assert "summary" in data
 
+              for finding in data["findings"]:
+                  if finding["severity"] != "PASS":
+                      print("FINDING", json.dumps(finding, sort_keys=True))
+
               print(
                   "RESULT",
                   json.dumps(
