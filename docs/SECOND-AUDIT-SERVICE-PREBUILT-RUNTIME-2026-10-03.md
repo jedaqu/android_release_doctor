@@ -143,3 +143,12 @@ Evidence:
 Product boundary: Android Release Doctor remains a GitHub Actions service. The prebuilt engine remains an internal runtime component.
 
 Audit result: PASS — production prebuilt-runtime gate closed. PR #76 is eligible for final integration, subject to post-merge main validation and current-state reconciliation.
+
+
+## Post-merge main reconciliation — 2026-10-03
+
+- PR #76 merge commit: 4dc8c27a3efbce45f5930d2b3b35baa33ffc39ea.
+- Main Rust CI: 37156909779 — SUCCESS.
+- Main Action Validation: 37156909843 — SUCCESS.
+
+Final audit disposition: PASS. The prebuilt-runtime migration is integrated and validated on main.
