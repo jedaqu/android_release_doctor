@@ -1,5 +1,6 @@
 name: "Android Release Doctor"
-description: "Audit one Android APK or AAB with the repository's validated Android Release Doctor CLI."
+author: "JEDAQU"
+description: "Audit Android APK and AAB artifacts in GitHub Actions with evidence-based checks."
 
 inputs:
   artifact:
@@ -33,6 +34,10 @@ outputs:
   report-path:
     description: "The supplied report output path, or empty when stdout is used."
     value: ${{ steps.doctor.outputs.report-path }}
+
+branding:
+  icon: "shield"
+  color: "blue"
 
 runs:
   using: "composite"
@@ -70,7 +75,7 @@ runs:
           cargo run
           --locked
           --quiet
-          --manifest-path "$GITHUB_ACTION_PATH/../../../Cargo.toml"
+          --manifest-path "$GITHUB_ACTION_PATH/Cargo.toml"
           -p doctor-cli
           --
         )

@@ -18,6 +18,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Verify repository-root Action metadata
+        run: test -f action.yml
+
       - name: Verify Rust toolchain
         run: |
           cargo --version
@@ -29,7 +32,7 @@ jobs:
 
       - name: Success path
         id: success
-        uses: ./.github/actions/android-release-doctor
+        uses: ./
         with:
           artifact: tests/fixtures/minimal-release.apk
           format: json
@@ -56,7 +59,7 @@ jobs:
       - name: Blocker path
         id: blocker
         continue-on-error: true
-        uses: ./.github/actions/android-release-doctor
+        uses: ./
         with:
           artifact: tests/fixtures/minimal-release.apk
           play: "true"
@@ -87,7 +90,7 @@ jobs:
       - name: AAB path
         id: aab
         continue-on-error: true
-        uses: ./.github/actions/android-release-doctor
+        uses: ./
         with:
           artifact: tests/fixtures/minimal-release.aab
           format: json
@@ -111,7 +114,7 @@ jobs:
 
       - name: Project path
         id: project
-        uses: ./.github/actions/android-release-doctor
+        uses: ./
         with:
           artifact: tests/fixtures/minimal-release.apk
           project: tests/fixtures/project-release
@@ -137,7 +140,7 @@ jobs:
       - name: Project and Play path
         id: project_play
         continue-on-error: true
-        uses: ./.github/actions/android-release-doctor
+        uses: ./
         with:
           artifact: tests/fixtures/minimal-release.apk
           project: tests/fixtures/project-release
@@ -165,7 +168,7 @@ jobs:
 
       - name: Non-default Play platform
         id: automotive
-        uses: ./.github/actions/android-release-doctor
+        uses: ./
         with:
           artifact: tests/fixtures/minimal-release.apk
           play: "true"
@@ -191,7 +194,7 @@ jobs:
       - name: Invalid play input
         id: invalid_play
         continue-on-error: true
-        uses: ./.github/actions/android-release-doctor
+        uses: ./
         with:
           artifact: tests/fixtures/minimal-release.apk
           play: "maybe"
@@ -210,7 +213,7 @@ jobs:
       - name: Invalid output format
         id: invalid_format
         continue-on-error: true
-        uses: ./.github/actions/android-release-doctor
+        uses: ./
         with:
           artifact: tests/fixtures/minimal-release.apk
           format: yaml
@@ -228,7 +231,7 @@ jobs:
       - name: Invalid Play platform
         id: invalid_platform
         continue-on-error: true
-        uses: ./.github/actions/android-release-doctor
+        uses: ./
         with:
           artifact: tests/fixtures/minimal-release.apk
           play: "true"
@@ -248,7 +251,7 @@ jobs:
       - name: Invalid output path
         id: invalid_output
         continue-on-error: true
-        uses: ./.github/actions/android-release-doctor
+        uses: ./
         with:
           artifact: tests/fixtures/minimal-release.apk
           format: json
@@ -299,7 +302,7 @@ jobs:
 
       - name: Consumer-style immutable SHA Action invocation
         id: consumer
-        uses: jedaqu/android_release_doctor/.github/actions/android-release-doctor@8668b8defb30caae699e1aa134bc01d65a4737c3
+        uses: jedaqu/android_release_doctor@b590b7678cb7eb4ca5f64fe6b85d4cf301b327ec
         with:
           artifact: tests/fixtures/minimal-release.apk
           format: json
@@ -396,7 +399,7 @@ jobs:
       - name: Operational error path
         id: error
         continue-on-error: true
-        uses: ./.github/actions/android-release-doctor
+        uses: ./
         with:
           artifact: tests/fixtures/does-not-exist.apk
           format: json
