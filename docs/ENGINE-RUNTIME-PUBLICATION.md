@@ -57,3 +57,18 @@ The next controlled block must:
 - reconcile `main` and close the runtime migration checkpoint.
 
 No merge into `main` occurs before these gates are closed.
+
+
+## Final publication reconciliation — 2026-10-03
+
+The earlier build2 publication procedure is superseded by the corrected immutable technical distribution.
+
+- Active technical release: engine-v0.1.3-build3.
+- engine-v0.1.3-build2 remains preserved but is superseded because its asset set contained an unintended preexisting index.js file.
+- Build3 was produced from a clean runtime-dist/ packaging directory and contains exactly the six engine binaries, six sidecars, and SHA256SUMS.txt.
+- Build3 release hashes are recorded in runtime/manifest.json.
+- The manifest is published and references build3.
+- Real production retrieval, cache recovery, and digest-mismatch rejection are validated by Action Validation Run 37156477423.
+- Rust CI Run 37156477520 is SUCCESS.
+- The production engine workflow is back to tag-driven publication only; temporary branch-only publication triggers were removed.
+- PR #76 is ready for final integration.
