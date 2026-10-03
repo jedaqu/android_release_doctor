@@ -68,7 +68,7 @@ jobs:
       - name: Direct prebuilt engine control — automotive
         run: |
           set +e
-          cargo run --release --locked --quiet --manifest-path Cargo.toml -p doctor-cli -- --play --play-platform automotive --format json --output "${{ runner.temp }}/android-release-doctor-direct-automotive.json" tests/fixtures/minimal-release.apk
+          target/release/android-release-doctor --play --play-platform automotive --format json --output "${{ runner.temp }}/android-release-doctor-direct-automotive.json" tests/fixtures/minimal-release.apk
           status=$?
           echo "direct automotive exit code=$status"
           test "$status" = "0"
