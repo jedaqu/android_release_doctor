@@ -347,9 +347,9 @@ jobs:
               print(f"schema PASS: {path}")
           PY
 
-      - name: Consumer-style branch Action invocation during architecture migration
+      - name: Consumer-style immutable-SHA Action invocation
         id: consumer
-        uses: jedaqu/android_release_doctor@service/prebuilt-cli-runtime-2026-10-03
+        uses: jedaqu/android_release_doctor@c15600daec5cc261280c667c35d0c69d7235d041
         with:
           artifact: tests/fixtures/minimal-release.apk
           format: json
