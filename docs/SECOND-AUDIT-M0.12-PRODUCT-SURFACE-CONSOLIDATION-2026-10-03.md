@@ -65,6 +65,20 @@ No historical execution is reintroduced into the maintained product surface.
 
 This consolidation contains only public technical product and engineering material. No private continuity data or sensitive operational material is added.
 
+## Post-integration closure
+
+PR #58 was merged successfully into `main` at commit `508edc22c7111aaada06fe885b93f224a1780853`.
+
+Post-merge product-tree verification confirms that only these permanent workflow files remain:
+
+- `.github/workflows/rust.yml`
+- `.github/workflows/android-release-doctor-action.yml`
+
+The historical `.github/workflows/m08-block3-action.yml` path is absent from the current tree.
+
+The consolidation is therefore technically closed. The three M0.12 corrections are retained in dedicated ledger-reconciliation documents because the connected GitHub write surface could not safely rewrite the large canonical append-only ledger file in place without replacing its historical contents.
+
 ## Audit result
 
-Technical consolidation is validated and ready for integration. Final closure requires the post-merge checkpoint and the append-only engineering-ledger reconciliation for CONSOL-001 through CONSOL-003.
+M0.12 Product Surface Consolidation — CLOSED.
+
