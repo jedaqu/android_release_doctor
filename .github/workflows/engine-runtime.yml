@@ -8,8 +8,6 @@ on:
         required: true
         default: "0.1.3"
   push:
-    branches:
-      - "service/prebuilt-cli-runtime-2026-10-03"
     tags:
       - "engine-v*"
 
@@ -109,7 +107,7 @@ jobs:
 
   publish-technical-runtime:
     name: Publish technical engine distribution
-    if: ${{ github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/engine-v') || github.ref == 'refs/heads/service/prebuilt-cli-runtime-2026-10-03') }}
+    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/engine-v') }}
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -124,37 +122,6 @@ jobs:
           pattern: engine-*
           path: release-assets
           merge-multiple: true
-
-      - name: Resolve technical publication tag
-        shell: bash
-        run: |
-          if [[ "$GITHUB_REF" == refs/tags/engine-v* ]]; then
-            TECHNICAL_TAG="$GITHUB_REF_NAME"
-          else
-            TECHNICAL_TAG="engine-v0.1.3-build3"
-          fi
-          echo "TECHNICAL_TAG=$TECHNICAL_TAG" >> "$GITHUB_ENV"
-          echo "technical publication tag=$TECHNICAL_TAG"
-
-      - name: Create immutable technical tag for controlled branch publication
-        if: ${{ github.ref == 'refs/heads/service/prebuilt-cli-runtime-2026-10-03' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TECHNICAL_TAG" >/tmp/tag.json 2>/dev/null; then
-            existing_sha="$(python3 - <<'PY'
-          import json
-          data = json.load(open('/tmp/tag.json', encoding='utf-8'))
-          print(data['object']['sha'])
-          PY
-            )"
-            test "$existing_sha" = "$GITHUB_SHA"
-          else
-            gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
-              -f ref="refs/tags/$TECHNICAL_TAG" \
-              -f sha="$GITHUB_SHA"
-          fi
 
       - name: Verify all six runtime assets and SHA-256 values
         shell: bash
@@ -174,8 +141,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          if gh release view "$TECHNICAL_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "technical engine release already exists: $TECHNICAL_TAG"
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "technical engine release already exists: $GITHUB_REF_NAME"
             exit 1
           fi
 
@@ -184,8 +151,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          gh release create "$TECHNICAL_TAG" release-assets/* \
+          gh release create "$GITHUB_REF_NAME" release-assets/* \
             --repo "$GITHUB_REPOSITORY" \
             --verify-tag \
-            --title "Android Release Doctor engine 0.1.3 ($TECHNICAL_TAG)" \
-            --notes "Technical engine distribution for the Android Release Doctor GitHub Actions service. This distribution is an internal service runtime mechanism, not an installable application. Engine version: 0.1.3. Technical tag: $TECHNICAL_TAG."
+            --title "Android Release Doctor engine 0.1.3 ($GITHUB_REF_NAME)" \
+            --notes "Technical engine distribution for the Android Release Doctor GitHub Actions service. This distribution is an internal service runtime mechanism, not an installable application. Engine version: 0.1.3. Technical tag: $GITHUB_REF_NAME."
