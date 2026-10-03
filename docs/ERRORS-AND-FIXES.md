@@ -1428,3 +1428,26 @@ From this point forward, a historical `OPEN` entry is not considered an active w
 - **Classification:** TEST DATA — not a product cryptographic defect.
 - **Private-key handling:** No private key was committed to the repository.
 - **Status:** RESOLVED
+
+
+## ERR-118 — Cargo.lock incompleto bajo validación estricta `--locked`
+
+- **Milestone:** M0.10 / GAP-1 Cargo reproducibility
+- **Type:** Lockfile reproducibility defect
+- **Observed:** Main HEAD `8c457a84697a6f571aee8fc5f9b1cb9afa89ebe6`
+- **Problem:** `cargo test --workspace --locked` failed because the committed `Cargo.lock` did not contain the complete dependency resolution required by the current manifests/features. CI run `37087228335` had previously passed because its build was executed without `--locked` and Cargo resolved and added `spin 0.9.9`.
+- **Original Cargo.lock hash:** `bb4e4a69621e7fc83bf3634184615661f283c27aaf0bc367a7722beb749113`
+- **Correction method:** Regenerate `Cargo.lock` using Cargo itself with `cargo test --workspace`. No manual lockfile editing was performed. No `Cargo.toml`, source code, workflow, or direct dependency was changed.
+- **Resolved graph:** `spin 0.9.9` was added. No package versions already present were changed and no package was removed. The remaining dependency-entry changes are lockfile resolution/version disambiguation and feature-driven transitive relationships.
+- **Generated Cargo.lock hash:** `3f967003fc962629edbdc8976cb821febf701b1ab7590275329d206b22910673`
+- **Reproducibility validation:**
+  - `cargo test --workspace --locked` — PASS
+  - `cargo build --workspace --locked` — PASS
+  - `cargo fmt --all -- --check` — PASS
+  - `cargo clippy --workspace --all-targets --locked -- -D warnings` — PASS
+  - post-validation Cargo.lock hash remained `3f967003fc962629edbdc8976cb821febf701b1ab7590275329d206b22910673`
+  - `git diff --check` — PASS
+- **Scope:** Cargo lockfile reproducibility only.
+- **No production behavior change:** Rust source, cryptographic implementation, NATIVE/16 KiB logic, GitHub Action implementation, and direct dependency declarations were not changed.
+- **Classification:** REPRODUCIBILITY — validated correction.
+- **Status:** RESOLVED LOCALLY / PENDING INTEGRATION
