@@ -1613,3 +1613,13 @@ Historical findings and their original chronological records remain unchanged; t
 - **Validation:** Pending replacement CI run.
 - **Classification:** ACTION INPUT HANDLING — product-facing Action behavior correction.
 - **Status:** PENDING VALIDATION.
+
+## Service prebuilt runtime — validation reconciliation — 2026-10-03
+
+The Action migration test-harness findings discovered during PR #76 were subsequently validated and closed by the passing Action Validation Run `37152271333` and Rust CI Run `37152271324` on head `905ff0985bb58a6e26a6f6ea3f9f0459e0e5cfe9`.
+
+- **ERR-124:** RESOLVED. Test-only runtime override now bypasses production engine-version enforcement while production execution remains manifest-backed.
+- **ERR-125:** RESOLVED. Diagnostic logging source was corrected and `src/action.js` / `dist/index.js` are synchronized.
+- **ERR-126:** RESOLVED. Hyphenated Action input names are now read correctly; the automotive/non-default Play-platform path passes.
+
+The immutable-SHA consumer validation also passed on the same Action Validation run, using the reviewed engine-runtime branch Action commit `c15600daec5cc261280c667c35d0c69d7235d041`.
