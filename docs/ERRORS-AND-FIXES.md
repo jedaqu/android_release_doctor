@@ -1395,7 +1395,7 @@ From this point forward, a historical `OPEN` entry is not considered an active w
 - **Type:** Semantic specification defect
 - **Observed:** NATIVE-003 evaluated every native `.so` ZIP entry uniformly. A misaligned `armeabi-v7a` or `x86` library could therefore trigger the 16 KB ZIP-packaging rule even though the applicable 16 KB compatibility guidance is scoped to the relevant 64-bit device ABIs.
 - **Root cause:** NATIVE-003 did not reuse the 64-bit ABI applicability boundary already established for PLAY-005 and NATIVE-002.
-- **Authoritative verification:** Current Android Developers guidance identifies `arm64-v8a` and `x86_64` for the 16 KB shared-library alignment check and provides `zipalign -c -P 16 -v 4` for APK ZIP alignment verification. For AABs, the bundle alignment configuration and generated APK require separate verification. citeturn343849search3turn343849search4
+- **Authoritative verification:** Current Android Developers guidance identifies `arm64-v8a` and `x86_64` for the 16 KB shared-library alignment check and provides `zipalign -c -P 16 -v 4` for APK ZIP alignment verification. For AABs, the bundle alignment configuration and generated APK require separate verification. See: https://developer.android.com/guide/practices/page-sizes
 - **Correction:** Scope NATIVE-003 to `arm64-v8a` and `x86_64`; keep 32-bit/non-target ABI entries in inventory without allowing them to trigger NATIVE-003.
 - **Correction PR:** #50
 - **Implementation commit:** `9e5f0d47932c0ab235f32e1e26f79245ee50b980`
