@@ -464,12 +464,13 @@ fn native_zip_64_bit_stored_alignment_matrix() {
         let good = native_zip_matrix_fixture(
             &format!("native-zip-{name}-good"),
             ArtifactKind::Apk,
-            &[(abi, CompressionMethod::Stored, Some(
-                doctor_core::ZIP_ALIGNMENT_16KB as u16,
-            ))],
+            &[(
+                abi,
+                CompressionMethod::Stored,
+                Some(doctor_core::ZIP_ALIGNMENT_16KB as u16),
+            )],
         );
-        let good_report =
-            audit_path(&good).expect("aligned 64-bit APK should be auditable");
+        let good_report = audit_path(&good).expect("aligned 64-bit APK should be auditable");
         assert_eq!(
             finding_severity(&good_report, "NATIVE-003"),
             Severity::Pass,
@@ -506,17 +507,16 @@ fn native_zip_mixed_32_and_64_bit_matrix_uses_only_applicable_abis() {
             ("armeabi-v7a", CompressionMethod::Stored, Some(4096)),
             ("x86", CompressionMethod::Stored, Some(4096)),
             ("arm64-v8a", CompressionMethod::Stored, Some(4096)),
-            ("x86_64", CompressionMethod::Stored, Some(
-                doctor_core::ZIP_ALIGNMENT_16KB as u16,
-            )),
+            (
+                "x86_64",
+                CompressionMethod::Stored,
+                Some(doctor_core::ZIP_ALIGNMENT_16KB as u16),
+            ),
         ],
     );
 
     let report = audit_path(&path).expect("mixed ABI APK should be auditable");
-    assert_eq!(
-        finding_severity(&report, "NATIVE-003"),
-        Severity::Warning
-    );
+    assert_eq!(finding_severity(&report, "NATIVE-003"), Severity::Warning);
     let native_abis = report.inventory.native_abis;
     assert_eq!(
         native_abis,
