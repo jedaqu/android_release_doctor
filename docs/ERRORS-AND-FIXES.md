@@ -1569,3 +1569,23 @@ Historical findings and their original chronological records remain unchanged; t
 - **Validation:** Pending replacement CI run.
 - **Classification:** TEST HARNESS / MODULE FORMAT — not a product defect.
 - **Status:** PENDING VALIDATION.
+
+## ERR-123-A — ERR-123 resolution reconciliation
+
+- **Milestone:** Service prebuilt CLI runtime / Action migration
+- **Type:** CI validation reconciliation
+- **Evidence:** Replacement validation reached the runtime validator after the CommonJS correction; the original `.mjs`/CommonJS mismatch no longer blocks validation.
+- **Correction status:** The validator is now `scripts/verify-runtime-manifest.cjs`, and the workflow points to that file.
+- **Status:** RESOLVED.
+
+## ERR-124 — Test-only runtime override still required a production engine version
+
+- **Milestone:** Service prebuilt CLI runtime / Action migration
+- **Type:** CI validation failure
+- **Observed:** Action Validation Run `37151682706`, PR #76, head `db42faf0c668e13c7e1163e2367b0d20feebe1b3`.
+- **Problem:** The test-only `ANDROID_RELEASE_DOCTOR_TEST_RUNTIME_PATH` bypassed manifest loading but the Action still required a valid production `engine-version`. The test harness intentionally leaves `engine-version` empty, so the first functional Action invocation exited with code 2 before launching the prebuilt test binary.
+- **Correction:** Separate the test-only runtime override path from production engine-version validation. The override may use a local-test fallback version while production execution continues to require a manifest-backed semver engine version.
+- **Correction commits:** `ad09e02dbc04849f658717e64cd7d18150876b77`, `72cd21277d0beb49773cd2ae6e85d5352c981699`.
+- **Validation:** Pending replacement CI run.
+- **Classification:** TEST HARNESS / TEST-ONLY OVERRIDE — not a product runtime contract defect.
+- **Status:** PENDING VALIDATION.
