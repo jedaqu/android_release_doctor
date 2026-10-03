@@ -42,6 +42,11 @@ impl PlayPlatform {
     }
 }
 
+
+fn is_16kb_64_bit_abi(abi: &str) -> bool {
+    matches!(abi, "arm64-v8a" | "x86_64")
+}
+
 pub fn evaluate_play_policy(
     manifest: Option<&ManifestInfo>,
     inventory: &ArtifactInventory,
@@ -119,27 +124,43 @@ pub fn evaluate_play_policy(
             "16 KB native payload check",
             "No packaged native .so libraries were detected, so there is no native payload requiring ELF or ZIP 16 KB alignment verification.",
         ));
+    } else if !inventory
+        .native_libraries
+        .iter()
+        .any(|library| is_16kb_64_bit_abi(&library.abi))
+    {
+        findings.push(Finding::pass(
+            "PLAY-005",
+            "16 KB native payload check",
+            "Native libraries are present only for 32-bit ABIs; the Google Play 16 KB compatibility requirement evaluated here applies to 64-bit device ABIs arm64-v8a and x86_64.",
+        ));
     } else {
         let target_sdk = manifest.and_then(|value| value.target_sdk);
-        let parse_errors = inventory
+        let applicable_native_libraries = inventory
             .native_libraries
+            .iter()
+            .filter(|library| is_16kb_64_bit_abi(&library.abi))
+            .collect::<Vec<_>>();
+        let applicable_native_zip_entries = inventory
+            .native_zip_entries
+            .iter()
+            .filter(|entry| is_16kb_64_bit_abi(&entry.abi))
+            .collect::<Vec<_>>();
+        let parse_errors = applicable_native_libraries
             .iter()
             .filter(|library| library.error.is_some())
             .collect::<Vec<_>>();
-        let incompatible_elf = inventory
-            .native_libraries
+        let incompatible_elf = applicable_native_libraries
             .iter()
             .filter(|library| {
                 !crate::load_segments_are_16kb_aligned(&library.load_segment_alignments)
             })
             .collect::<Vec<_>>();
-        let zip_errors = inventory
-            .native_zip_entries
+        let zip_errors = applicable_native_zip_entries
             .iter()
             .filter(|entry| entry.error.is_some())
             .collect::<Vec<_>>();
-        let incompatible_zip = inventory
-            .native_zip_entries
+        let incompatible_zip = applicable_native_zip_entries
             .iter()
             .filter(|entry| entry.alignment_16kb == Some(false))
             .collect::<Vec<_>>();
@@ -366,6 +387,58 @@ mod tests {
                 "{rule_id} should require manual review"
             );
         }
+    }
+
+
+    #[test]
+    fn misaligned_32_bit_native_payload_does_not_trigger_play_005() {
+        let inventory = ArtifactInventory {
+            native_abis: vec!["armeabi-v7a".to_string(), "x86".to_string()],
+            native_libraries: vec![
+                crate::NativeLibraryInfo {
+                    path: "lib/armeabi-v7a/libbad.so".to_string(),
+                    abi: "armeabi-v7a".to_string(),
+                    load_segment_alignments: vec![4096],
+                    error: None,
+                },
+                crate::NativeLibraryInfo {
+                    path: "lib/x86/libbad.so".to_string(),
+                    abi: "x86".to_string(),
+                    load_segment_alignments: vec![4096],
+                    error: None,
+                },
+            ],
+            native_zip_entries: vec![
+                crate::NativeZipEntryInfo {
+                    path: "lib/armeabi-v7a/libbad.so".to_string(),
+                    abi: "armeabi-v7a".to_string(),
+                    compression: crate::NativeZipCompression::Stored,
+                    data_offset: 4096,
+                    alignment_16kb: Some(false),
+                    error: None,
+                },
+                crate::NativeZipEntryInfo {
+                    path: "lib/x86/libbad.so".to_string(),
+                    abi: "x86".to_string(),
+                    compression: crate::NativeZipCompression::Stored,
+                    data_offset: 4096,
+                    alignment_16kb: Some(false),
+                    error: None,
+                },
+            ],
+            ..Default::default()
+        };
+
+        let findings =
+            evaluate_play_policy(Some(&manifest(36)), &inventory, PlayPlatform::Mobile);
+
+        assert_eq!(
+            findings
+                .iter()
+                .find(|finding| finding.rule_id == "PLAY-005")
+                .map(|finding| finding.severity),
+            Some(Severity::Pass)
+        );
     }
 
     #[test]
