@@ -5,9 +5,9 @@
 - Repository: `jedaqu/android_release_doctor`
 - Visibility: public
 - Default branch: `main`
-- Main baseline audited for this document: `4a41b80415b94ffe1748ec07a10a4cbe0224ee1a`
+- Main baseline current after M0.11-A integration: `8e9f639ce71ce06e211718187d3079a5d68458f5`
 
-The exact moving `main` SHA must be taken from the latest checkpoint/validated audit. This document records the product state anchored to the baseline above and is updated as validated work advances.
+The exact moving `main` SHA is recorded by the latest validated checkpoint. This document records the current validated product state and is updated as validated work advances.
 
 This document is the current-state companion to the historical milestone/audit records. It is not a replacement for them.
 
@@ -44,7 +44,7 @@ The current validated implementation includes:
 - supported v3 proof-of-rotation verification;
 - explicit unsupported/manual-review boundaries rather than guessed passes;
 - Report v1 JSON and stable CLI exit semantics;
-- a reusable GitHub Action with success, blocker, and operational-error self-test coverage on its dedicated historical validation workflow.
+- a reusable GitHub Action with success, blocker, and operational-error self-test coverage exercised by the Action validation workflow targeting `main`.
 
 ## Current hardening gaps
 
@@ -52,11 +52,11 @@ The following are open product-hardening candidates and are intentionally not re
 
 ### Action validation on current main
 
-The dedicated Action self-test workflow is currently scoped to the historical `m08-block3-github-action` branch and its stacked PR target. Current `main` Rust CI does not execute the Action self-test.
+M0.11-A integrated the existing bounded Action self-test into the `main` push and `main` pull-request trigger paths. The pull-request-to-`main` validation for PR #55 completed successfully on Run `37127173597`, covering success, blocker, Report v1, output-path, exit-code, and operational-error behavior.
 
 ### Action dependency reproducibility
 
-The Action invokes the repository CLI through Cargo using `cargo run` without `--locked`. The normal Rust CI now enforces `--locked`. This is a current consistency/hardening gap and not yet a correction.
+The reusable Action now invokes Cargo with `--locked`, matching the locked dependency-resolution boundary enforced by the normal Rust CI. This correction was validated on Action Run `37127173597` and Rust CI Run `37127173629` before integration.
 
 ### Play policy semantics
 
@@ -72,7 +72,7 @@ For understanding the repository today, use this order:
 
 1. `README.md` — public product entry point.
 2. `docs/CURRENT-PRODUCT-STATE-2026-10-03.md` — current product truth.
-3. Latest checkpoint / validated audit for the active work block.
+3. Latest checkpoint / validated audit for the active work block (`M0.11-A` closed after PR #55 merge).
 4. `docs/ERRORS-AND-FIXES.md` — append-only chronology plus later reconciliations.
 5. Historical milestone/pre-audit/second-audit documents — engineering history, not current product contract.
 
