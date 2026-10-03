@@ -85,9 +85,10 @@ jobs:
           ASSET_KEY: ${{ matrix.asset_key }}
           EXT: ${{ matrix.ext }}
         run: |
-          mkdir -p dist
+          rm -rf runtime-dist
+          mkdir -p runtime-dist
           source_file="target/release/android-release-doctor${EXT}"
-          asset="dist/android-release-doctor-${ENGINE_VERSION}-${ASSET_KEY}${EXT}"
+          asset="runtime-dist/android-release-doctor-${ENGINE_VERSION}-${ASSET_KEY}${EXT}"
           test -s "$source_file"
           cp "$source_file" "$asset"
           test -s "$asset"
@@ -104,7 +105,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: engine-${{ matrix.asset_key }}
-          path: dist/*
+          path: runtime-dist/*
 
   publish-technical-runtime:
     name: Publish technical engine distribution
@@ -130,7 +131,7 @@ jobs:
           if [[ "$GITHUB_REF" == refs/tags/engine-v* ]]; then
             TECHNICAL_TAG="$GITHUB_REF_NAME"
           else
-            TECHNICAL_TAG="engine-v0.1.3-build2"
+            TECHNICAL_TAG="engine-v0.1.3-build3"
           fi
           echo "TECHNICAL_TAG=$TECHNICAL_TAG" >> "$GITHUB_ENV"
           echo "technical publication tag=$TECHNICAL_TAG"
