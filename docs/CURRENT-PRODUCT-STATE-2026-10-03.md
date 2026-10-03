@@ -18,7 +18,7 @@ This document is the current-state companion to the historical milestone/audit r
 Android Release Doctor is a GitHub Actions service.
 
 Its primary consumer interface is the reusable GitHub composite Action:
-`.github/actions/android-release-doctor/action.yml`.
+`action.yml` at the repository root.
 
 The service is backed by:
 
