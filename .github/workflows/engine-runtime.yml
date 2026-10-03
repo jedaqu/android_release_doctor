@@ -58,7 +58,13 @@ jobs:
               }
             ' Cargo.toml)
             TAG_SUFFIX="${GITHUB_REF_NAME#engine-v}"
-            printf '%s' "$TAG_SUFFIX" | grep -Eq "^$VERSION(-build[0-9]+)?$"
+            case "$TAG_SUFFIX" in
+              "$VERSION" | "$VERSION"-build[0-9]*) ;;
+              *)
+                echo "technical tag does not match engine version: tag=$TAG_SUFFIX engine=$VERSION"
+                exit 1
+                ;;
+            esac
           elif [ "$GITHUB_EVENT_NAME" = "push" ]; then
             VERSION="$(awk '
               /^\[workspace\.package\]$/ { in_workspace=1; next }
