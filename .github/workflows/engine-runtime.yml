@@ -48,15 +48,7 @@ jobs:
         shell: bash
         run: |
           if [ "$GITHUB_EVENT_NAME" = "push" ] && [[ "$GITHUB_REF" == refs/tags/engine-v* ]]; then
-            VERSION="$(awk '
-              /^\[workspace\.package\]$/ { in_workspace=1; next }
-              in_workspace && /^[[:space:]]*version[[:space:]]*=/ {
-                value=$3
-                gsub(/"/, "", value)
-                print value
-                exit
-              }
-            ' Cargo.toml)
+            VERSION="$(cargo metadata --no-deps --format-version 1 | python3 -c 'import json,sys; data=json.load(sys.stdin); print(next(p["version"] for p in data["packages"] if p["name"]=="doctor-cli"))')"
             TAG_SUFFIX="${GITHUB_REF_NAME#engine-v}"
             case "$TAG_SUFFIX" in
               "$VERSION" | "$VERSION"-build[0-9]*) ;;
@@ -66,18 +58,11 @@ jobs:
                 ;;
             esac
           elif [ "$GITHUB_EVENT_NAME" = "push" ]; then
-            VERSION="$(awk '
-              /^\[workspace\.package\]$/ { in_workspace=1; next }
-              in_workspace && /^[[:space:]]*version[[:space:]]*=/ {
-                value=$3
-                gsub(/"/, "", value)
-                print value
-                exit
-              }
-            ' Cargo.toml)
+            VERSION="$(cargo metadata --no-deps --format-version 1 | python3 -c 'import json,sys; data=json.load(sys.stdin); print(next(p["version"] for p in data["packages"] if p["name"]=="doctor-cli"))')"
           else
             VERSION="${{ inputs.engine-version }}"
           fi
+          echo "resolved engine version=$VERSION"
           test -n "$VERSION"
           printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([-.+][0-9A-Za-z.-]+)?$'
           echo "ENGINE_VERSION=$VERSION" >> "$GITHUB_ENV"
@@ -85,15 +70,7 @@ jobs:
       - name: Verify source version matches engine version
         shell: bash
         run: |
-          actual_version="$(awk '
-            /^\[workspace\.package\]$/ { in_workspace=1; next }
-            in_workspace && /^[[:space:]]*version[[:space:]]*=/ {
-              value=$3
-              gsub(/"/, "", value)
-              print value
-              exit
-            }
-          ' Cargo.toml)"
+          actual_version="$(cargo metadata --no-deps --format-version 1 | python3 -c 'import json,sys; data=json.load(sys.stdin); print(next(p["version"] for p in data["packages"] if p["name"]=="doctor-cli"))')"
           test -n "$actual_version"
           test "$actual_version" = "$ENGINE_VERSION"
           echo "engine source version=$actual_version"
