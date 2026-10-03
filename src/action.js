@@ -97,7 +97,8 @@ async function main() {
   console.log("Android Release Doctor: engine=" + engineVersion + " platform=" + key);
   let status;
   try { status = await execute(runtimePath, args, process.env.GITHUB_WORKSPACE || process.cwd()); } catch (error) { console.error("Android Release Doctor: unable to execute engine: " + error.message); setOutput("exit-code", "2"); setOutput("report-path", ""); process.exit(2); }
-  console.log("Android Release Doctor: engine exit code=" + status);\n  setOutput("exit-code", String(status)); setOutput("report-path", output); process.exit(status);
+  console.log("Android Release Doctor: engine exit code=" + status);
+  setOutput("exit-code", String(status)); setOutput("report-path", output); process.exit(status);
 }
 
 main().catch((error) => { console.error("Android Release Doctor: internal Action error: " + (error.stack || error.message)); setOutput("exit-code", "2"); setOutput("report-path", ""); process.exit(2); });
