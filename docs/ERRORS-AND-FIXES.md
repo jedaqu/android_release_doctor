@@ -1589,3 +1589,15 @@ Historical findings and their original chronological records remain unchanged; t
 - **Validation:** Pending replacement CI run.
 - **Classification:** TEST HARNESS / TEST-ONLY OVERRIDE — not a product runtime contract defect.
 - **Status:** PENDING VALIDATION.
+
+## ERR-125 — Action diagnostic logging inserted as a literal escape sequence
+
+- **Milestone:** Service prebuilt CLI runtime / Action migration
+- **Type:** CI validation failure
+- **Observed:** Action Validation Run `37151956082`, PR #76, head `d027a426bb4f714d99f05d9744102f0e529a7ac1`.
+- **Problem:** The diagnostic `engine exit code` logging change inserted a literal `\\n` sequence into the JavaScript source, causing `node --check` to fail before Action execution.
+- **Correction:** Replaced the literal sequence with a real source newline and synchronized `dist/index.js` with `src/action.js`.
+- **Correction commits:** `a6e4b301b8688e1d0474639378bcbef9bdb8da09`, `6ce3916f9bac0e9915dc994263665ca9fbbe4ecc`.
+- **Validation:** Pending replacement CI run.
+- **Classification:** TEST HARNESS / SOURCE GENERATION — not a product runtime contract defect.
+- **Status:** PENDING VALIDATION.
