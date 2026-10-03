@@ -114,7 +114,7 @@ jobs:
 
   publish-technical-runtime:
     name: Publish technical engine distribution
-    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/engine-v') }}
+    if: ${{ github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/engine-v') || github.ref == 'refs/heads/service/prebuilt-cli-runtime-2026-10-03') }}
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -128,12 +128,15 @@ jobs:
           merge-multiple: true
 
       - name: Verify all six runtime assets and SHA-256 values
-        env:
-          ENGINE_VERSION: ${{ github.ref_name }}
-          RUNTIME_ASSETS_DIR: release-assets
         shell: bash
         run: |
-          ENGINE_VERSION="${ENGINE_VERSION#engine-v}" node scripts/verify-engine-assets.cjs
+          if [[ "$GITHUB_REF" == refs/tags/engine-v* ]]; then
+            ENGINE_VERSION="${GITHUB_REF_NAME#engine-v}"
+          else
+            ENGINE_VERSION="$(awk '$0 == "[workspace.package]" {in_workspace=1; next} in_workspace && $1 == "version" {gsub(/"/, "", $3); print $3; exit}' Cargo.toml)"
+          fi
+          test -n "$ENGINE_VERSION"
+          ENGINE_VERSION="$ENGINE_VERSION" RUNTIME_ASSETS_DIR=release-assets node scripts/verify-engine-assets.cjs
 
       - name: Build checksum index
         shell: bash
@@ -142,6 +145,7 @@ jobs:
           test "$(wc -l < release-assets/SHA256SUMS.txt)" = "6"
 
       - name: Reject duplicate technical release
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/engine-v') }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -152,6 +156,7 @@ jobs:
           fi
 
       - name: Create technical engine distribution
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/engine-v') }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
