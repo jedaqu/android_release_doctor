@@ -140,6 +140,8 @@ jobs:
 
       - name: Intentional download digest mismatch rejection
         if: steps.production_runtime_state.outputs.published == 'true'
+        env:
+          ANDROID_RELEASE_DOCTOR_TEST_RUNTIME_PATH: ""
         run: |
           tmp_root="${RUNNER_TEMP}/android-release-doctor-digest-mismatch"
           rm -rf "$tmp_root"
