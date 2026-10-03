@@ -413,7 +413,7 @@ The Block 3 action executes the repository CLI through Cargo. The runner therefo
 
 Android Release Doctor is the audit engine plus its reusable GitHub Action interface. The product is the evidence-producing workflow that inspects APK/AAB artifacts, optionally compares static Gradle configuration, applies the configured Play readiness profile, and returns a stable report and exit code.
 
-The repository does not define a public binary-release, tag-driven publication, or downloadable package contract.
+The repository does not define a public binary-release, tag-driven publication, or downloadable package contract.\n\nCargo package version metadata remains for the Rust workspace and CLI build; it is not a public release identifier or publication contract.
 
 ## Still not implemented
 
