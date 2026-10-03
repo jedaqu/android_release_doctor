@@ -1623,3 +1623,74 @@ The Action migration test-harness findings discovered during PR #76 were subsequ
 - **ERR-126:** RESOLVED. Hyphenated Action input names are now read correctly; the automotive/non-default Play-platform path passes.
 
 The immutable-SHA consumer validation also passed on the same Action Validation run, using the reviewed engine-runtime branch Action commit `c15600daec5cc261280c667c35d0c69d7235d041`.
+
+## ERR-127 — Engine runtime source-version pre-check depended on Cargo package resolution
+
+- **Milestone:** Service prebuilt CLI runtime / production runtime gate
+- **Type:** CI gate defect
+- **Observed:** Engine Runtime Build Run `37153642292`; all six native target jobs failed before compilation.
+- **Problem:** The source-version pre-check used `cargo pkgid -p doctor-cli`. The gate therefore depended on Cargo package resolution before the build stage, so the check failed even though the repository workspace version was `0.1.3`.
+- **Correction:** Read the authoritative workspace package version directly from the root `Cargo.toml` for the pre-check. The check still requires an exact match with the requested engine version.
+- **Correction commit:** `3d9304f4ae8e9a4a4e04463c6ccf662b4457af5f`.
+- **Validation:** Replacement gate subsequently passed the source-version pre-check on all six targets in Run `37154236737`.
+- **Status:** RESOLVED.
+
+## ERR-128 — Engine version resolver assumed every push ref was a technical tag
+
+- **Milestone:** Service prebuilt CLI runtime / controlled branch gate validation
+- **Type:** Workflow validation defect
+- **Observed:** Engine Runtime Build Run `37154142685`.
+- **Problem:** The workflow treated every `push` event as `engine-v*` and therefore parsed the service branch name as a semantic engine version.
+- **Correction:** Distinguish technical tag pushes from ordinary branch pushes; branch validation derives the workspace version instead.
+- **Correction commit:** `dbf68b0042782ca5526b0b1620138f35a9b9a365`.
+- **Validation:** The corrected resolver reached and passed the source-version check on all six targets in Run `37154236737`.
+- **Status:** RESOLVED.
+
+## ERR-129 — Workspace version extraction contained over-escaped shell pattern
+
+- **Milestone:** Service prebuilt CLI runtime / controlled branch gate validation
+- **Type:** Workflow implementation defect
+- **Observed:** Engine Runtime Build Run `37154192438`.
+- **Problem:** The first shell-based extraction correction contained an over-escaped pattern, so `sed` did not extract the version and the resolver failed before the build.
+- **Correction:** Replace the fragile pattern with an `awk` extraction scoped to `[workspace.package]`.
+- **Correction commit:** `e17481df4d9818ec5ca8c9b170ae4c7e535cb6ec`.
+- **Validation:** Run `37154236737` passed version resolution and source-version consistency on all six targets.
+- **Status:** RESOLVED.
+
+## ERR-130 — Aggregate runtime verification job lacked repository checkout
+
+- **Milestone:** Service prebuilt CLI runtime / six-asset verification
+- **Type:** Workflow implementation defect
+- **Observed:** Engine Runtime Build Run `37154427807`; all six build jobs succeeded but the aggregate verification job failed before reading the verifier source.
+- **Problem:** The publish/aggregate job downloaded the six artifacts but did not check out the repository, so `Cargo.toml` and `scripts/verify-engine-assets.cjs` were absent from the workspace.
+- **Correction:** Add an explicit `actions/checkout@v6` step before aggregate verification.
+- **Correction commit:** `2f5b99c39c7e8f0e07ba712850025ebed4f8eda8`.
+- **Validation:** The corrected aggregate job successfully loaded the six artifacts in Run `37154600728`; the next failure isolated to the verifier's SHA-256 sidecar parser.
+- **Status:** RESOLVED.
+
+## ERR-131 — Runtime SHA-256 sidecar validator matched a literal escape sequence
+
+- **Milestone:** Service prebuilt CLI runtime / six-asset verification
+- **Type:** Verification implementation defect
+- **Observed:** Engine Runtime Build Run `37154600728`.
+- **Problem:** `scripts/verify-engine-assets.cjs` used a double-escaped `\\s+` inside a JavaScript regular-expression literal, so valid sidecar lines were rejected as invalid.
+- **Correction:** Use the actual whitespace class `\s+` in the regular expression.
+- **Correction commit:** `15908f299f55af470b36177cfd59848f047b1cbf`.
+- **Validation:** Engine Runtime Build Run `37154787258` — SUCCESS. All six build jobs succeeded; the aggregate verifier independently recomputed and accepted all six binary SHA-256 values; the six-line checksum index check also passed.
+- **Status:** RESOLVED.
+
+## Service prebuilt runtime — production-gate validation reconciliation — 2026-10-03
+
+The controlled branch validation established a clean six-platform runtime build and independent artifact/hash verification before technical distribution publication.
+
+- Validation run: `37154787258` — SUCCESS.
+- Linux x64: `44e7a0fc87fdbed57962acf7bf7d6491f4987bc2316cb8c652d0a4576f794760`
+- Linux ARM64: `6f96be49ca16e0cf3562f3809a412c4c243fd0feffa091246b006088a52bc48d`
+- macOS x64: `513f11988de3faf41e7d62cd1132693271bc25c32bd3ebdd2a80b2659c68116e`
+- macOS ARM64: `197475e7e59d331db2e5aa934c0c8919d87dc19cb42008d68db54ee33179752c`
+- Windows x64: `392380402e5e2c157ef190b5a97efe69847ef02334a664be965a552b09752331`
+- Windows ARM64: `0e772cb45a4c589691cac1d4017859cd9f469bba88cd477a78657d2ae885b103`
+- The verifier also confirmed six non-empty runtime assets and built a six-entry `SHA256SUMS.txt`.
+- These hashes are the hashes of the packaged runtime binaries, not the SHA-256 digests of the surrounding GitHub Actions artifact ZIPs.
+- Technical release publication and `runtime/manifest.json` publication remain separate gates and were not performed by the branch validation run.
+- **Status:** BUILD + HASH VERIFICATION RESOLVED / TECHNICAL PUBLICATION PENDING.
