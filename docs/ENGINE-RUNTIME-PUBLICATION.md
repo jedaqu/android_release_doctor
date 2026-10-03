@@ -72,3 +72,12 @@ The earlier build2 publication procedure is superseded by the corrected immutabl
 - Rust CI Run 37156477520 is SUCCESS.
 - The production engine workflow is back to tag-driven publication only; temporary branch-only publication triggers were removed.
 - PR #76 is ready for final integration.
+
+
+## Final main integration — 2026-10-03
+
+PR #76 was merged at 4dc8c27a3efbce45f5930d2b3b35baa33ffc39ea.
+
+Post-merge Rust CI 37156909779 and Action Validation 37156909843 both passed. engine-v0.1.3-build3 remains the active technical runtime distribution referenced by the published manifest.
+
+Publication and production consumption are therefore closed for the current engine runtime migration.
