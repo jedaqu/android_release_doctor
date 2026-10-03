@@ -93,3 +93,26 @@ The continuation changes were validated by the permanent PR workflows on this br
 - Rust CI Run `37153106161` — SUCCESS.
 
 This closes the branch-local implementation/test portion of the checkpoint. The only remaining production gate is the real six-platform technical engine distribution and subsequent manifest population/retrieval validation.
+
+## Validation reconciliation — 2026-10-03
+
+The previously open six-platform build gate was executed on the corrected service branch and closed for the build/hash-verification portion.
+
+- Validation run: `37154787258` — SUCCESS.
+- All six matrix jobs completed successfully.
+- Aggregate verification downloaded all six runtime artifacts.
+- `scripts/verify-engine-assets.cjs` independently recomputed and accepted all six binary SHA-256 values.
+- `SHA256SUMS.txt` was generated with exactly six entries.
+- The validated binary hashes are recorded in `docs/ERRORS-AND-FIXES.md`.
+
+### Current remaining production gate
+
+The remaining work is not binary construction. It is technical distribution publication and Action consumption validation:
+
+1. Publish the verified six binaries under the intended technical tag.
+2. Populate `runtime/manifest.json` with the six verified binary SHA-256 values and move the manifest to `published`.
+3. Validate real Action retrieval, cache reuse, and digest rejection.
+4. Reconcile the final integrated `main` state.
+5. Run the second audit and final checkpoint before merge/closure.
+
+The controlled branch-only trigger used to execute the verification gate has been removed from the production workflow. The production workflow remains tag-driven for technical publication.
