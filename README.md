@@ -356,7 +356,9 @@ The CLI keeps a stable exit-code contract:
 MANUAL-REVIEW findings do not produce exit code 1. In JSON mode, stdout contains only the Report v1 JSON; diagnostics remain on stderr.
 
 
-## M0.8 Block 3 scope — GitHub Action
+## M0.8 Block 3 scope — Historical GitHub Action implementation
+
+> Historical note: this section records the original composite/Cargo Action implementation. The current service execution model is documented in the architecture section below and no longer compiles the CLI on consumer runners.
 
 M0.8 Block 3 exposes the existing CLI as a reusable GitHub composite action without changing the audit engine or Report v1.
 
@@ -398,8 +400,25 @@ The action preserves the CLI exit semantics:
 
 When `output` is supplied, the report is written by the existing CLI. A blocking audit therefore still leaves the generated report available for later workflow steps, for example with `continue-on-error: true` and a subsequent upload/inspection step.
 
-The Action executes the validated CLI through Cargo. The runner therefore needs a usable Rust/Cargo toolchain.
+The original M0.8 implementation executed the validated CLI through Cargo. That requirement is retained here as historical context only.
 
+## Current service runtime architecture — 2026-10-03
+
+The service Action is being migrated to the third-party CLI Action pattern recommended by GitHub. The root Action now runs as a Node.js 24 JavaScript Action and launches a prebuilt Android Release Doctor engine selected by OS/architecture.
+
+The consumer path is:
+
+```text
+workflow APK/AAB
+  -> root Node 24 Action
+  -> runtime manifest
+  -> verified prebuilt engine
+  -> Report v1 + exit code
+```
+
+The Action does not invoke Cargo on the consumer runner. The Rust CLI remains the source/build/local-validation surface. Runtime binaries are distributed as technical engine assets and verified by SHA-256 before execution.
+
+The migration branch is not production-ready until the engine runtime distribution exists for every declared platform and runtime/manifest.json contains verified hashes. See docs/SERVICE-RUNTIME-ARCHITECTURE-2026-10-03.md.
 
 ## Documentation coherence
 
@@ -516,7 +535,7 @@ The reusable action is available from:
 
 For supply-chain control, pin the Action to a reviewed commit SHA.
 
-The Action executes the validated CLI through Cargo on the runner, so the runner must provide a usable Rust/Cargo toolchain. Its inputs are `artifact`, `project`, `play`, `play-platform`, `format`, and `output`; its outputs are `exit-code` and `report-path`.
+The Action resolves a prebuilt engine for the runner's OS/architecture, verifies its SHA-256 against the runtime manifest, caches the verified binary when possible, and then executes it. Its inputs are artifact, project, play, play-platform, format, output, and optional engine-version; its outputs are exit-code and report-path.
 
 ### What the tool does not claim
 

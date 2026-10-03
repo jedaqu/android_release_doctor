@@ -1,0 +1,158 @@
+name: Android Release Doctor — Engine Runtime Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      engine-version:
+        description: Technical engine version to build.
+        required: true
+        default: "0.1.3"
+  push:
+    tags:
+      - "engine-v*"
+
+jobs:
+  build:
+    name: Build ${{ matrix.asset_key }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            asset_key: linux-x64
+            ext: ""
+          - runner: ubuntu-24.04-arm
+            asset_key: linux-arm64
+            ext: ""
+          - runner: macos-15-intel
+            asset_key: macos-x64
+            ext: ""
+          - runner: macos-15
+            asset_key: macos-arm64
+            ext: ""
+          - runner: windows-2025
+            asset_key: windows-x64
+            ext: ".exe"
+          - runner: windows-11-arm
+            asset_key: windows-arm64
+            ext: ".exe"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Resolve engine version
+        shell: bash
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [[ "$GITHUB_REF" == refs/tags/engine-v* ]]; then
+            VERSION="$(cargo metadata --no-deps --format-version 1 | python3 -c 'import json,sys; data=json.load(sys.stdin); print(next(p["version"] for p in data["packages"] if p["name"]=="doctor-cli"))')"
+            TAG_SUFFIX="${GITHUB_REF_NAME#engine-v}"
+            case "$TAG_SUFFIX" in
+              "$VERSION" | "$VERSION"-build[0-9]*) ;;
+              *)
+                echo "technical tag does not match engine version: tag=$TAG_SUFFIX engine=$VERSION"
+                exit 1
+                ;;
+            esac
+          elif [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            VERSION="$(cargo metadata --no-deps --format-version 1 | python3 -c 'import json,sys; data=json.load(sys.stdin); print(next(p["version"] for p in data["packages"] if p["name"]=="doctor-cli"))')"
+          else
+            VERSION="${{ inputs.engine-version }}"
+          fi
+          echo "resolved engine version=$VERSION"
+          test -n "$VERSION"
+          printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([-.+][0-9A-Za-z.-]+)?$'
+          echo "ENGINE_VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Verify source version matches engine version
+        shell: bash
+        run: |
+          actual_version="$(cargo metadata --no-deps --format-version 1 | python3 -c 'import json,sys; data=json.load(sys.stdin); print(next(p["version"] for p in data["packages"] if p["name"]=="doctor-cli"))')"
+          test -n "$actual_version"
+          test "$actual_version" = "$ENGINE_VERSION"
+          echo "engine source version=$actual_version"
+
+      - name: Build release binary
+        shell: bash
+        run: cargo build --release --locked -p doctor-cli
+
+      - name: Package runtime asset
+        shell: bash
+        env:
+          ASSET_KEY: ${{ matrix.asset_key }}
+          EXT: ${{ matrix.ext }}
+        run: |
+          rm -rf runtime-dist
+          mkdir -p runtime-dist
+          source_file="target/release/android-release-doctor${EXT}"
+          asset="runtime-dist/android-release-doctor-${ENGINE_VERSION}-${ASSET_KEY}${EXT}"
+          test -s "$source_file"
+          cp "$source_file" "$asset"
+          test -s "$asset"
+          ASSET_FILE="$asset" node - <<'NODE'
+          const fs = require('node:fs');
+          const crypto = require('node:crypto');
+          const filePath = process.env.ASSET_FILE;
+          const data = fs.readFileSync(filePath);
+          const sha = crypto.createHash('sha256').update(data).digest('hex');
+          fs.writeFileSync(filePath + '.sha256', sha + '  ' + filePath.split(/[\\/]/).pop() + '\n');
+          NODE
+
+      - name: Upload runtime build
+        uses: actions/upload-artifact@v7
+        with:
+          name: engine-${{ matrix.asset_key }}
+          path: runtime-dist/*
+
+  publish-technical-runtime:
+    name: Publish technical engine distribution
+    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/engine-v') }}
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Download engine assets
+        uses: actions/download-artifact@v8
+        with:
+          pattern: engine-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Verify all six runtime assets and SHA-256 values
+        shell: bash
+        run: |
+          ENGINE_VERSION="$(awk '$0 == "[workspace.package]" {in_workspace=1; next} in_workspace && $1 == "version" {gsub(/"/, "", $3); print $3; exit}' Cargo.toml)"
+          test -n "$ENGINE_VERSION"
+          ENGINE_VERSION="$ENGINE_VERSION" RUNTIME_ASSETS_DIR=release-assets node scripts/verify-engine-assets.cjs
+
+      - name: Build checksum index
+        shell: bash
+        run: |
+          cat release-assets/*.sha256 > release-assets/SHA256SUMS.txt
+          test "$(wc -l < release-assets/SHA256SUMS.txt)" = "6"
+
+      - name: Reject duplicate technical release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "technical engine release already exists: $GITHUB_REF_NAME"
+            exit 1
+          fi
+
+      - name: Create technical engine distribution
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh release create "$GITHUB_REF_NAME" release-assets/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --title "Android Release Doctor engine 0.1.3 ($GITHUB_REF_NAME)" \
+            --notes "Technical engine distribution for the Android Release Doctor GitHub Actions service. This distribution is an internal service runtime mechanism, not an installable application. Engine version: 0.1.3. Technical tag: $GITHUB_REF_NAME."

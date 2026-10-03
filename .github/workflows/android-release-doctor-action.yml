@@ -13,6 +13,8 @@ on:
 jobs:
   action:
     runs-on: ubuntu-latest
+    env:
+      ANDROID_RELEASE_DOCTOR_TEST_RUNTIME_PATH: ${{ github.workspace }}/target/release/android-release-doctor
 
     steps:
       - name: Checkout
@@ -21,11 +23,177 @@ jobs:
       - name: Verify repository-root Action metadata
         run: test -f action.yml
 
-      - name: Verify Rust toolchain
+      - name: Verify Node.js Action runtime
+        run: |
+          node --version
+          node --check src/action.js
+          node --check dist/index.js
+          cmp src/action.js dist/index.js
+
+      - name: Verify runtime manifest
+        run: node scripts/verify-runtime-manifest.cjs
+
+      - name: Validate runtime manifest against its schema
+        env:
+          MANIFEST: ${{ github.workspace }}/runtime/manifest.json
+          MANIFEST_SCHEMA: ${{ github.workspace }}/runtime/manifest.schema.json
+        run: |
+          python3 - "$MANIFEST" "$MANIFEST_SCHEMA" <<'PY'
+          import json
+          import sys
+          from jsonschema import Draft202012Validator
+
+          manifest = json.load(open(sys.argv[1], encoding="utf-8"))
+          schema = json.load(open(sys.argv[2], encoding="utf-8"))
+          errors = sorted(Draft202012Validator(schema).iter_errors(manifest), key=lambda error: list(error.path))
+          if errors:
+              for error in errors:
+                  print(error.message, file=sys.stderr)
+              raise SystemExit(1)
+          print("runtime manifest schema PASS")
+          PY
+      - name: Verify Action does not invoke Cargo
+        run: |
+          if grep -R -nE '(^|[^A-Za-z])cargo([[:space:]]|$)' action.yml dist/index.js; then
+            echo 'Action runtime must not invoke Cargo'
+            exit 1
+          fi
+
+      - name: Build prebuilt CLI for Action validation
         run: |
           cargo --version
           rustc --version
+          cargo build --release --locked -p doctor-cli
 
+      - name: Detect published production runtime
+        id: production_runtime_state
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          with open("runtime/manifest.json", encoding="utf-8") as handle:
+              manifest = json.load(handle)
+          print(f"published={str(manifest.get('status') == 'published').lower()}")
+          PY
+
+      - name: Production runtime retrieval
+        id: production_runtime
+        if: steps.production_runtime_state.outputs.published == 'true'
+        env:
+          ANDROID_RELEASE_DOCTOR_TEST_RUNTIME_PATH: ""
+        uses: ./
+        with:
+          artifact: tests/fixtures/minimal-release.apk
+          format: json
+          output: ${{ runner.temp }}/android-release-doctor-production-runtime.json
+
+      - name: Validate production runtime retrieval
+        if: steps.production_runtime_state.outputs.published == 'true'
+        env:
+          EXIT_CODE: ${{ steps.production_runtime.outputs.exit-code }}
+          REPORT_PATH: ${{ steps.production_runtime.outputs.report-path }}
+        run: |
+          test "$EXIT_CODE" = "0"
+          test -s "$REPORT_PATH"
+
+      - name: Corrupt cached runtime for digest revalidation
+        if: steps.production_runtime_state.outputs.published == 'true'
+        run: |
+          cache_root="${RUNNER_TOOL_CACHE:-${RUNNER_TEMP}}/android-release-doctor"
+          cached="$cache_root/0.1.3/linux-x64/android-release-doctor-0.1.3-linux-x64"
+          test -s "$cached"
+          printf '\x00' | dd of="$cached" bs=1 count=1 conv=notrunc status=none
+          echo "corrupted cache: $cached"
+
+      - name: Production runtime cache recovery
+        id: production_runtime_cache
+        if: steps.production_runtime_state.outputs.published == 'true'
+        env:
+          ANDROID_RELEASE_DOCTOR_TEST_RUNTIME_PATH: ""
+        uses: ./
+        with:
+          artifact: tests/fixtures/minimal-release.apk
+          format: json
+          output: ${{ runner.temp }}/android-release-doctor-production-cache.json
+
+      - name: Validate cache digest recovery
+        if: steps.production_runtime_state.outputs.published == 'true'
+        env:
+          EXIT_CODE: ${{ steps.production_runtime_cache.outputs.exit-code }}
+          REPORT_PATH: ${{ steps.production_runtime_cache.outputs.report-path }}
+        run: |
+          test "$EXIT_CODE" = "0"
+          test -s "$REPORT_PATH"
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          manifest = json.loads(Path("runtime/manifest.json").read_text(encoding="utf-8"))
+          expected = manifest["engines"]["0.1.3"]["assets"]["linux-x64"]["sha256"]
+          cache_root = Path(os.environ.get("RUNNER_TOOL_CACHE") or os.environ["RUNNER_TEMP"]) / "android-release-doctor"
+          cached = cache_root / "0.1.3" / "linux-x64" / "android-release-doctor-0.1.3-linux-x64"
+          actual = hashlib.sha256(cached.read_bytes()).hexdigest()
+          assert actual == expected, (expected, actual)
+          print("cache digest recovery PASS")
+          PY
+
+      - name: Intentional download digest mismatch rejection
+        if: steps.production_runtime_state.outputs.published == 'true'
+        env:
+          ANDROID_RELEASE_DOCTOR_TEST_RUNTIME_PATH: ""
+        run: |
+          tmp_root="${RUNNER_TEMP}/android-release-doctor-digest-mismatch"
+          rm -rf "$tmp_root"
+          mkdir -p "$tmp_root/runtime"
+          cp runtime/manifest.json "$tmp_root/runtime/manifest.json"
+          python3 - "$tmp_root/runtime/manifest.json" <<'PY'
+          import json
+          import sys
+          path = sys.argv[1]
+          manifest = json.loads(open(path, encoding="utf-8").read())
+          manifest["engines"]["0.1.3"]["assets"]["linux-x64"]["sha256"] = "0" * 64
+          with open(path, "w", encoding="utf-8") as handle:
+              json.dump(manifest, handle, indent=2)
+              handle.write("\n")
+          PY
+
+          output="$tmp_root/output"
+          stderr="$tmp_root/stderr"
+          stdout="$tmp_root/stdout"
+          set +e
+          GITHUB_ACTION_PATH="$tmp_root" \
+          GITHUB_OUTPUT="$output" \
+          GITHUB_WORKSPACE="$GITHUB_WORKSPACE" \
+          RUNNER_TOOL_CACHE="$tmp_root/cache" \
+          INPUT_ARTIFACT="$GITHUB_WORKSPACE/tests/fixtures/minimal-release.apk" \
+          INPUT_FORMAT="json" \
+          INPUT_OUTPUT="$tmp_root/report.json" \
+          node dist/index.js >"$stdout" 2>"$stderr"
+          status=$?
+          set -e
+
+          echo "mismatch test exit=$status"
+          echo "--- stdout ---"
+          cat "$stdout" || true
+          echo "--- stderr ---"
+          cat "$stderr" || true
+          echo "--- outputs ---"
+          cat "$output" || true
+
+          test "$status" = "2"
+          test -s "$stderr"
+          grep -F "runtime SHA-256 mismatch" "$stderr"
+          echo "download digest mismatch rejection PASS"
+
+      - name: Direct prebuilt engine control — automotive
+        run: |
+          set +e
+          target/release/android-release-doctor --play --play-platform automotive --format json --output "${{ runner.temp }}/android-release-doctor-direct-automotive.json" tests/fixtures/minimal-release.apk
+          status=$?
+          echo "direct automotive exit code=$status"
+          test "$status" = "0"
+          test -s "${{ runner.temp }}/android-release-doctor-direct-automotive.json"
       - name: Install Report v1 JSON Schema validator
         run: |
           python3 -m pip install --disable-pip-version-check --quiet "jsonschema==4.25.1"
@@ -300,9 +468,9 @@ jobs:
               print(f"schema PASS: {path}")
           PY
 
-      - name: Consumer-style immutable SHA Action invocation
+      - name: Consumer-style immutable-SHA Action invocation
         id: consumer
-        uses: jedaqu/android_release_doctor@b590b7678cb7eb4ca5f64fe6b85d4cf301b327ec
+        uses: jedaqu/android_release_doctor@c15600daec5cc261280c667c35d0c69d7235d041
         with:
           artifact: tests/fixtures/minimal-release.apk
           format: json

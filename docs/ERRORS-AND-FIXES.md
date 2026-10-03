@@ -1557,3 +1557,191 @@ Historical findings and their original chronological records remain unchanged; t
 - **Validation:** Replacement Action Validation Run `37149982327` — SUCCESS. Rust CI Run `37149982393` — SUCCESS.
 - **Classification:** TEST HARNESS / WORKFLOW ORDERING — not a product defect.
 - **Status:** RESOLVED.
+
+## ERR-123 — Runtime manifest validator module-format mismatch
+
+- **Milestone:** Service prebuilt CLI runtime / Action migration
+- **Type:** CI validation failure
+- **Observed:** Action Validation Run `37151630608`, PR #76, head `78ac65ea97cf2c31d33a15e1bc3006e265ffcee7`.
+- **Problem:** `scripts/verify-runtime-manifest.mjs` used CommonJS `require()` even though the `.mjs` extension makes Node execute it as an ES module. The manifest validation step therefore failed before the Action runtime tests.
+- **Correction:** Renamed the validator to `scripts/verify-runtime-manifest.cjs` and updated the validation workflow to invoke the CommonJS file. No product runtime contract, audit engine, Report v1, or Action input/output semantics were changed.
+- **Correction commits:** `84d74d41a127d764cdea712db18466eec5851d62`, `eaa565097a81d8aa2db19eb011978c44da235371`, `9e0cda66fb64968758444a95f4c76946b54ab283`.
+- **Validation:** Pending replacement CI run.
+- **Classification:** TEST HARNESS / MODULE FORMAT — not a product defect.
+- **Status:** PENDING VALIDATION.
+
+## ERR-123-A — ERR-123 resolution reconciliation
+
+- **Milestone:** Service prebuilt CLI runtime / Action migration
+- **Type:** CI validation reconciliation
+- **Evidence:** Replacement validation reached the runtime validator after the CommonJS correction; the original `.mjs`/CommonJS mismatch no longer blocks validation.
+- **Correction status:** The validator is now `scripts/verify-runtime-manifest.cjs`, and the workflow points to that file.
+- **Status:** RESOLVED.
+
+## ERR-124 — Test-only runtime override still required a production engine version
+
+- **Milestone:** Service prebuilt CLI runtime / Action migration
+- **Type:** CI validation failure
+- **Observed:** Action Validation Run `37151682706`, PR #76, head `db42faf0c668e13c7e1163e2367b0d20feebe1b3`.
+- **Problem:** The test-only `ANDROID_RELEASE_DOCTOR_TEST_RUNTIME_PATH` bypassed manifest loading but the Action still required a valid production `engine-version`. The test harness intentionally leaves `engine-version` empty, so the first functional Action invocation exited with code 2 before launching the prebuilt test binary.
+- **Correction:** Separate the test-only runtime override path from production engine-version validation. The override may use a local-test fallback version while production execution continues to require a manifest-backed semver engine version.
+- **Correction commits:** `ad09e02dbc04849f658717e64cd7d18150876b77`, `72cd21277d0beb49773cd2ae6e85d5352c981699`.
+- **Validation:** Pending replacement CI run.
+- **Classification:** TEST HARNESS / TEST-ONLY OVERRIDE — not a product runtime contract defect.
+- **Status:** PENDING VALIDATION.
+
+## ERR-125 — Action diagnostic logging inserted as a literal escape sequence
+
+- **Milestone:** Service prebuilt CLI runtime / Action migration
+- **Type:** CI validation failure
+- **Observed:** Action Validation Run `37151956082`, PR #76, head `d027a426bb4f714d99f05d9744102f0e529a7ac1`.
+- **Problem:** The diagnostic `engine exit code` logging change inserted a literal `\\n` sequence into the JavaScript source, causing `node --check` to fail before Action execution.
+- **Correction:** Replaced the literal sequence with a real source newline and synchronized `dist/index.js` with `src/action.js`.
+- **Correction commits:** `a6e4b301b8688e1d0474639378bcbef9bdb8da09`, `6ce3916f9bac0e9915dc994263665ca9fbbe4ecc`.
+- **Validation:** Pending replacement CI run.
+- **Classification:** TEST HARNESS / SOURCE GENERATION — not a product runtime contract defect.
+- **Status:** PENDING VALIDATION.
+
+## ERR-126 — Hyphenated Action input name was normalized incorrectly
+
+- **Milestone:** Service prebuilt CLI runtime / Action migration
+- **Type:** CI validation failure
+- **Observed:** Action Validation Run `37152013587`, PR #76, head `d469ed927074dca8c033f6623c2be84bec7317da`.
+- **Problem:** The custom input reader converted hyphens to underscores. GitHub exposes Action inputs through the `INPUT_{NAME}` environment convention; the `play-platform` input therefore was not read by the custom helper and fell back to `mobile`. The dedicated automotive validation then returned the mobile-path blocker result.
+- **Correction:** Preserve hyphens in the canonical environment-variable lookup while retaining an underscore fallback for compatibility.
+- **Correction commits:** `90b5477d39dc760bb72d4d73102c42eded52a6b3`, `35b2fb5ee06d90e75f474f203875e2681b3a9588`.
+- **Validation:** Pending replacement CI run.
+- **Classification:** ACTION INPUT HANDLING — product-facing Action behavior correction.
+- **Status:** PENDING VALIDATION.
+
+## Service prebuilt runtime — validation reconciliation — 2026-10-03
+
+The Action migration test-harness findings discovered during PR #76 were subsequently validated and closed by the passing Action Validation Run `37152271333` and Rust CI Run `37152271324` on head `905ff0985bb58a6e26a6f6ea3f9f0459e0e5cfe9`.
+
+- **ERR-124:** RESOLVED. Test-only runtime override now bypasses production engine-version enforcement while production execution remains manifest-backed.
+- **ERR-125:** RESOLVED. Diagnostic logging source was corrected and `src/action.js` / `dist/index.js` are synchronized.
+- **ERR-126:** RESOLVED. Hyphenated Action input names are now read correctly; the automotive/non-default Play-platform path passes.
+
+The immutable-SHA consumer validation also passed on the same Action Validation run, using the reviewed engine-runtime branch Action commit `c15600daec5cc261280c667c35d0c69d7235d041`.
+
+## ERR-127 — Engine runtime source-version pre-check depended on Cargo package resolution
+
+- **Milestone:** Service prebuilt CLI runtime / production runtime gate
+- **Type:** CI gate defect
+- **Observed:** Engine Runtime Build Run `37153642292`; all six native target jobs failed before compilation.
+- **Problem:** The source-version pre-check used `cargo pkgid -p doctor-cli`. The gate therefore depended on Cargo package resolution before the build stage, so the check failed even though the repository workspace version was `0.1.3`.
+- **Correction:** Read the authoritative workspace package version directly from the root `Cargo.toml` for the pre-check. The check still requires an exact match with the requested engine version.
+- **Correction commit:** `3d9304f4ae8e9a4a4e04463c6ccf662b4457af5f`.
+- **Validation:** Replacement gate subsequently passed the source-version pre-check on all six targets in Run `37154236737`.
+- **Status:** RESOLVED.
+
+## ERR-128 — Engine version resolver assumed every push ref was a technical tag
+
+- **Milestone:** Service prebuilt CLI runtime / controlled branch gate validation
+- **Type:** Workflow validation defect
+- **Observed:** Engine Runtime Build Run `37154142685`.
+- **Problem:** The workflow treated every `push` event as `engine-v*` and therefore parsed the service branch name as a semantic engine version.
+- **Correction:** Distinguish technical tag pushes from ordinary branch pushes; branch validation derives the workspace version instead.
+- **Correction commit:** `dbf68b0042782ca5526b0b1620138f35a9b9a365`.
+- **Validation:** The corrected resolver reached and passed the source-version check on all six targets in Run `37154236737`.
+- **Status:** RESOLVED.
+
+## ERR-129 — Workspace version extraction contained over-escaped shell pattern
+
+- **Milestone:** Service prebuilt CLI runtime / controlled branch gate validation
+- **Type:** Workflow implementation defect
+- **Observed:** Engine Runtime Build Run `37154192438`.
+- **Problem:** The first shell-based extraction correction contained an over-escaped pattern, so `sed` did not extract the version and the resolver failed before the build.
+- **Correction:** Replace the fragile pattern with an `awk` extraction scoped to `[workspace.package]`.
+- **Correction commit:** `e17481df4d9818ec5ca8c9b170ae4c7e535cb6ec`.
+- **Validation:** Run `37154236737` passed version resolution and source-version consistency on all six targets.
+- **Status:** RESOLVED.
+
+## ERR-130 — Aggregate runtime verification job lacked repository checkout
+
+- **Milestone:** Service prebuilt CLI runtime / six-asset verification
+- **Type:** Workflow implementation defect
+- **Observed:** Engine Runtime Build Run `37154427807`; all six build jobs succeeded but the aggregate verification job failed before reading the verifier source.
+- **Problem:** The publish/aggregate job downloaded the six artifacts but did not check out the repository, so `Cargo.toml` and `scripts/verify-engine-assets.cjs` were absent from the workspace.
+- **Correction:** Add an explicit `actions/checkout@v6` step before aggregate verification.
+- **Correction commit:** `2f5b99c39c7e8f0e07ba712850025ebed4f8eda8`.
+- **Validation:** The corrected aggregate job successfully loaded the six artifacts in Run `37154600728`; the next failure isolated to the verifier's SHA-256 sidecar parser.
+- **Status:** RESOLVED.
+
+## ERR-131 — Runtime SHA-256 sidecar validator matched a literal escape sequence
+
+- **Milestone:** Service prebuilt CLI runtime / six-asset verification
+- **Type:** Verification implementation defect
+- **Observed:** Engine Runtime Build Run `37154600728`.
+- **Problem:** `scripts/verify-engine-assets.cjs` used a double-escaped `\\s+` inside a JavaScript regular-expression literal, so valid sidecar lines were rejected as invalid.
+- **Correction:** Use the actual whitespace class `\s+` in the regular expression.
+- **Correction commit:** `15908f299f55af470b36177cfd59848f047b1cbf`.
+- **Validation:** Engine Runtime Build Run `37154787258` — SUCCESS. All six build jobs succeeded; the aggregate verifier independently recomputed and accepted all six binary SHA-256 values; the six-line checksum index check also passed.
+- **Status:** RESOLVED.
+
+## Service prebuilt runtime — production-gate validation reconciliation — 2026-10-03
+
+The controlled branch validation established a clean six-platform runtime build and independent artifact/hash verification before technical distribution publication.
+
+- Validation run: `37154787258` — SUCCESS.
+- Linux x64: `44e7a0fc87fdbed57962acf7bf7d6491f4987bc2316cb8c652d0a4576f794760`
+- Linux ARM64: `6f96be49ca16e0cf3562f3809a412c4c243fd0feffa091246b006088a52bc48d`
+- macOS x64: `513f11988de3faf41e7d62cd1132693271bc25c32bd3ebdd2a80b2659c68116e`
+- macOS ARM64: `197475e7e59d331db2e5aa934c0c8919d87dc19cb42008d68db54ee33179752c`
+- Windows x64: `392380402e5e2c157ef190b5a97efe69847ef02334a664be965a552b09752331`
+- Windows ARM64: `0e772cb45a4c589691cac1d4017859cd9f469bba88cd477a78657d2ae885b103`
+- The verifier also confirmed six non-empty runtime assets and built a six-entry `SHA256SUMS.txt`.
+- These hashes are the hashes of the packaged runtime binaries, not the SHA-256 digests of the surrounding GitHub Actions artifact ZIPs.
+- Technical release publication and `runtime/manifest.json` publication remain separate gates and were not performed by the branch validation run.
+- **Status:** BUILD + HASH VERIFICATION RESOLVED / TECHNICAL PUBLICATION PENDING.
+
+
+## ERR-132 — Technical runtime release included a preexisting Action bundle file
+
+- Milestone: Service prebuilt CLI runtime / publication correction
+- Type: Distribution packaging defect
+- Observed: Technical release engine-v0.1.3-build2.
+- Problem: The matrix packaging step uploaded the existing repository dist/*, so the technical release included an unrelated index.js Action bundle.
+- Correction: Package runtime assets from a clean runtime-dist/ directory.
+- Correction commit: 06de19ac1d8cd26fb3a9a68090f870451228024b.
+- Validation: Replacement release engine-v0.1.3-build3 contains exactly six runtime binaries, six sidecars, and SHA256SUMS.txt; no index.js asset.
+- Status: RESOLVED.
+
+## ERR-133 — Superseded technical runtime publication
+
+- Milestone: Service prebuilt CLI runtime / publication correction
+- Type: Release-state reconciliation
+- Problem: engine-v0.1.3-build2 was published before the packaging correction.
+- Correction: Publish immutable corrected distribution engine-v0.1.3-build3 and activate only that tag in runtime/manifest.json.
+- Validation: Manifest is published, published=true, and references engine-v0.1.3-build3.
+- Status: RESOLVED / SUPERSEDED ARTIFACT PRESERVED.
+
+## ERR-134 — Production digest-mismatch validation inherited the CI test-runtime override
+
+- Milestone: Service prebuilt CLI runtime / production retrieval validation
+- Type: Test isolation defect
+- Observed: Action Validation Runs 37156089068 and 37156355103.
+- Problem: The job-level ANDROID_RELEASE_DOCTOR_TEST_RUNTIME_PATH remained active during the intentional production download-mismatch test.
+- Correction: Explicitly clear the test-runtime override for production retrieval, cache recovery, and digest-mismatch validation.
+- Correction commit: 5096bc489f9046489b0fcf5acde82caad7745909.
+- Validation: Action Validation Run 37156477423 passed production retrieval, cache digest recovery, and intentional download digest-mismatch rejection.
+- Status: RESOLVED.
+
+## Production runtime closure reconciliation — 2026-10-03
+
+The production runtime gate is now closed on the service branch.
+
+- Corrected technical release: engine-v0.1.3-build3.
+- Technical engine workflow Run 37155822288 — SUCCESS.
+- The published release contains six runtime binaries, six SHA-256 sidecars, and SHA256SUMS.txt; no unrelated Action bundle file is included.
+- Runtime manifest is published and points to engine-v0.1.3-build3.
+- Action Validation Run 37156477423 — SUCCESS.
+- Rust CI Run 37156477520 — SUCCESS.
+- Production runtime retrieval succeeded through the published manifest/release.
+- Corrupted-cache recovery succeeded after digest revalidation forced a re-download.
+- Intentional download digest-mismatch rejection succeeded with exit code 2.
+- Published binary SHA-256 values: linux-x64 44e7a0fc87fdbed57962acf7bf7d6491f4987bc2316cb8c652d0a4576f794760; linux-arm64 6f96be49ca16e0cf3562f3809a412c4c243fd0feffa091246b006088a52bc48d; macos-x64 513f11988de3faf41e7d62cd1132693271bc25c32bd3ebdd2a80b2659c68116e; macos-arm64 197475e7e59d331db2e5aa934c0c8919d87dc19cb42008d68db54ee33179752c; windows-x64 b59553dc65671bd3eb8607fd362c7b2fa548e8f698b185fb0fcbd8a104ce5a1d; windows-arm64 a249422d7ed73f106127a7defa8851fe205027cfc18decdf9f44040f25e2d988.
+
+The original engine-v0.1.3 tag remains immutable at its historical failed-gate commit. The superseded engine-v0.1.3-build2 distribution is not referenced by the production manifest. The active production runtime is build3.
+
+Disposition: PRODUCTION RUNTIME GATE CLOSED.

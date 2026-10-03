@@ -214,3 +214,73 @@ Validated:
 - public repository scan found no tested restricted commercial/private-boundary terms.
 
 M0.16 introduced no production-code changes. Its engineering disposition is CLOSED after the final readiness gate. Historical evidence remains preserved and the public/private boundary remains unchanged.
+
+
+## Service runtime migration — active branch state — 2026-10-03
+
+The current branch is migrating the public Action from consumer-side Cargo execution to a Node 24 Action that retrieves a prebuilt Rust engine runtime.
+
+Branch-local architecture:
+
+- repository-root `action.yml` using Node 24;
+- `runtime/manifest.json` selecting the engine version and exact platform asset;
+- SHA-256 verification before execution and on cached binaries;
+- runner-local runtime cache;
+- six declared runtime targets: Linux x64, Linux ARM64, macOS x64, macOS ARM64, Windows x64, and Windows ARM64;
+- technical engine distribution tags of the form `engine-v<version>` as transport/versioning mechanisms only;
+- `.github/workflows/engine-runtime.yml` builds the six native binaries and gates publication on asset and checksum validation.
+
+The six-target matrix is an intentional service architecture decision: the Action is designed to be multiplatform, while each consumer runner retrieves only the runtime matching its own operating system and architecture.
+
+The production runtime gate remains open until a real technical engine distribution is built, its six SHA-256 values are independently verified, the manifest leaves `draft`, and real consumer retrieval through the published runtime path is validated.
+
+This section describes branch-local active work. It does not retroactively rewrite the historical main-state sections above.
+
+## Service runtime validation — six-platform build/hash gate — 2026-10-03
+
+The controlled runtime build/hash gate has now been validated independently on the active service branch.
+
+- Validation Run: `37154787258` — SUCCESS.
+- All six native build jobs succeeded.
+- Aggregate job downloaded all six GitHub Actions artifacts and independently verified the packaged binary files against their sidecar SHA-256 values.
+- Exactly six entries were accepted into `SHA256SUMS.txt`.
+
+Verified binary SHA-256 values:
+
+| Target | Binary SHA-256 |
+|---|---|
+| Linux x64 | `44e7a0fc87fdbed57962acf7bf7d6491f4987bc2316cb8c652d0a4576f794760` |
+| Linux ARM64 | `6f96be49ca16e0cf3562f3809a412c4c243fd0feffa091246b006088a52bc48d` |
+| macOS x64 | `513f11988de3faf41e7d62cd1132693271bc25c32bd3ebdd2a80b2659c68116e` |
+| macOS ARM64 | `197475e7e59d331db2e5aa934c0c8919d87dc19cb42008d68db54ee33179752c` |
+| Windows x64 | `392380402e5e2c157ef190b5a97efe69847ef02334a664be965a552b09752331` |
+| Windows ARM64 | `0e772cb45a4c589691cac1d4017859cd9f469bba88cd477a78657d2ae885b103` |
+
+These are the hashes of the six packaged runtime binaries themselves. The GitHub Actions artifact ZIP digests are separate transport-level digests and are not used as the runtime manifest values.
+
+The temporary branch-only trigger used to exercise this gate has been removed from `.github/workflows/engine-runtime.yml`. The production workflow remains tag-driven for technical publication.
+
+### Remaining production publication gate
+
+The six-platform binary build and independent hash verification are closed.
+
+Still open:
+
+- technical publication under the intended `engine-v0.1.3` distribution tag;
+- population of `runtime/manifest.json` from the verified six hashes and transition from `draft` to `published`;
+- real Action download/cache execution and intentional digest-mismatch rejection;
+- final reconciliation into `main`;
+- second audit and final checkpoint before merge/closure.
+
+The existing public `engine-v0.1.3` tag currently points to the earlier failed gate commit; it was intentionally not moved during this validation because the technical distribution was not yet published. A corrected immutable publication reference must be established before the manifest can be activated.
+
+
+## Service runtime migration closure on branch — 2026-10-03
+
+The Node 24 prebuilt-runtime migration is validated through the complete production runtime path.
+
+- Six native targets remain the active multiplatform runtime architecture.
+- Runtime manifest is published and points to engine-v0.1.3-build3.
+- Real Action retrieval, cache digest revalidation, and intentional download digest mismatch rejection are validated.
+- Permanent Rust CI and Action Validation both pass on branch head 5096bc489f9046489b0fcf5acde82caad7745909.
+- The canonical main HEAD and post-merge CI results will be reconciled immediately after PR #76 integration.
