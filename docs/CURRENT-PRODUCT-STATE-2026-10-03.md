@@ -273,3 +273,14 @@ Still open:
 - second audit and final checkpoint before merge/closure.
 
 The existing public `engine-v0.1.3` tag currently points to the earlier failed gate commit; it was intentionally not moved during this validation because the technical distribution was not yet published. A corrected immutable publication reference must be established before the manifest can be activated.
+
+
+## Service runtime migration closure on branch — 2026-10-03
+
+The Node 24 prebuilt-runtime migration is validated through the complete production runtime path.
+
+- Six native targets remain the active multiplatform runtime architecture.
+- Runtime manifest is published and points to engine-v0.1.3-build3.
+- Real Action retrieval, cache digest revalidation, and intentional download digest mismatch rejection are validated.
+- Permanent Rust CI and Action Validation both pass on branch head 5096bc489f9046489b0fcf5acde82caad7745909.
+- The canonical main HEAD and post-merge CI results will be reconciled immediately after PR #76 integration.
