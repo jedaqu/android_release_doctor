@@ -2,7 +2,7 @@
 
 Open-source, local-first tool for auditing Android APK and AAB releases before publication.
 
-> **Status:** M0.9 Block 1 public-release onboarding validated and closed. The current release target is `v0.1.3`; publication is tag-driven.
+> **Status:** Product validation completed. The primary product surface is the reusable GitHub Action and its underlying CLI/audit engine. Historical binary distribution and public-release packaging are not part of the active product surface.
 
 Android Release Doctor inspects the **artifact you are actually going to distribute**, can compare it with the Android application Gradle configuration, and can apply a versioned Google Play submission-readiness profile.
 
@@ -406,28 +406,14 @@ The action preserves the CLI exit semantics:
 
 When `output` is supplied, the report is written by the existing CLI. A blocking audit therefore still leaves the generated report available for later workflow steps, for example with `continue-on-error: true` and a subsequent upload/inspection step.
 
-The Block 3 action currently executes the repository CLI through Cargo. The runner therefore needs a usable Rust/Cargo toolchain. Prebuilt binary distribution is intentionally deferred to the later distribution/release-packaging block.
+The Block 3 action executes the repository CLI through Cargo. The runner therefore needs a usable Rust/Cargo toolchain.
 
 
-## M0.8 Block 4 scope — Distribution / Release Packaging
+## Product boundary
 
-The current distribution workflow packages the validated CLI for three x86_64 hosts:
+Android Release Doctor is the audit engine plus its reusable GitHub Action interface. The product is the evidence-producing workflow that inspects APK/AAB artifacts, optionally compares static Gradle configuration, applies the configured Play readiness profile, and returns a stable report and exit code.
 
-- Linux;
-- Windows;
-- macOS Intel.
-
-The release build uses:
-
-```text
-cargo build --locked --release -p doctor-cli
-```
-
-Each archive contains the CLI binary, `LICENSE`, and `README.md`. Every packaged binary is checked with `--version` and `--help`, and release archives are accompanied by `SHA256SUMS`.
-
-Release publication is tag-driven. A tag such as `v0.1.0` must match the workspace package version exactly. Branch and pull-request runs validate packaging but do not publish a GitHub Release.
-
-The initial distribution matrix intentionally excludes ARM64, package-manager integrations, installers, OS code signing/notarization, binary signatures, provenance/attestations, and automatic version bumping.
+The repository does not define a public binary-release, publication, or downloadable package contract.\n\nCargo package version metadata remains for the Rust workspace and CLI build; it is not a public release identifier or publication contract.
 
 ## Still not implemented
 
@@ -454,9 +440,9 @@ The ledger is the project's incremental memory of previously discovered failures
 - reduce unnecessary trial-and-error changes;
 - connect new failures with their historical context before choosing a correction.
 
-Every newly discovered failure or audit finding that represents an error, defect, CI failure, or corrective event must be appended to that ledger with its cause, correction, validation evidence, and status. Historical entries must not be renumbered or rewritten.
-
 This principle is mandatory for the project's working discipline and complements the sequence: **ledger review → audit → scoped changes → second audit → Actions → follow-up → individual correction → new validation → checkpoint**.
+
+Every newly discovered failure or audit finding that represents an error, defect, CI failure, or corrective event must be appended to that ledger with its cause, correction, validation evidence, and status. Historical entries must not be renumbered or rewritten.
 
 ## Development
 
@@ -472,7 +458,7 @@ cargo run -p doctor-cli -- --play tests/fixtures/minimal-release.apk
 
 ## Design principles
 
-- **Local-first:** release artifacts and project configuration are inspected locally.
+- **Local-first:** artifacts and project configuration are inspected locally.
 - **Evidence before conclusions:** findings are tied to observable project or artifact evidence.
 - **Actionable diagnostics:** warnings explain what to change.
 - **Versioned rules:** Android and Play requirements change, so rules are explicit and replaceable.
@@ -484,114 +470,29 @@ cargo run -p doctor-cli -- --play tests/fixtures/minimal-release.apk
 
 Apache License 2.0.
 
-
 ## Getting started
 
-Android Release Doctor is distributed as native x86_64 packages for Linux, Windows, and Intel macOS. The current release target is **v0.1.3**. Publication is tag-driven: the release tag must match the workspace version exactly.
+The primary product surface is the reusable GitHub Action. The CLI is the underlying audit engine and can also be run locally from the repository.
 
-### Supported downloads
+### Local CLI
 
-The `v0.1.3` package names are:
-
-| Platform | Package |
-|---|---|
-| Linux x86_64 | `android-release-doctor-v0.1.3-linux-x86_64.tar.gz` |
-| Windows x86_64 | `android-release-doctor-v0.1.3-windows-x86_64.zip` |
-| macOS Intel x86_64 | `android-release-doctor-v0.1.3-macos-x86_64.tar.gz` |
-
-The release also includes `SHA256SUMS`.
-
-ARM64 packages, installers, package-manager integrations, and OS signing/notarization are not part of this release boundary.
-
-### Installation and first check
-
-Download the package for your host from the GitHub Release and extract it.
-
-Linux/macOS:
+Run the audit engine from source:
 
 ```bash
-./android-release-doctor --version
-./android-release-doctor --help
+cargo run -p doctor-cli -- tests/fixtures/minimal-release.apk
+cargo run -p doctor-cli -- --project tests/fixtures/project-release tests/fixtures/minimal-release.apk
+cargo run -p doctor-cli -- --play tests/fixtures/minimal-release.apk
+cargo run -p doctor-cli -- --format json --output report.json tests/fixtures/minimal-release.apk
 ```
 
-Windows PowerShell:
-
-```powershell
-.\android-release-doctor.exe --version
-.\android-release-doctor.exe --help
-```
-
-The version command should report:
-
-```text
-android-release-doctor 0.1.3
-```
-
-To verify the downloaded archive with SHA-256:
-
-Linux:
+For a normal local development validation:
 
 ```bash
-sha256sum -c SHA256SUMS
+cargo check --workspace
+cargo test --workspace
+cargo fmt --all -- --check
+cargo clippy --workspace --all-targets -- -D warnings
 ```
-
-macOS:
-
-```bash
-shasum -a 256 -c SHA256SUMS
-```
-
-Windows PowerShell:
-
-```powershell
-Get-FileHash .\android-release-doctor-v0.1.3-windows-x86_64.zip -Algorithm SHA256
-```
-
-Compare the calculated hash with the corresponding entry in `SHA256SUMS`.
-
-### First APK/AAB audit
-
-Audit the artifact you are actually going to distribute:
-
-```bash
-android-release-doctor app-release.apk
-```
-
-For an APK/AAB release-readiness check:
-
-```bash
-android-release-doctor --play app-release.aab
-```
-
-To compare the final artifact with the Android application module's static Gradle configuration:
-
-```bash
-android-release-doctor --project app/ app-release.apk
-```
-
-The default output is human-readable text.
-
-### JSON report for CI and tooling
-
-Report v1 is the stable machine-readable contract:
-
-```bash
-android-release-doctor --format json --output report.json app-release.apk
-```
-
-The report can be consumed by CI or other tooling without changing the audit engine.
-
-### Exit codes
-
-The process exit code is part of the CLI contract:
-
-| Exit code | Meaning |
-|---:|---|
-| `0` | Audit completed without blockers |
-| `1` | One or more blockers were found |
-| `2` | Usage, input/audit, output-file, or internal error |
-
-A MANUAL-REVIEW finding does not by itself produce exit code `1`.
 
 ### GitHub Action
 
@@ -600,20 +501,18 @@ The reusable action is available from:
 ```yaml
 - uses: actions/checkout@v6
 
-- name: Audit Android release
+- name: Audit Android artifact
   id: release-doctor
-  uses: jedaqu/android-release-doctor/.github/actions/android-release-doctor@v0.1.3
+  uses: jedaqu/android_release_doctor/.github/actions/android-release-doctor@main
   with:
     artifact: app/build/outputs/apk/release/app-release.apk
     format: json
     output: android-release-doctor-report.json
 ```
 
-This example pins the Action to release tag `v0.1.3`.
+For supply-chain pinning, replace `@main` with a reviewed commit SHA.
 
-The current action executes the validated CLI through Cargo on the runner, so the runner must provide a usable Rust/Cargo toolchain. Its inputs are `artifact`, `project`, `play`, `play-platform`, `format`, and `output`; its outputs are `exit-code` and `report-path`.
-
-A future binary-backed Action distribution is outside the current `v0.1.3` release boundary.
+The action executes the validated CLI through Cargo on the runner, so the runner must provide a usable Rust/Cargo toolchain. Its inputs are `artifact`, `project`, `play`, `play-platform`, `format`, and `output`; its outputs are `exit-code` and `report-path`.
 
 ### What the tool does not claim
 
@@ -626,4 +525,3 @@ Current explicit boundaries include:
 - AAB signing is not treated as equivalent to final generated APK signing verification;
 - unsupported cryptographic algorithms remain explicit unsupported/manual-review evidence.
 
-See `CHANGELOG.md` for the first public-release capability summary and known boundaries.
