@@ -48,23 +48,23 @@ The current validated implementation includes:
 
 ## Current hardening gaps
 
-The following are open product-hardening candidates and are intentionally not represented as completed capabilities:
-
-### Action validation on current main
-
-M0.11-A integrated the existing bounded Action self-test into the `main` push and `main` pull-request trigger paths. The pull-request-to-`main` validation for PR #55 completed successfully on Run `37127173597`, covering success, blocker, Report v1, output-path, exit-code, and operational-error behavior.
-
-### Action dependency reproducibility
-
-The reusable Action now invokes Cargo with `--locked`, matching the locked dependency-resolution boundary enforced by the normal Rust CI. This correction was validated on Action Run `37127173597` and Rust CI Run `37127173629` before integration.
+The remaining items below are product-hardening boundaries, not completed capabilities:
 
 ### Play policy semantics
 
-The Play profile currently evaluates target API and 16 KiB evidence using deterministic artifact rules. A separate product audit is still required for policy-context nuances that depend on submission context, dates, extensions, or other Play Console state that the artifact cannot prove.
+The Play profile evaluates target API and 16 KiB evidence using deterministic artifact rules. Policy-context nuances that depend on submission context, dates, extensions, or Play Console state remain outside artifact-only proof.
 
 ### AAB final-APK equivalence
 
-AAB inspection remains intentionally bounded. Bundle contents can be inspected, but raw AAB ZIP offsets do not prove the final generated APK's native packaging alignment. The current manual-review boundary is intentional.
+Bundle contents can be inspected, but raw AAB ZIP offsets do not prove the final generated APK's native packaging alignment. This remains a manual-review boundary.
+
+### Report v1 schema validation
+
+The product emits Report v1 JSON and maintains the published JSON Schema. Direct runtime validation of every generated report against the schema file is a future validation improvement.
+
+### External consumer black-box coverage
+
+The reusable Action is validated in-repository. A separate external consumer repository remains a future validation improvement.
 
 ## Current documentation hierarchy
 
@@ -123,3 +123,28 @@ Permanent workflow files after consolidation:
 - `.github/workflows/android-release-doctor-action.yml`
 
 The historical M0.8 workflow path is no longer present in the current repository tree. Historical execution records may still remain visible in GitHub Actions history.
+
+
+## M0.13 — Product Validation Expansion (CLOSED)
+
+M0.13 expanded the permanent Action validation without changing production audit behavior.
+
+The validated suite now includes:
+- APK success and Play-blocker paths;
+- AAB input;
+- project input;
+- combined project + Play input;
+- non-default Play platform;
+- operational error;
+- invalid `play` input;
+- invalid output format;
+- invalid Play platform;
+- CR/LF output-path rejection.
+
+Automated Rust/CLI validation remains:
+- 115 doctor-core unit tests;
+- 25 doctor-core integration tests;
+- 7 CLI integration tests;
+- Build, Format and Clippy all passing.
+
+M0.13 was integrated by PR #60 at main commit `70fc650cfad15974f06e5b58b5ab3efcdfcf28f9`, followed by successful post-merge Rust CI Run `37132758711` and Action Validation Run `37132758674`.
