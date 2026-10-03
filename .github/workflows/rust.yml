@@ -4,39 +4,9 @@ on:
   push:
     branches:
       - main
-      - m0-foundation
-      - m05-package-alignment
-      - m05-crypto-signatures
-      - m06-block1-state-hardening
-      - m06-block2-signing-evidence
-      - m06-block3-verification-hardening
-      - m06-block4-signer-error-isolation
-      - m06-block5-verification-completeness
-      - m07-block1-crypto-coverage
-      - m07-block2-rotation-semantics
-      - m07-block3-v31-verification
-      - m07-block4-integration-completeness
-      - m08-block1-report-contract
-      - m08-block2-cli-output-contract
-      - m08-block3-github-action
   pull_request:
     branches:
       - main
-      - m04-elf-signing
-      - m05-package-alignment
-      - m05-crypto-signatures
-      - m06-block1-state-hardening
-      - m06-block2-signing-evidence
-      - m06-block3-verification-hardening
-      - m06-block4-signer-error-isolation
-      - m07-block1-crypto-coverage
-      - m07-block2-rotation-semantics
-      - m07-block3-v31-verification
-      - m07-block4-integration-completeness
-
-      - m08-block1-report-contract
-      - m08-block2-cli-output-contract
-      - m08-block3-github-action
 
 env:
   CARGO_TERM_COLOR: always

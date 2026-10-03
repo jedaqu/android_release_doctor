@@ -472,7 +472,7 @@ Apache License 2.0.
 
 ## Getting started
 
-The primary product surface is the reusable GitHub Action. The CLI is the underlying audit engine and can also be run locally from the repository.
+The primary product surfaces are the reusable GitHub Action and the local CLI, backed by the shared Rust audit engine.
 
 ### Local CLI
 
@@ -503,7 +503,7 @@ The reusable action is available from:
 
 - name: Audit Android artifact
   id: release-doctor
-  uses: jedaqu/android_release_doctor/.github/actions/android-release-doctor@main
+  uses: jedaqu/android_release_doctor/.github/actions/android-release-doctor@<reviewed-ref>
   with:
     artifact: app/build/outputs/apk/release/app-release.apk
     format: json
