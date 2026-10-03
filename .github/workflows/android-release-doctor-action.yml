@@ -79,6 +79,186 @@ jobs:
           assert report["summary"]["blockers"] > 0
           PY
 
+
+      - name: AAB path
+        id: aab
+        uses: ./.github/actions/android-release-doctor
+        with:
+          artifact: tests/fixtures/minimal-release.aab
+          format: json
+          output: ${{ runner.temp }}/android-release-doctor-aab.json
+
+      - name: Validate AAB report
+        env:
+          EXIT_CODE: ${{ steps.aab.outputs.exit-code }}
+          REPORT_PATH: ${{ steps.aab.outputs.report-path }}
+        run: |
+          test "$EXIT_CODE" = "0"
+          test -s "$REPORT_PATH"
+          python3 - "$REPORT_PATH" <<'PY'
+          import json
+          import sys
+          with open(sys.argv[1], "r", encoding="utf-8") as handle:
+              report = json.load(handle)
+          assert report["artifact"]["kind"] == "AAB"
+          assert report["schema_version"] == "1.0"
+          PY
+
+      - name: Project path
+        id: project
+        uses: ./.github/actions/android-release-doctor
+        with:
+          artifact: tests/fixtures/minimal-release.apk
+          project: tests/fixtures/project-release
+          format: json
+          output: ${{ runner.temp }}/android-release-doctor-project.json
+
+      - name: Validate project report
+        env:
+          EXIT_CODE: ${{ steps.project.outputs.exit-code }}
+          REPORT_PATH: ${{ steps.project.outputs.report-path }}
+        run: |
+          test "$EXIT_CODE" = "0"
+          test -s "$REPORT_PATH"
+          python3 - "$REPORT_PATH" <<'PY'
+          import json
+          import sys
+          with open(sys.argv[1], "r", encoding="utf-8") as handle:
+              report = json.load(handle)
+          assert report["project"]["application_id"] == "com.example.doctorfixture"
+          assert report["project"]["target_sdk"] == 35
+          PY
+
+      - name: Project and Play path
+        id: project_play
+        continue-on-error: true
+        uses: ./.github/actions/android-release-doctor
+        with:
+          artifact: tests/fixtures/minimal-release.apk
+          project: tests/fixtures/project-release
+          play: "true"
+          play-platform: mobile
+          format: json
+          output: ${{ runner.temp }}/android-release-doctor-project-play.json
+
+      - name: Validate project and Play result
+        env:
+          EXIT_CODE: ${{ steps.project_play.outputs.exit-code }}
+          REPORT_PATH: ${{ steps.project_play.outputs.report-path }}
+        run: |
+          test "$EXIT_CODE" = "1"
+          test -s "$REPORT_PATH"
+          python3 - "$REPORT_PATH" <<'PY'
+          import json
+          import sys
+          with open(sys.argv[1], "r", encoding="utf-8") as handle:
+              report = json.load(handle)
+          assert report["project"]["application_id"] == "com.example.doctorfixture"
+          assert report["play"]["platform"] == "mobile"
+          assert report["summary"]["blockers"] > 0
+          PY
+
+      - name: Non-default Play platform
+        id: automotive
+        uses: ./.github/actions/android-release-doctor
+        with:
+          artifact: tests/fixtures/minimal-release.apk
+          play: "true"
+          play-platform: automotive
+          format: json
+          output: ${{ runner.temp }}/android-release-doctor-automotive.json
+
+      - name: Validate non-default Play platform
+        env:
+          EXIT_CODE: ${{ steps.automotive.outputs.exit-code }}
+          REPORT_PATH: ${{ steps.automotive.outputs.report-path }}
+        run: |
+          test "$EXIT_CODE" = "0"
+          test -s "$REPORT_PATH"
+          python3 - "$REPORT_PATH" <<'PY'
+          import json
+          import sys
+          with open(sys.argv[1], "r", encoding="utf-8") as handle:
+              report = json.load(handle)
+          assert report["play"]["platform"] == "automotive"
+          PY
+
+      - name: Invalid play input
+        id: invalid_play
+        continue-on-error: true
+        uses: ./.github/actions/android-release-doctor
+        with:
+          artifact: tests/fixtures/minimal-release.apk
+          play: "maybe"
+          format: json
+          output: ${{ runner.temp }}/android-release-doctor-invalid-play.json
+
+      - name: Validate invalid play input
+        env:
+          EXIT_CODE: ${{ steps.invalid_play.outputs.exit-code }}
+          REPORT_PATH: ${{ steps.invalid_play.outputs.report-path }}
+        run: |
+          test "$EXIT_CODE" = "2"
+          test -z "$REPORT_PATH"
+          test ! -e "${{ runner.temp }}/android-release-doctor-invalid-play.json"
+
+      - name: Invalid output format
+        id: invalid_format
+        continue-on-error: true
+        uses: ./.github/actions/android-release-doctor
+        with:
+          artifact: tests/fixtures/minimal-release.apk
+          format: yaml
+          output: ${{ runner.temp }}/android-release-doctor-invalid-format.json
+
+      - name: Validate invalid output format
+        env:
+          EXIT_CODE: ${{ steps.invalid_format.outputs.exit-code }}
+          REPORT_PATH: ${{ steps.invalid_format.outputs.report-path }}
+        run: |
+          test "$EXIT_CODE" = "2"
+          test "$REPORT_PATH" = "${{ runner.temp }}/android-release-doctor-invalid-format.json"
+          test ! -e "${{ runner.temp }}/android-release-doctor-invalid-format.json"
+
+      - name: Invalid Play platform
+        id: invalid_platform
+        continue-on-error: true
+        uses: ./.github/actions/android-release-doctor
+        with:
+          artifact: tests/fixtures/minimal-release.apk
+          play: "true"
+          play-platform: invalid-platform
+          format: json
+          output: ${{ runner.temp }}/android-release-doctor-invalid-platform.json
+
+      - name: Validate invalid Play platform
+        env:
+          EXIT_CODE: ${{ steps.invalid_platform.outputs.exit-code }}
+          REPORT_PATH: ${{ steps.invalid_platform.outputs.report-path }}
+        run: |
+          test "$EXIT_CODE" = "2"
+          test "$REPORT_PATH" = "${{ runner.temp }}/android-release-doctor-invalid-platform.json"
+          test ! -e "${{ runner.temp }}/android-release-doctor-invalid-platform.json"
+
+      - name: Invalid output path
+        id: invalid_output
+        continue-on-error: true
+        uses: ./.github/actions/android-release-doctor
+        with:
+          artifact: tests/fixtures/minimal-release.apk
+          format: json
+          output: |
+            ${{ runner.temp }}/android-release-doctor-invalid
+            path.json
+
+      - name: Validate invalid output path
+        env:
+          EXIT_CODE: ${{ steps.invalid_output.outputs.exit-code }}
+          REPORT_PATH: ${{ steps.invalid_output.outputs.report-path }}
+        run: |
+          test "$EXIT_CODE" = "2"
+          test -z "$REPORT_PATH"
+
       - name: Operational error path
         id: error
         continue-on-error: true
