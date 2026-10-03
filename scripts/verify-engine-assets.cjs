@@ -33,7 +33,7 @@ for (const [key, file] of Object.entries(assets)) {
   }
 
   const expectedLine = fs.readFileSync(sidecarPath, "utf8").trim();
-  const match = expectedLine.match(/^([0-9a-fA-F]{64})\\s+/);
+  const match = expectedLine.match(/^([0-9a-fA-F]{64})\s+/);
   if (!match) {
     throw new Error(`invalid SHA-256 sidecar for ${key}: ${file}.sha256`);
   }
