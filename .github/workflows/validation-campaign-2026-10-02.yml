@@ -181,7 +181,7 @@ jobs:
           assert r["artifact"]["kind"]=="AAB"
           f=next(x for x in r["findings"] if x["rule_id"]=="PLAY-005")
           assert f["severity"]=="MANUAL-REVIEW",f["severity"]
-          assert any(x["path"]=="feature/manifest/AndroidManifest.xml" for x in r["inventory"]["entries"])
+          assert "feature/manifest/AndroidManifest.xml" in r["inventory"]["entries"]
           print("AAB boundary ok")
           PY
 
