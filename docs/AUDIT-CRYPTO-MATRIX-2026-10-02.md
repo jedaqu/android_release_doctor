@@ -103,3 +103,54 @@ For every supported positive cell, a tampered or malformed signature must not ve
 ## Authorization boundary
 
 No production behavior change is authorized until this pre-audit is used as the implementation/test boundary. Documentation updates must reflect the verified implementation rather than expanding implementation scope.
+
+## Implementation and Validation
+
+PR: #51
+
+Final test head:
+`f19027efc783c1c4f9c8061332f39c1fbb9c82af`
+
+The campaign added public cryptographic test vectors containing only certificates and signatures:
+
+- RSA 2048 × `0x0101`..`0x0104`
+- RSA 4096 × `0x0101`..`0x0104`
+- RSA 8192 × `0x0101`..`0x0104`
+- ECDSA P-256 × `0x0201`
+- ECDSA P-384 × `0x0201`, `0x0202`
+- ECDSA P-521 × `0x0201`, `0x0202`
+
+The regression tests additionally cover:
+
+- positive verification for every supported new cell;
+- tampered signature rejection;
+- truncated/malformed signature rejection;
+- RSA/ECDSA key-family mismatch rejection;
+- DSA `0x0301` remaining Unsupported;
+- unknown algorithm IDs remaining Unsupported;
+- RSA-1024 PSS/SHA-512 remaining Unsupported;
+- ECDSA P-256 SHA-512 remaining Unsupported;
+- explicit RSA key-size boundaries.
+
+### Campaign corrections
+
+1. CI run `37086633173` exposed a test-fixture parser defect: the pre-section `MESSAGE=` line was ignored. The parser was corrected; no production verification logic changed.
+2. CI run `37086707555` exposed three corrupted/truncated public RSA fixture values introduced during manual fixture insertion:
+   - RSA-4096 `0x0102`
+   - RSA-8192 `0x0101`
+   - RSA-8192 `0x0104`
+   The values were restored from the locally generated OpenSSL-verified source fixtures. No production verification logic changed.
+3. CI run `37086980714` on final head `f19027efc783c1c4f9c8061332f39c1fbb9c82af` passed Build, Test, Format and Clippy.
+
+### Second Audit
+
+- The production verifier files were not modified by this campaign.
+- All new fixture material contains public certificates and signatures only; no private keys were committed.
+- The tested matrix matches the intended classical algorithm boundary in v2/v3.
+- DSA, v3.2/PQC, AAB cryptographic signing, and runtime Android trust simulation remain outside the supported verification scope.
+
+## Final Result
+
+**PASS — Complete classical cryptographic matrix is now explicitly tested and documented.**
+
+The verifier's existing implementation capability is now demonstrated by deterministic positive and negative tests across the supported RSA and ECDSA cells. No new cryptographic algorithm capability was added in this campaign.
