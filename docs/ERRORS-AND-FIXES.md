@@ -1499,3 +1499,28 @@ Current status of ERR-118: **RESOLVED AND INTEGRATED**.
 ### Documentation rule
 
 From this point forward, a later validated disposition that changes the practical status of an older finding must be recorded here as an append-only reconciliation entry. Historical observations remain immutable; current status is determined by the latest validated disposition.
+
+
+---
+
+## ERR-120 — M0.11-A Action Cargo resolution hardening
+
+- **Milestone:** M0.11-A / Action hardening
+- **Type:** Reproducibility / CI execution hardening
+- **Finding:** The reusable Action invoked Cargo without `--locked`, while the normal Rust CI enforced locked dependency resolution.
+- **Authorized correction:** Add `--locked` to the existing Cargo invocation only.
+- **Implementation:** Commit `8c7d39d124348e33836b626d31fe366b5add80b7`.
+- **Validation:** Action self-test Run `37127054717` completed successfully; Rust CI Run `37127054763` completed successfully.
+- **Scope verification:** No Rust source, dependency declaration, Report v1, Play, crypto, native/16 KiB, or release changes.
+- **Status:** RESOLVED ON PR #55 / PENDING MERGE.
+
+## ERR-121 — M0.11-A current-main Action validation gap
+
+- **Milestone:** M0.11-A / Action hardening
+- **Type:** Validation coverage
+- **Finding:** The reusable Action self-test workflow was restricted to historical M0.8 branch/PR triggers and did not exercise the current `main` product path.
+- **Authorized correction:** Add `main` to the existing workflow's push and pull-request branch triggers without changing the job graph or test cases.
+- **Implementation:** Commit `ecddd620a80df455a68f9dca9827dbbb249a32dd`.
+- **Validation:** Action self-test Run `37127054717` passed success, blocker, Report v1, output-path, exit-code, and operational-error validation.
+- **Status:** RESOLVED ON PR #55 / PENDING MERGE.
+
