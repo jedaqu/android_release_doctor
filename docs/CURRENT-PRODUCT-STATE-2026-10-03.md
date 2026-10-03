@@ -5,11 +5,12 @@
 - Repository: `jedaqu/android_release_doctor`
 - Visibility: public
 - Default branch: `main`
-- Current validated main HEAD: `4dc8c27a3efbce45f5930d2b3b35baa33ffc39ea`
+- Current main HEAD: `efa46e530cda020e50b7db3aecc017dae1c9e78a`
+- Current validated product/code baseline: `4dc8c27a3efbce45f5930d2b3b35baa33ffc39ea`
 - M0.16 readiness-gate baseline: `1298c73d3019799e76cf7ace9706c8f880a98d72`
 - M0.11-A implementation integration baseline: `8e9f639ce71ce06e211718187d3079a5d68458f5`
 
-The exact moving `main` SHA is recorded by the latest validated checkpoint. This document records the current validated product state and is updated as validated work advances.
+The exact moving `main` SHA is recorded by the latest validated checkpoint. The validated product/code baseline is kept distinct from later docs-only reconciliation commits. This document records the current product state and is updated as validated work advances.
 
 This document is the current-state companion to the historical milestone/audit records. It is not a replacement for them.
 
@@ -17,8 +18,7 @@ This document is the current-state companion to the historical milestone/audit r
 
 Android Release Doctor is a GitHub Actions service.
 
-Its primary consumer interface is the reusable GitHub composite Action:
-`action.yml` at the repository root.
+Its primary consumer interface is the repository-root Node 24 JavaScript GitHub Action defined by `action.yml`.
 
 The service is backed by:
 
@@ -46,7 +46,22 @@ The current validated implementation includes:
 - supported v3 proof-of-rotation verification;
 - explicit unsupported/manual-review boundaries rather than guessed passes;
 - Report v1 JSON and stable CLI exit semantics;
-- a reusable GitHub Action with success, blocker, and operational-error self-test coverage exercised by the Action validation workflow targeting `main`.
+- the repository-root Node 24 GitHub Action with success, blocker, and operational-error self-test coverage exercised by the Action validation workflow targeting `main`;
+- a published prebuilt engine runtime resolved from `runtime/manifest.json`, verified by SHA-256, with six intentional OS/architecture targets.
+
+## Current runtime/distribution state
+
+The current production runtime state is CLOSED and is not a branch-local migration in progress.
+
+- Action execution: repository-root Node 24 JavaScript Action; no consumer-side Cargo execution.
+- Engine version: `0.1.3`, selected from the published runtime manifest unless overridden by the supported `engine-version` input.
+- Active technical distribution: `engine-v0.1.3-build3`.
+- Runtime targets: Linux x64, Linux ARM64, macOS x64, macOS ARM64, Windows x64, Windows ARM64.
+- Runtime integrity: immutable manifest SHA-256 verification on download and cached-runtime reuse.
+- Production runtime retrieval, cache recovery, and intentional digest-mismatch rejection: validated.
+- PR #76 integrated the runtime architecture at product/code baseline `4dc8c27a3efbce45f5930d2b3b35baa33ffc39ea`.
+- PR #77 is a docs-only post-merge reconciliation; final repository `main` is `efa46e530cda020e50b7db3aecc017dae1c9e78a`.
+- Final post-PR #77 Rust CI `37157332204` and Action Validation `37157332205`: SUCCESS.
 
 ## Current hardening gaps
 
@@ -100,9 +115,9 @@ Public repository documentation must contain only material appropriate for the p
 
 
 
-## M0.12 — Consolidated product surface (CLOSED)
+## Historical milestone record — M0.12 — Consolidated product surface (CLOSED)
 
-The maintained product surface is explicitly consolidated into:
+At M0.12, the maintained product surface was explicitly consolidated into:
 
 - `doctor-core`: the reusable Rust audit engine;
 - `doctor-cli`: the local command-line interface;
@@ -216,9 +231,9 @@ Validated:
 M0.16 introduced no production-code changes. Its engineering disposition is CLOSED after the final readiness gate. Historical evidence remains preserved and the public/private boundary remains unchanged.
 
 
-## Service runtime migration — active branch state — 2026-10-03
+## Historical branch-state record — Service runtime migration — 2026-10-03
 
-The current branch is migrating the public Action from consumer-side Cargo execution to a Node 24 Action that retrieves a prebuilt Rust engine runtime.
+At this stage, the service branch was migrating the public Action from consumer-side Cargo execution to a Node 24 Action that retrieves a prebuilt Rust engine runtime. This section is historical branch-state evidence; it does not describe the current `main` execution model.
 
 Branch-local architecture:
 
@@ -234,9 +249,9 @@ The six-target matrix is an intentional service architecture decision: the Actio
 
 The production runtime gate remains open until a real technical engine distribution is built, its six SHA-256 values are independently verified, the manifest leaves `draft`, and real consumer retrieval through the published runtime path is validated.
 
-This section describes branch-local active work. It does not retroactively rewrite the historical main-state sections above.
+This section records what was branch-local active work at that point. It does not retroactively rewrite the historical main-state sections above.
 
-## Service runtime validation — six-platform build/hash gate — 2026-10-03
+## Historical branch-state validation — six-platform build/hash gate — 2026-10-03
 
 The controlled runtime build/hash gate has now been validated independently on the active service branch.
 
@@ -275,7 +290,7 @@ Still open:
 The existing public `engine-v0.1.3` tag currently points to the earlier failed gate commit; it was intentionally not moved during this validation because the technical distribution was not yet published. A corrected immutable publication reference must be established before the manifest can be activated.
 
 
-## Service runtime migration closure on branch — 2026-10-03
+## Historical branch closure record — Service runtime migration — 2026-10-03
 
 The Node 24 prebuilt-runtime migration is validated through the complete production runtime path.
 
@@ -286,7 +301,7 @@ The Node 24 prebuilt-runtime migration is validated through the complete product
 - The canonical main HEAD and post-merge CI results will be reconciled immediately after PR #76 integration.
 
 
-## Final main integration reconciliation — 2026-10-03
+## PR #76 main integration — historical closure record — 2026-10-03
 
 PR #76 was merged into main at merge commit 4dc8c27a3efbce45f5930d2b3b35baa33ffc39ea.
 
@@ -303,4 +318,23 @@ The main-state current truth is now:
 - Production cache revalidation and digest mismatch rejection are validated.
 - The six-target multiplatform service runtime remains intentional and unchanged.
 
-This section closes the branch-to-main reconciliation for PR #76.
+This section records the historical branch-to-main reconciliation for PR #76. It is preserved as engineering history and is not the final current-state baseline.
+
+
+## Final post-PR #77 reconciliation — 2026-10-03
+
+PR #77 completed the final documentation reconciliation after the PR #76 runtime integration.
+
+- PR #77 — “Finalize main integration reconciliation” — MERGED.
+- Final main merge commit: `efa46e530cda020e50b7db3aecc017dae1c9e78a`.
+- Rust CI Run `37157332204` — SUCCESS on the final main commit.
+- Action Validation Run `37157332205` — SUCCESS on the final main commit.
+- The production runtime distribution remains `engine-v0.1.3-build3`.
+- The runtime manifest remains published and resolves the six official targets with immutable SHA-256 values.
+- No product-code or runtime-behavior change was introduced by PR #77; it completed the post-merge documentation/current-state reconciliation.
+
+The canonical current-state baseline is therefore:
+
+`main @ efa46e530cda020e50b7db3aecc017dae1c9e78a`
+
+The prebuilt-runtime migration, technical publication, main integration, post-merge validation, and documentation reconciliation are CLOSED. Any next work begins as a new product phase and must not reopen the completed runtime migration without new evidence of a defect.
