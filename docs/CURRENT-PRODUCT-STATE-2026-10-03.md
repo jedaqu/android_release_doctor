@@ -5,7 +5,7 @@
 - Repository: `jedaqu/android_release_doctor`
 - Visibility: public
 - Default branch: `main`
-- Current main HEAD: `57c32a9b21b76e4229462ff0c7ddd6dd47a1f199`
+- Current main HEAD: `325154034f965de475d4214959d9608c60f82de8`
 - M0.11-A implementation integration baseline: `8e9f639ce71ce06e211718187d3079a5d68458f5`
 
 The exact moving `main` SHA is recorded by the latest validated checkpoint. This document records the current validated product state and is updated as validated work advances.
@@ -16,9 +16,10 @@ This document is the current-state companion to the historical milestone/audit r
 
 Android Release Doctor is currently the following product surface:
 
-1. Reusable GitHub composite Action:
-   `.github/actions/android-release-doctor/action.yml`
-2. CLI:
+1. CLI: `android-release-doctor`
+2. Rust audit engine: `crates/doctor-core`
+3. Reusable GitHub composite Action: `.github/actions/android-release-doctor/action.yml`
+4. Report v1 machine-readable output:
    `android-release-doctor`
 3. Rust audit engine:
    APK/AAB inventory, manifest/component evidence, static Gradle cross-checks, Play readiness, signing evidence, classical cryptographic verification, proof-of-rotation evidence, and native/16 KiB inspection.
@@ -26,7 +27,8 @@ Android Release Doctor is currently the following product surface:
    `schema_version = "1.0"`
    with the public JSON Schema at `docs/report-schema-v1.0.json`.
 5. Public technical fixtures and engineering evidence.
-6. `docs/ERRORS-AND-FIXES.md` as append-only engineering memory.
+6. Permanent CI validation for the maintained product surface.
+7. `docs/ERRORS-AND-FIXES.md` as append-only engineering memory.
 
 Historical binary distribution, public-release packaging, and publication workflows are not part of the active product surface.
 
@@ -73,7 +75,7 @@ For understanding the repository today, use this order:
 
 1. `README.md` — public product entry point.
 2. `docs/CURRENT-PRODUCT-STATE-2026-10-03.md` — current product truth.
-3. Latest checkpoint / validated audit for the active work block (`M0.11-A` closed after PR #56 documentation reconciliation).
+3. Latest checkpoint / validated audit for the active work block (`M0.12 product surface consolidation is the current active technical block; M0.11-A remains closed.).
 4. `docs/ERRORS-AND-FIXES.md` — append-only chronology plus later reconciliations.
 5. Historical milestone/pre-audit/second-audit documents — engineering history, not current product contract.
 
@@ -93,3 +95,17 @@ Historical audit observations are preserved. Later status changes are recorded t
 
 Public repository documentation must contain only material appropriate for the public project surface. Private continuity, passwords, credentials, commercial strategy, pricing, private metrics, and internal conversations remain outside this repository.
 
+
+
+## M0.12 — Consolidated product surface
+
+The maintained product surface is explicitly consolidated into:
+
+- `doctor-core`: the reusable Rust audit engine;
+- `doctor-cli`: the local command-line interface;
+- `.github/actions/android-release-doctor/action.yml`: the reusable GitHub composite Action;
+- Report v1 and `docs/report-schema-v1.0.json`;
+- fixtures/regression tests supporting the maintained behavior;
+- permanent CI validation through `.github/workflows/rust.yml` and `.github/workflows/android-release-doctor-action.yml`.
+
+Development campaigns, stress tests, temporary fixture-harvest workflows, and historical validation workflows are not current product interfaces.
