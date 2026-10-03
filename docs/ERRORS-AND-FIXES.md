@@ -1524,3 +1524,22 @@ From this point forward, a later validated disposition that changes the practica
 - **Validation:** Action self-test Run `37127054717` passed success, blocker, Report v1, output-path, exit-code, and operational-error validation.
 - **Status:** RESOLVED ON PR #55 / PENDING MERGE.
 
+
+
+---
+
+## M0.11-A — post-integration reconciliation — 2026-10-03
+
+PR #55 was merged successfully into `main`.
+
+- PR: #55
+- Merge commit: `8e9f639ce71ce06e211718187d3079a5d68458f5`
+- A — Action Cargo resolution: integrated with `--locked`.
+- B — Action validation: integrated into `main` push and `main` pull-request trigger paths.
+- Action validation evidence: Run `37127173597` — SUCCESS.
+- Rust CI evidence before integration: Run `37127173629` — SUCCESS (Build/Test/Format/Clippy).
+- Second audit: `docs/AUDIT-M0.11-A-ACTION-HARDENING-SECOND-AUDIT-2026-10-03.md`.
+
+ERR-120 and ERR-121 are therefore **RESOLVED AND INTEGRATED**.
+
+Historical findings and their original chronological records remain unchanged; this entry records the later disposition.
