@@ -2714,7 +2714,10 @@ mod tests {
         sections
     }
 
-    fn matrix_certificate_der(sections: &std::collections::BTreeMap<String, String>, section: &str) -> Vec<u8> {
+    fn matrix_certificate_der(
+        sections: &std::collections::BTreeMap<String, String>,
+        section: &str,
+    ) -> Vec<u8> {
         let pem_text = sections
             .get(section)
             .unwrap_or_else(|| panic!("missing certificate section {section}"));
@@ -2745,9 +2748,7 @@ mod tests {
 
                 verify_signature_bytes(algorithm_id, &certificate, message, &signature)
                     .unwrap_or_else(|error| {
-                        panic!(
-                            "RSA {bits} algorithm 0x{algorithm_id:04x} should verify: {error}"
-                        )
+                        panic!("RSA {bits} algorithm 0x{algorithm_id:04x} should verify: {error}")
                     });
 
                 let mut tampered = signature.clone();
@@ -2778,14 +2779,13 @@ mod tests {
             ("p384", vec![0x0201_u32, 0x0202]),
             ("p521", vec![0x0201_u32, 0x0202]),
         ] {
-            let certificate = matrix_certificate_der(&sections, &format!("CERTIFICATE_PEM:{curve}"));
+            let certificate =
+                matrix_certificate_der(&sections, &format!("CERTIFICATE_PEM:{curve}"));
 
             for algorithm_id in supported_algorithms {
                 let hex = sections
                     .get(&format!("{algorithm_id:04x}:{curve}"))
-                    .unwrap_or_else(|| {
-                        panic!("missing {curve} algorithm 0x{algorithm_id:04x}")
-                    });
+                    .unwrap_or_else(|| panic!("missing {curve} algorithm 0x{algorithm_id:04x}"));
                 let signature = decode_hex_bytes(hex);
 
                 verify_signature_bytes(algorithm_id, &certificate, message, &signature)
@@ -2812,13 +2812,8 @@ mod tests {
             }
 
             if curve == "p256" {
-                let error = verify_signature_bytes(
-                    0x0202,
-                    &certificate,
-                    message,
-                    &[],
-                )
-                .expect_err("ECDSA/SHA-512 P-256 must remain unsupported");
+                let error = verify_signature_bytes(0x0202, &certificate, message, &[])
+                    .expect_err("ECDSA/SHA-512 P-256 must remain unsupported");
                 assert!(error
                     .to_string()
                     .starts_with("UNSUPPORTED: ECDSA SHA-512 signer curve"));
@@ -2834,20 +2829,14 @@ mod tests {
         let rsa_certificate = matrix_certificate_der(&rsa_sections, "CERTIFICATE_PEM");
         let p256_certificate = matrix_certificate_der(&ec_sections, "CERTIFICATE_PEM:p256");
 
-        let rsa_with_ec = verify_signature_bytes(
-            0x0101,
-            &p256_certificate,
-            message,
-            &[],
-        )
-        .expect_err("RSA algorithm with EC key must fail");
+        let rsa_with_ec = verify_signature_bytes(0x0101, &p256_certificate, message, &[])
+            .expect_err("RSA algorithm with EC key must fail");
         assert!(rsa_with_ec
             .to_string()
             .contains("RSA signature algorithm is paired with a non-RSA"));
 
-        let ecdsa_with_rsa =
-            verify_signature_bytes(0x0201, &rsa_certificate, message, &[])
-                .expect_err("ECDSA algorithm with RSA key must fail");
+        let ecdsa_with_rsa = verify_signature_bytes(0x0201, &rsa_certificate, message, &[])
+            .expect_err("ECDSA algorithm with RSA key must fail");
         assert!(ecdsa_with_rsa
             .to_string()
             .contains("ECDSA signature algorithm is paired with a non-EC"));
@@ -2867,9 +2856,7 @@ mod tests {
 
     #[test]
     fn crypto_matrix_algorithm_ids_and_key_boundaries_are_explicit() {
-        for algorithm_id in [
-            0x0101_u32, 0x0102, 0x0103, 0x0104, 0x0201, 0x0202,
-        ] {
+        for algorithm_id in [0x0101_u32, 0x0102, 0x0103, 0x0104, 0x0201, 0x0202] {
             assert!(supported_signature_algorithm(algorithm_id).is_some());
         }
         assert!(supported_signature_algorithm(0x0301).is_none());
