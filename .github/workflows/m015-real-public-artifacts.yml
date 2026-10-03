@@ -1,0 +1,116 @@
+name: Android Release Doctor — Real Public Artifact Test (temporary)
+
+on:
+  push:
+    branches:
+      - test/m015-real-public-artifacts-2026-10-03
+  workflow_dispatch:
+
+jobs:
+  real-artifacts:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Download public release artifacts
+        run: |
+          set -euo pipefail
+          mkdir -p ${{ runner.temp }}/adr-real
+
+          curl -fL --retry 3 -o ${{ runner.temp }}/adr-real/meshtastic.apk             "https://github.com/meshtastic/Meshtastic-Android/releases/download/v2.8.1/androidApp-google-release.apk"
+          curl -fL --retry 3 -o ${{ runner.temp }}/adr-real/meshtastic.aab             "https://github.com/meshtastic/Meshtastic-Android/releases/download/v2.8.1/androidApp-google-release.aab"
+          curl -fL --retry 3 -o ${{ runner.temp }}/adr-real/reticulum.apk             "https://github.com/FreeTAKTeam/reticulum_mobile_emergency_management/releases/download/1.2.3/reticulum-mobile-emergency-management-v1.2.3-release.apk"
+          curl -fL --retry 3 -o ${{ runner.temp }}/adr-real/reticulum.aab             "https://github.com/FreeTAKTeam/reticulum_mobile_emergency_management/releases/download/1.2.3/reticulum-mobile-emergency-management-v1.2.3-release.aab"
+
+      - name: Verify published SHA-256 values
+        run: |
+          set -euo pipefail
+          cd ${{ runner.temp }}/adr-real
+
+          test "$(sha256sum meshtastic.apk | cut -d' ' -f1)" = "7f42735fd1c17c7e6a64d3a48ae1e4baf22cab778e994eb8331d3b993e42eb00"
+          test "$(sha256sum meshtastic.aab | cut -d' ' -f1)" = "c8872f888b3260e3b50bed1fd97c8f04873e7658589da680e69e7cc2738de8d3"
+          test "$(sha256sum reticulum.apk | cut -d' ' -f1)" = "113cb66c09be900a0096fdf6d95f90c86c13fc6f5fcbf1a27f15986196320638"
+          test "$(sha256sum reticulum.aab | cut -d' ' -f1)" = "2e55481d0cbb5e1fc87eaa5dd7bf9907c7071ab0767d29b989fb35cb35529a4e"
+
+      - name: Install Report v1 JSON Schema validator
+        run: |
+          python3 -m pip install --disable-pip-version-check --quiet "jsonschema==4.25.1"
+
+      - name: Test public APK and AAB artifacts
+        env:
+          SCHEMA: ${{ github.workspace }}/docs/report-schema-v1.0.json
+          ROOT: ${{ runner.temp }}/adr-real
+        run: |
+          set -euo pipefail
+          python3 - "$SCHEMA" "$ROOT" <<'PY'
+          import json
+          import subprocess
+          import sys
+          from pathlib import Path
+          from jsonschema import Draft202012Validator
+
+          schema_path = Path(sys.argv[1])
+          root = Path(sys.argv[2])
+          schema = json.loads(schema_path.read_text(encoding="utf-8"))
+          validator = Draft202012Validator(schema)
+
+          cases = [
+              ("Meshtastic Android v2.8.1", root / "meshtastic.apk", "APK"),
+              ("Meshtastic Android v2.8.1", root / "meshtastic.aab", "AAB"),
+              ("Reticulum Mobile Emergency Management v1.2.3", root / "reticulum.apk", "APK"),
+              ("Reticulum Mobile Emergency Management v1.2.3", root / "reticulum.aab", "AAB"),
+          ]
+
+          for label, artifact, expected_kind in cases:
+              report = root / (artifact.stem + ".report.json")
+              result = subprocess.run(
+                  [
+                      "cargo", "run", "--locked", "--quiet",
+                      "--manifest-path", "Cargo.toml",
+                      "-p", "doctor-cli", "--",
+                      "--format", "json",
+                      "--output", str(report),
+                      str(artifact),
+                  ],
+                  text=True,
+                  capture_output=True,
+              )
+
+              print(f"=== {label} :: {artifact.name} ===")
+              print(f"exit={result.returncode}")
+              print(result.stdout)
+              if result.stderr:
+                  print(result.stderr, file=sys.stderr)
+
+              if result.returncode not in (0, 1):
+                  raise SystemExit(f"unexpected product exit code {result.returncode} for {artifact.name}")
+
+              data = json.loads(report.read_text(encoding="utf-8"))
+              errors = sorted(validator.iter_errors(data), key=lambda error: list(error.path))
+              if errors:
+                  for error in errors:
+                      print(f"schema error: {error.message}", file=sys.stderr)
+                  raise SystemExit(f"Report v1 schema validation failed for {artifact.name}")
+
+              assert data["schema_version"] == "1.0"
+              assert data["artifact"]["kind"] == expected_kind
+              assert "findings" in data
+              assert "summary" in data
+
+              print(
+                  "RESULT",
+                  json.dumps(
+                      {
+                          "artifact": artifact.name,
+                          "kind": data["artifact"]["kind"],
+                          "exit_code": result.returncode,
+                          "summary": data["summary"],
+                          "application": data["application"],
+                      },
+                      sort_keys=True,
+                  ),
+              )
+              print("REPORT V1 SCHEMA: PASS")
+      
