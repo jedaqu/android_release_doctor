@@ -141,7 +141,8 @@ jobs:
       - name: Intentional download digest mismatch rejection
         if: steps.production_runtime_state.outputs.published == 'true'
         run: |
-          tmp_root="$(mktemp -d)"
+          tmp_root="${RUNNER_TEMP}/android-release-doctor-digest-mismatch"
+          rm -rf "$tmp_root"
           mkdir -p "$tmp_root/runtime"
           cp runtime/manifest.json "$tmp_root/runtime/manifest.json"
           python3 - "$tmp_root/runtime/manifest.json" <<'PY'
@@ -156,7 +157,8 @@ jobs:
           PY
 
           output="$tmp_root/output"
-          error="$tmp_root/error"
+          stderr="$tmp_root/stderr"
+          stdout="$tmp_root/stdout"
           set +e
           GITHUB_ACTION_PATH="$tmp_root" \
           GITHUB_OUTPUT="$output" \
@@ -165,13 +167,21 @@ jobs:
           INPUT_ARTIFACT="$GITHUB_WORKSPACE/tests/fixtures/minimal-release.apk" \
           INPUT_FORMAT="json" \
           INPUT_OUTPUT="$tmp_root/report.json" \
-          node dist/index.js >"$tmp_root/stdout" 2>"$error"
+          node dist/index.js >"$stdout" 2>"$stderr"
           status=$?
           set -e
 
+          echo "mismatch test exit=$status"
+          echo "--- stdout ---"
+          cat "$stdout" || true
+          echo "--- stderr ---"
+          cat "$stderr" || true
+          echo "--- outputs ---"
+          cat "$output" || true
+
           test "$status" = "2"
-          test -s "$output"
-          grep -F "exit-code=2" "$output"
+          test -s "$stderr"
+          grep -F "runtime SHA-256 mismatch" "$stderr"
           echo "download digest mismatch rejection PASS"
 
       - name: Direct prebuilt engine control — automotive
