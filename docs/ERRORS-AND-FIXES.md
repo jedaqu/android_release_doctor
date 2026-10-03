@@ -1388,3 +1388,16 @@ From this point forward, a historical `OPEN` entry is not considered an active w
 - **Validation:** Actions run 37084235187 passed Build, 110 tests, Format, and Clippy. Second audit confirmed the correction was limited to `crates/doctor-core/src/lib.rs`.
 - **Status:** RESOLVED
 - **Remaining related audit:** NATIVE-003 ZIP packaging semantics and a full mixed-ABI oracle matrix still require explicit validation.
+
+## ERR-115 — NATIVE-003 applied 16 KB ZIP packaging compatibility to 32-bit ABIs
+
+- **Milestone:** Post-stress real-artifact validation / full ABI matrix
+- **Type:** Semantic specification defect
+- **Observed:** NATIVE-003 evaluated every native `.so` ZIP entry uniformly. A misaligned `armeabi-v7a` or `x86` library could therefore trigger the 16 KB ZIP-packaging rule even though the applicable 16 KB compatibility guidance is scoped to the relevant 64-bit device ABIs.
+- **Root cause:** NATIVE-003 did not reuse the 64-bit ABI applicability boundary already established for PLAY-005 and NATIVE-002.
+- **Authoritative verification:** Current Android Developers guidance identifies `arm64-v8a` and `x86_64` for the 16 KB shared-library alignment check and provides `zipalign -c -P 16 -v 4` for APK ZIP alignment verification. For AABs, the bundle alignment configuration and generated APK require separate verification. citeturn343849search3turn343849search4
+- **Correction:** Scope NATIVE-003 to `arm64-v8a` and `x86_64`; keep 32-bit/non-target ABI entries in inventory without allowing them to trigger NATIVE-003.
+- **Correction PR:** #50
+- **Implementation commit:** `9e5f0d47932c0ab235f32e1e26f79245ee50b980`
+- **Validation:** Rust CI run `37085412571` on corrected head `9e3945fee5f2ee9c3dc4aaec5e227c70ddf8a282` passed Build, Test, Format, and Clippy. The explicit ABI matrix covered 64-bit good/bad, 32-bit 4 KiB, mixed APKs, compressed libraries, AAB stored/compressed, and mixed AAB cases.
+- **Status:** RESOLVED
