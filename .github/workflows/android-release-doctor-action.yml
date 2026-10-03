@@ -33,6 +33,25 @@ jobs:
       - name: Verify runtime manifest
         run: node scripts/verify-runtime-manifest.mjs
 
+      - name: Validate runtime manifest against its schema
+        env:
+          MANIFEST: ${{ github.workspace }}/runtime/manifest.json
+          MANIFEST_SCHEMA: ${{ github.workspace }}/runtime/manifest.schema.json
+        run: |
+          python3 - "$MANIFEST" "$MANIFEST_SCHEMA" <<'PY'
+          import json
+          import sys
+          from jsonschema import Draft202012Validator
+
+          manifest = json.load(open(sys.argv[1], encoding="utf-8"))
+          schema = json.load(open(sys.argv[2], encoding="utf-8"))
+          errors = sorted(Draft202012Validator(schema).iter_errors(manifest), key=lambda error: list(error.path))
+          if errors:
+              for error in errors:
+                  print(error.message, file=sys.stderr)
+              raise SystemExit(1)
+          print("runtime manifest schema PASS")
+          PY
       - name: Verify Action does not invoke Cargo
         run: |
           if grep -R -nE '(^|[^A-Za-z])cargo([[:space:]]|$)' action.yml dist/index.js; then
