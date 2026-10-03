@@ -1557,3 +1557,15 @@ Historical findings and their original chronological records remain unchanged; t
 - **Validation:** Replacement Action Validation Run `37149982327` — SUCCESS. Rust CI Run `37149982393` — SUCCESS.
 - **Classification:** TEST HARNESS / WORKFLOW ORDERING — not a product defect.
 - **Status:** RESOLVED.
+
+## ERR-123 — Runtime manifest validator module-format mismatch
+
+- **Milestone:** Service prebuilt CLI runtime / Action migration
+- **Type:** CI validation failure
+- **Observed:** Action Validation Run `37151630608`, PR #76, head `78ac65ea97cf2c31d33a15e1bc3006e265ffcee7`.
+- **Problem:** `scripts/verify-runtime-manifest.mjs` used CommonJS `require()` even though the `.mjs` extension makes Node execute it as an ES module. The manifest validation step therefore failed before the Action runtime tests.
+- **Correction:** Renamed the validator to `scripts/verify-runtime-manifest.cjs` and updated the validation workflow to invoke the CommonJS file. No product runtime contract, audit engine, Report v1, or Action input/output semantics were changed.
+- **Correction commits:** `84d74d41a127d764cdea712db18466eec5851d62`, `eaa565097a81d8aa2db19eb011978c44da235371`, `9e0cda66fb64968758444a95f4c76946b54ab283`.
+- **Validation:** Pending replacement CI run.
+- **Classification:** TEST HARNESS / MODULE FORMAT — not a product defect.
+- **Status:** PENDING VALIDATION.
