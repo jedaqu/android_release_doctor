@@ -164,3 +164,19 @@ Historical pre-audit document remains unchanged. Current-state statements on `ma
 **M0.11-A A+B — VALIDATED ON PR #55; INTEGRATION PENDING.**
 
 No additional implementation is authorized or required by this second audit.
+
+
+---
+
+## Post-integration reconciliation — 2026-10-03
+
+M0.11-A Candidates A and B were integrated by PR #55.
+
+- Merge commit: `8e9f639ce71ce06e211718187d3079a5d68458f5`
+- PR #55 state: merged.
+- Main baseline after integration: `8e9f639ce71ce06e211718187d3079a5d68458f5`.
+- Action self-test against the PR targeting `main`: Run `37127173597` — SUCCESS.
+- Rust CI validation: Run `37127173629` — SUCCESS.
+- ERR-120 / ERR-121: RESOLVED AND INTEGRATED.
+
+This append-only section records current disposition without rewriting the historical second-audit observations.
