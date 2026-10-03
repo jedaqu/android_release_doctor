@@ -131,3 +131,12 @@ The production runtime gate is now closed.
 ## Final checkpoint disposition before main integration — 2026-10-03
 
 No production runtime gate remains open. PR #76 is the remaining integration vehicle. The next controlled operation is merge into main, followed by post-merge CI and current-state reconciliation.
+
+
+## Final main checkpoint closure — 2026-10-03
+
+PR #76 is integrated into main at 4dc8c27a3efbce45f5930d2b3b35baa33ffc39ea.
+
+Post-merge Rust CI 37156909779 and Action Validation 37156909843 both succeeded. The runtime migration is therefore closed at the main integration boundary.
+
+Final disposition: CLOSED.
