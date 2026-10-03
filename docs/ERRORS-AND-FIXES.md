@@ -1694,3 +1694,54 @@ The controlled branch validation established a clean six-platform runtime build 
 - These hashes are the hashes of the packaged runtime binaries, not the SHA-256 digests of the surrounding GitHub Actions artifact ZIPs.
 - Technical release publication and `runtime/manifest.json` publication remain separate gates and were not performed by the branch validation run.
 - **Status:** BUILD + HASH VERIFICATION RESOLVED / TECHNICAL PUBLICATION PENDING.
+
+
+## ERR-132 — Technical runtime release included a preexisting Action bundle file
+
+- Milestone: Service prebuilt CLI runtime / publication correction
+- Type: Distribution packaging defect
+- Observed: Technical release engine-v0.1.3-build2.
+- Problem: The matrix packaging step uploaded the existing repository dist/*, so the technical release included an unrelated index.js Action bundle.
+- Correction: Package runtime assets from a clean runtime-dist/ directory.
+- Correction commit: 06de19ac1d8cd26fb3a9a68090f870451228024b.
+- Validation: Replacement release engine-v0.1.3-build3 contains exactly six runtime binaries, six sidecars, and SHA256SUMS.txt; no index.js asset.
+- Status: RESOLVED.
+
+## ERR-133 — Superseded technical runtime publication
+
+- Milestone: Service prebuilt CLI runtime / publication correction
+- Type: Release-state reconciliation
+- Problem: engine-v0.1.3-build2 was published before the packaging correction.
+- Correction: Publish immutable corrected distribution engine-v0.1.3-build3 and activate only that tag in runtime/manifest.json.
+- Validation: Manifest is published, published=true, and references engine-v0.1.3-build3.
+- Status: RESOLVED / SUPERSEDED ARTIFACT PRESERVED.
+
+## ERR-134 — Production digest-mismatch validation inherited the CI test-runtime override
+
+- Milestone: Service prebuilt CLI runtime / production retrieval validation
+- Type: Test isolation defect
+- Observed: Action Validation Runs 37156089068 and 37156355103.
+- Problem: The job-level ANDROID_RELEASE_DOCTOR_TEST_RUNTIME_PATH remained active during the intentional production download-mismatch test.
+- Correction: Explicitly clear the test-runtime override for production retrieval, cache recovery, and digest-mismatch validation.
+- Correction commit: 5096bc489f9046489b0fcf5acde82caad7745909.
+- Validation: Action Validation Run 37156477423 passed production retrieval, cache digest recovery, and intentional download digest-mismatch rejection.
+- Status: RESOLVED.
+
+## Production runtime closure reconciliation — 2026-10-03
+
+The production runtime gate is now closed on the service branch.
+
+- Corrected technical release: engine-v0.1.3-build3.
+- Technical engine workflow Run 37155822288 — SUCCESS.
+- The published release contains six runtime binaries, six SHA-256 sidecars, and SHA256SUMS.txt; no unrelated Action bundle file is included.
+- Runtime manifest is published and points to engine-v0.1.3-build3.
+- Action Validation Run 37156477423 — SUCCESS.
+- Rust CI Run 37156477520 — SUCCESS.
+- Production runtime retrieval succeeded through the published manifest/release.
+- Corrupted-cache recovery succeeded after digest revalidation forced a re-download.
+- Intentional download digest-mismatch rejection succeeded with exit code 2.
+- Published binary SHA-256 values: linux-x64 44e7a0fc87fdbed57962acf7bf7d6491f4987bc2316cb8c652d0a4576f794760; linux-arm64 6f96be49ca16e0cf3562f3809a412c4c243fd0feffa091246b006088a52bc48d; macos-x64 513f11988de3faf41e7d62cd1132693271bc25c32bd3ebdd2a80b2659c68116e; macos-arm64 197475e7e59d331db2e5aa934c0c8919d87dc19cb42008d68db54ee33179752c; windows-x64 b59553dc65671bd3eb8607fd362c7b2fa548e8f698b185fb0fcbd8a104ce5a1d; windows-arm64 a249422d7ed73f106127a7defa8851fe205027cfc18decdf9f44040f25e2d988.
+
+The original engine-v0.1.3 tag remains immutable at its historical failed-gate commit. The superseded engine-v0.1.3-build2 distribution is not referenced by the production manifest. The active production runtime is build3.
+
+Disposition: PRODUCTION RUNTIME GATE CLOSED.
