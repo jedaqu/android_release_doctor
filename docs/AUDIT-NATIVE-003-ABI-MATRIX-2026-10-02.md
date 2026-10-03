@@ -68,3 +68,58 @@ No production-code change is authorized by this pre-audit document until these s
 ## Audit status
 
 PRE-AUDIT COMPLETE — implementation may proceed within the scope above.
+
+
+## Implementation
+
+Implementation commit: `9e5f0d47932c0ab235f32e1e26f79245ee50b980`
+
+The production change in `crates/doctor-core/src/lib.rs` restricts NATIVE-003 evaluation to the existing 64-bit applicability predicate `arm64-v8a` / `x86_64`. Inventory continues to retain all native ABIs.
+
+The test expansion in `crates/doctor-core/tests/fixtures.rs` added explicit oracle coverage for:
+
+- 64-bit stored bad/good alignment for `arm64-v8a` and `x86_64`
+- 32-bit `armeabi-v7a` and `x86` at 4 KiB
+- mixed 32-bit/64-bit APKs
+- compressed 64-bit APK libraries
+- 64-bit stored AAB libraries
+- 32-bit stored AAB libraries
+- 64-bit compressed AAB libraries
+- mixed 32-bit/64-bit AABs
+
+## Validation
+
+First validation run `37085320293` on the initial implementation head:
+
+- Build: PASS
+- Test: PASS — 111 unit tests and 25 fixture/integration tests
+- Format: FAIL — rustfmt only, no semantic issue
+- Clippy: skipped by the workflow gate
+
+The rustfmt diagnostics were limited to four layout changes in `crates/doctor-core/tests/fixtures.rs`. No production logic changed.
+
+Second validation run `37085412571` on corrected head `9e3945fee5f2ee9c3dc4aaec5e227c70ddf8a282`:
+
+- Build: PASS
+- Test: PASS
+- Format: PASS
+- Clippy: PASS
+
+The complete NATIVE-003 ABI matrix therefore passed the repository CI gates on the corrected head.
+
+## Second Audit
+
+A second audit of the changed production/test scope confirms:
+
+1. NATIVE-003 now evaluates only `arm64-v8a` and `x86_64`.
+2. 32-bit/non-target entries remain inventoried but cannot produce a 16 KB NATIVE-003 warning or manual-review result.
+3. Existing APK stored/compressed behavior is preserved.
+4. Existing AAB evidence limitation is preserved for applicable 64-bit stored libraries.
+5. The new tests assert finding ID and severity for each matrix class.
+6. No unrelated production subsystem was changed.
+
+## Final Result
+
+**PASS — NATIVE-003 ABI scope and the explicit full ABI oracle matrix are validated.**
+
+NATIVE-003 is now aligned with the same 64-bit applicability boundary already established for NATIVE-002 and PLAY-005. This does not close the broader 16 KB campaign; future work must still cover any remaining semantic gaps and real-artifact validation outside this bounded correction.
