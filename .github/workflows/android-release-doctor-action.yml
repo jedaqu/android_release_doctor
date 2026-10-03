@@ -65,6 +65,14 @@ jobs:
           rustc --version
           cargo build --release --locked -p doctor-cli
 
+      - name: Direct prebuilt engine control — automotive
+        run: |
+          set +e
+          cargo run --release --locked --quiet --manifest-path Cargo.toml -p doctor-cli -- --play --play-platform automotive --format json --output "${{ runner.temp }}/android-release-doctor-direct-automotive.json" tests/fixtures/minimal-release.apk
+          status=$?
+          echo "direct automotive exit code=$status"
+          test "$status" = "0"
+          test -s "${{ runner.temp }}/android-release-doctor-direct-automotive.json"
       - name: Install Report v1 JSON Schema validator
         run: |
           python3 -m pip install --disable-pip-version-check --quiet "jsonschema==4.25.1"
