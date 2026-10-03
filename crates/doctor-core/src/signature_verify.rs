@@ -2681,6 +2681,205 @@ mod tests {
         assert!(!ring_rsa_key_size_supported(16384));
     }
 
+    fn crypto_matrix_sections(name: &str) -> std::collections::BTreeMap<String, String> {
+        let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures/crypto-matrix")
+            .join(name);
+        let contents =
+            std::fs::read_to_string(path).expect("crypto matrix fixture should be readable");
+
+        let mut sections = std::collections::BTreeMap::new();
+        let mut current: Option<String> = None;
+        let mut buffer = String::new();
+
+        for line in contents.lines() {
+            if line.starts_with('[') && line.ends_with(']') {
+                if let Some(section) = current.take() {
+                    sections.insert(section, buffer.trim_end().to_string());
+                }
+                buffer.clear();
+                current = Some(line[1..line.len() - 1].to_string());
+            } else if current.is_some() {
+                buffer.push_str(line);
+                buffer.push('\n');
+            }
+        }
+
+        if let Some(section) = current {
+            sections.insert(section, buffer.trim_end().to_string());
+        }
+
+        sections
+    }
+
+    fn matrix_certificate_der(sections: &std::collections::BTreeMap<String, String>, section: &str) -> Vec<u8> {
+        let pem_text = sections
+            .get(section)
+            .unwrap_or_else(|| panic!("missing certificate section {section}"));
+        let (_, pem) =
+            parse_x509_pem(pem_text.as_bytes()).expect("matrix certificate PEM should parse");
+        pem.contents.to_vec()
+    }
+
+    fn matrix_message(sections: &std::collections::BTreeMap<String, String>) -> &[u8] {
+        sections
+            .get("MESSAGE")
+            .expect("matrix message should be present")
+            .as_bytes()
+    }
+
+    #[test]
+    fn verifies_complete_rsa_ring_matrix_and_rejects_tampered_and_truncated_signatures() {
+        for bits in [2048_u32, 4096, 8192] {
+            let sections = crypto_matrix_sections(&format!("rsa-{bits}.txt"));
+            let certificate = matrix_certificate_der(&sections, "CERTIFICATE_PEM");
+            let message = matrix_message(&sections);
+
+            for algorithm_id in [0x0101_u32, 0x0102, 0x0103, 0x0104] {
+                let hex = sections
+                    .get(&format!("{algorithm_id:04x}"))
+                    .unwrap_or_else(|| panic!("missing RSA {bits} algorithm 0x{algorithm_id:04x}"));
+                let signature = decode_hex_bytes(hex);
+
+                verify_signature_bytes(algorithm_id, &certificate, message, &signature)
+                    .unwrap_or_else(|error| {
+                        panic!(
+                            "RSA {bits} algorithm 0x{algorithm_id:04x} should verify: {error}"
+                        )
+                    });
+
+                let mut tampered = signature.clone();
+                *tampered
+                    .last_mut()
+                    .expect("RSA signature must not be empty") ^= 0x01;
+                assert!(
+                    verify_signature_bytes(algorithm_id, &certificate, message, &tampered).is_err(),
+                    "tampered RSA {bits} algorithm 0x{algorithm_id:04x} must fail"
+                );
+
+                let truncated = &signature[..signature.len() / 2];
+                assert!(
+                    verify_signature_bytes(algorithm_id, &certificate, message, truncated).is_err(),
+                    "truncated RSA {bits} algorithm 0x{algorithm_id:04x} must fail"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn verifies_complete_ec_matrix_and_rejects_unsupported_cells() {
+        let sections = crypto_matrix_sections("ec.txt");
+        let message = matrix_message(&sections);
+
+        for (curve, supported_algorithms) in [
+            ("p256", vec![0x0201_u32]),
+            ("p384", vec![0x0201_u32, 0x0202]),
+            ("p521", vec![0x0201_u32, 0x0202]),
+        ] {
+            let certificate = matrix_certificate_der(&sections, &format!("CERTIFICATE_PEM:{curve}"));
+
+            for algorithm_id in supported_algorithms {
+                let hex = sections
+                    .get(&format!("{algorithm_id:04x}:{curve}"))
+                    .unwrap_or_else(|| {
+                        panic!("missing {curve} algorithm 0x{algorithm_id:04x}")
+                    });
+                let signature = decode_hex_bytes(hex);
+
+                verify_signature_bytes(algorithm_id, &certificate, message, &signature)
+                    .unwrap_or_else(|error| {
+                        panic!(
+                            "ECDSA {curve} algorithm 0x{algorithm_id:04x} should verify: {error}"
+                        )
+                    });
+
+                let mut tampered = signature.clone();
+                *tampered
+                    .last_mut()
+                    .expect("ECDSA signature must not be empty") ^= 0x01;
+                assert!(
+                    verify_signature_bytes(algorithm_id, &certificate, message, &tampered).is_err(),
+                    "tampered ECDSA {curve} algorithm 0x{algorithm_id:04x} must fail"
+                );
+
+                let truncated = &signature[..signature.len() / 2];
+                assert!(
+                    verify_signature_bytes(algorithm_id, &certificate, message, truncated).is_err(),
+                    "truncated ECDSA {curve} algorithm 0x{algorithm_id:04x} must fail"
+                );
+            }
+
+            if curve == "p256" {
+                let error = verify_signature_bytes(
+                    0x0202,
+                    &certificate,
+                    message,
+                    &[],
+                )
+                .expect_err("ECDSA/SHA-512 P-256 must remain unsupported");
+                assert!(error
+                    .to_string()
+                    .starts_with("UNSUPPORTED: ECDSA SHA-512 signer curve"));
+            }
+        }
+    }
+
+    #[test]
+    fn rejects_crypto_matrix_algorithm_and_key_family_mismatches() {
+        let rsa_sections = crypto_matrix_sections("rsa-2048.txt");
+        let ec_sections = crypto_matrix_sections("ec.txt");
+        let message = matrix_message(&rsa_sections);
+        let rsa_certificate = matrix_certificate_der(&rsa_sections, "CERTIFICATE_PEM");
+        let p256_certificate = matrix_certificate_der(&ec_sections, "CERTIFICATE_PEM:p256");
+
+        let rsa_with_ec = verify_signature_bytes(
+            0x0101,
+            &p256_certificate,
+            message,
+            &[],
+        )
+        .expect_err("RSA algorithm with EC key must fail");
+        assert!(rsa_with_ec
+            .to_string()
+            .contains("RSA signature algorithm is paired with a non-RSA"));
+
+        let ecdsa_with_rsa =
+            verify_signature_bytes(0x0201, &rsa_certificate, message, &[])
+                .expect_err("ECDSA algorithm with RSA key must fail");
+        assert!(ecdsa_with_rsa
+            .to_string()
+            .contains("ECDSA signature algorithm is paired with a non-EC"));
+
+        let dsa = verify_signature_bytes(0x0301, &rsa_certificate, message, &[])
+            .expect_err("DSA must remain unsupported");
+        assert!(dsa
+            .to_string()
+            .starts_with("UNSUPPORTED: signature algorithm 0x00000301"));
+
+        let unknown = verify_signature_bytes(0x9999, &rsa_certificate, message, &[])
+            .expect_err("unknown signature algorithm must remain unsupported");
+        assert!(unknown
+            .to_string()
+            .starts_with("UNSUPPORTED: signature algorithm 0x00009999"));
+    }
+
+    #[test]
+    fn crypto_matrix_algorithm_ids_and_key_boundaries_are_explicit() {
+        for algorithm_id in [
+            0x0101_u32, 0x0102, 0x0103, 0x0104, 0x0201, 0x0202,
+        ] {
+            assert!(supported_signature_algorithm(algorithm_id).is_some());
+        }
+        assert!(supported_signature_algorithm(0x0301).is_none());
+        assert!(supported_signature_algorithm(0x9999).is_none());
+
+        assert!(!ring_rsa_key_size_supported(1024));
+        assert!(ring_rsa_key_size_supported(2048));
+        assert!(ring_rsa_key_size_supported(4096));
+        assert!(ring_rsa_key_size_supported(8192));
+        assert!(!ring_rsa_key_size_supported(16384));
+    }
+
     #[test]
     fn signature_selection_prefers_sha512_content_digests() {
         let signatures = encode_signature_entries(&[
