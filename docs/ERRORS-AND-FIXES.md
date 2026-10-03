@@ -1543,3 +1543,17 @@ PR #55 was merged successfully into `main`.
 ERR-120 and ERR-121 are therefore **RESOLVED AND INTEGRATED**.
 
 Historical findings and their original chronological records remain unchanged; this entry records the later disposition.
+
+
+
+## ERR-122 — Service Action root-metadata validation step ran before checkout
+
+- **Milestone:** Service productization / repository-root Action metadata
+- **Type:** CI validation failure
+- **Observed:** Action Validation Run `37149944149`, PR #73, head `85409eb58ac689141e5049229c35f525278aaeec`.
+- **Problem:** The new `Verify repository-root Action metadata` step was placed before `actions/checkout`. The runner workspace therefore did not yet contain the repository-root `action.yml`, and the validation step failed before exercising the Action.
+- **Correction:** Move the metadata existence check to immediately after `actions/checkout`. No Action metadata, service input/output contract, audit logic, or execution behavior was changed.
+- **Correction commit:** `7365c47b111f4f4ff62c044c42d57796b6596136`.
+- **Validation:** Replacement Action Validation Run `37149982327` — SUCCESS. Rust CI Run `37149982393` — SUCCESS.
+- **Classification:** TEST HARNESS / WORKFLOW ORDERING — not a product defect.
+- **Status:** RESOLVED.
