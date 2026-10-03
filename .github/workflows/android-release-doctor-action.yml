@@ -93,7 +93,7 @@ jobs:
           EXIT_CODE: ${{ steps.aab.outputs.exit-code }}
           REPORT_PATH: ${{ steps.aab.outputs.report-path }}
         run: |
-          test "$EXIT_CODE" = "0"
+          test "$EXIT_CODE" = "1"
           test -s "$REPORT_PATH"
           python3 - "$REPORT_PATH" <<'PY'
           import json
