@@ -68,7 +68,7 @@ jobs:
               }
             ' Cargo.toml)
           else
-            VERSION="{{ inputs.engine-version }}"
+            VERSION="${{ inputs.engine-version }}"
           fi
           test -n "$VERSION"
           printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([-.+][0-9A-Za-z.-]+)?$'
@@ -140,12 +140,11 @@ jobs:
           merge-multiple: true
 
       - name: Verify all six runtime assets and SHA-256 values
-        env:
-          ENGINE_VERSION: ${{ github.ref_name }}
-          RUNTIME_ASSETS_DIR: release-assets
         shell: bash
         run: |
-          ENGINE_VERSION="${ENGINE_VERSION#engine-v}" node scripts/verify-engine-assets.cjs
+          ENGINE_VERSION="$(awk '$0 == "[workspace.package]" {in_workspace=1; next} in_workspace && $1 == "version" {gsub(/"/, "", $3); print $3; exit}' Cargo.toml)"
+          test -n "$ENGINE_VERSION"
+          ENGINE_VERSION="$ENGINE_VERSION" RUNTIME_ASSETS_DIR=release-assets node scripts/verify-engine-assets.cjs
 
       - name: Build checksum index
         shell: bash
