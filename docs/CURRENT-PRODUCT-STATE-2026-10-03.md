@@ -5,7 +5,7 @@
 - Repository: `jedaqu/android_release_doctor`
 - Visibility: public
 - Default branch: `main`
-- Current validated main HEAD: `4dc8c27a3efbce45f5930d2b3b35baa33ffc39ea`
+- Current validated main HEAD: `efa46e530cda020e50b7db3aecc017dae1c9e78a`
 - M0.16 readiness-gate baseline: `1298c73d3019799e76cf7ace9706c8f880a98d72`
 - M0.11-A implementation integration baseline: `8e9f639ce71ce06e211718187d3079a5d68458f5`
 
@@ -286,7 +286,7 @@ The Node 24 prebuilt-runtime migration is validated through the complete product
 - The canonical main HEAD and post-merge CI results will be reconciled immediately after PR #76 integration.
 
 
-## Final main integration reconciliation — 2026-10-03
+## PR #76 main integration — historical closure record — 2026-10-03
 
 PR #76 was merged into main at merge commit 4dc8c27a3efbce45f5930d2b3b35baa33ffc39ea.
 
@@ -303,4 +303,23 @@ The main-state current truth is now:
 - Production cache revalidation and digest mismatch rejection are validated.
 - The six-target multiplatform service runtime remains intentional and unchanged.
 
-This section closes the branch-to-main reconciliation for PR #76.
+This section records the historical branch-to-main reconciliation for PR #76. It is preserved as engineering history and is not the final current-state baseline.
+
+
+## Final post-PR #77 reconciliation — 2026-10-03
+
+PR #77 completed the final documentation reconciliation after the PR #76 runtime integration.
+
+- PR #77 — “Finalize main integration reconciliation” — MERGED.
+- Final main merge commit: `efa46e530cda020e50b7db3aecc017dae1c9e78a`.
+- Rust CI Run `37157332204` — SUCCESS on the final main commit.
+- Action Validation Run `37157332205` — SUCCESS on the final main commit.
+- The production runtime distribution remains `engine-v0.1.3-build3`.
+- The runtime manifest remains published and resolves the six official targets with immutable SHA-256 values.
+- No product-code or runtime-behavior change was introduced by PR #77; it completed the post-merge documentation/current-state reconciliation.
+
+The canonical current-state baseline is therefore:
+
+`main @ efa46e530cda020e50b7db3aecc017dae1c9e78a`
+
+The prebuilt-runtime migration, technical publication, main integration, post-merge validation, and documentation reconciliation are CLOSED. Any next work begins as a new product phase and must not reopen the completed runtime migration without new evidence of a defect.
