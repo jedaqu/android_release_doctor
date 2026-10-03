@@ -194,7 +194,7 @@ Final M0.15 integration:
 M0.15 is CLOSED. The next work should begin with a fresh checkpoint and pre-audit rather than modifying this closed milestone.
 
 
-## M0.16 — Final Product Readiness Gate (READY FOR PRODUCT PREPARATION)
+## M0.16 — Final Product Readiness Gate (CLOSED)
 
 M0.16 performed the final engineering readiness gate against main `1298c73d3019799e76cf7ace9706c8f880a98d72`.
 
@@ -207,16 +207,4 @@ Validated:
 - exactly two maintained workflow files remain active;
 - public repository scan found no tested restricted commercial/private-boundary terms.
 
-M0.16 introduced no production-code changes. Its engineering disposition is READY FOR PRODUCT PREPARATION. Historical evidence remains preserved and the public/private boundary remains unchanged.
-
-
-## M0.17 — Product Preparation / v0.1.3 (PREPARED)
-
-M0.17 prepared the public product for a future manual publication review at version `0.1.3` without changing production behavior.
-
-Prepared public documents:
-- `docs/PRODUCT-MANIFEST-v0.1.3-CANDIDATE-2026-10-03.md`
-- `docs/RELEASE-NOTES-v0.1.3-CANDIDATE-2026-10-03.md`
-- `docs/CHECKLIST-M0.17-PRODUCT-PREPARATION-2026-10-03.md`
-
-M0.17 does not claim that a GitHub Release or tag has already been published. The publication step remains manual and must use the exact final validated main commit.
+M0.16 introduced no production-code changes. Its engineering disposition is CLOSED after the final readiness gate. Historical evidence remains preserved and the public/private boundary remains unchanged.

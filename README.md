@@ -415,7 +415,7 @@ See [DOCUMENTATION-COHERENCE.md](docs/DOCUMENTATION-COHERENCE.md).
 
 Android Release Doctor is the audit engine plus its reusable GitHub Action interface. The product is the evidence-producing workflow that inspects APK/AAB artifacts, optionally compares static Gradle configuration, applies the configured Play readiness profile, and returns a stable report and exit code.
 
-The repository does not define a public binary-release, publication, or downloadable package contract.\n\nCargo package version metadata remains for the Rust workspace and CLI build; it is not a public release identifier or publication contract.
+The maintained product surface is the local CLI, shared audit engine, reusable GitHub Action, Report v1 contract, public fixtures, and permanent validation workflows.
 
 ## Still not implemented
 
