@@ -5,7 +5,8 @@
 - Repository: `jedaqu/android_release_doctor`
 - Visibility: public
 - Default branch: `main`
-- Main baseline current after M0.11-A integration: `8e9f639ce71ce06e211718187d3079a5d68458f5`
+- Current main HEAD: `57c32a9b21b76e4229462ff0c7ddd6dd47a1f199`
+- M0.11-A implementation integration baseline: `8e9f639ce71ce06e211718187d3079a5d68458f5`
 
 The exact moving `main` SHA is recorded by the latest validated checkpoint. This document records the current validated product state and is updated as validated work advances.
 
@@ -72,7 +73,7 @@ For understanding the repository today, use this order:
 
 1. `README.md` — public product entry point.
 2. `docs/CURRENT-PRODUCT-STATE-2026-10-03.md` — current product truth.
-3. Latest checkpoint / validated audit for the active work block (`M0.11-A` closed after PR #55 merge).
+3. Latest checkpoint / validated audit for the active work block (`M0.11-A` closed after PR #56 documentation reconciliation).
 4. `docs/ERRORS-AND-FIXES.md` — append-only chronology plus later reconciliations.
 5. Historical milestone/pre-audit/second-audit documents — engineering history, not current product contract.
 

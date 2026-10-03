@@ -7,10 +7,9 @@
 - Default branch: `main`
 - Milestone/block: M0.11-A — GitHub Action Hardening
 - Status: CLOSED
-- Current main HEAD: `8e9f639ce71ce06e211718187d3079a5d68458f5`
-- PR: #55
-- PR state: MERGED
-- Merge commit: `8e9f639ce71ce06e211718187d3079a5d68458f5`
+- Current main HEAD: `57c32a9b21b76e4229462ff0c7ddd6dd47a1f199`
+- Implementation merge commit: `8e9f639ce71ce06e211718187d3079a5d68458f5` (PR #55)
+- Documentation closure merge commit: `57c32a9b21b76e4229462ff0c7ddd6dd47a1f199` (PR #56)
 
 ## Scope completed
 
@@ -32,6 +31,7 @@ Candidate C (consumer SHA-pinning documentation hardening) was not implemented a
   - Clippy: PASS
 - Second audit: `docs/AUDIT-M0.11-A-ACTION-HARDENING-SECOND-AUDIT-2026-10-03.md`.
 - Error ledger: ERR-120 and ERR-121, subsequently reconciled as resolved and integrated.
+- PR #56 documentation reconciliation: merged successfully into `main` at `57c32a9b21b76e4229462ff0c7ddd6dd47a1f199`.
 
 ## Product state
 
@@ -62,4 +62,4 @@ No governance or product-scope change beyond the explicitly authorized A+B scope
 
 M0.11-A is closed because implementation, validation evidence, documentation, contracts, ledger, and checkpoint are coherent after integration.
 
-Post-merge CI visibility note: the available GitHub connector exposes PR-triggered workflow runs for commit lookup but does not expose the post-merge push-run listing. The closure evidence therefore relies on the validated PR-to-main Action run and the successful Rust CI run on the integrated A+B state, plus the successful merge itself. No unobserved post-merge run is claimed as evidence.
+Post-merge CI visibility note: the available GitHub connector exposes PR-triggered workflow runs for commit lookup but does not expose the post-merge push-run listing. The closure evidence therefore relies on the validated PR-to-main Action run and the successful Rust CI run on the integrated A+B state, plus the successful merge of PR #55 and the documentation closure in PR #56. No unobserved post-merge run is claimed as evidence.
