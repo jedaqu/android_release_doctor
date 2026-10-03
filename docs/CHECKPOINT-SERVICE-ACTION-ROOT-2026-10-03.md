@@ -5,7 +5,8 @@
 - Repository: `jedaqu/android_release_doctor`
 - Branch: `service/action-root-metadata-2026-10-03`
 - Base main: `1b1446b80cfd66d9333c3d51c9b5ec0bc2a8d206`
-- Validated head: `7365c47b111f4f4ff62c044c42d57796b6596136`
+- Validated implementation head: `7365c47b111f4f4ff62c044c42d57796b6596136`
+- Documentation closure head: this branch's final commit after the reconciliation changes.
 - PR: #73
 
 ## Authorized block
