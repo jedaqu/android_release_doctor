@@ -5,9 +5,11 @@ on:
 
   push:
     branches:
+      - main
       - m08-block3-github-action
   pull_request:
     branches:
+      - main
       - m08-block2-cli-output-contract
 
 jobs:
