@@ -122,3 +122,24 @@ The production distribution workflow has also been hardened with:
 The manifest remains draft until an actual technical engine distribution has been produced and the six published SHA-256 values are populated and verified.
 
 This reconciliation is append-only; the earlier audit baseline and findings remain historical evidence.
+
+
+## Final production-runtime readiness audit — 2026-10-03
+
+Scope: close the second audit after real runtime publication and production Action consumption validation. Historical audit text above is preserved.
+
+Evidence:
+- Branch head: 5096bc489f9046489b0fcf5acde82caad7745909.
+- Six-platform runtime build/publication: Run 37155822288 — SUCCESS.
+- Active technical release: engine-v0.1.3-build3.
+- Manifest: published=true, release tag engine-v0.1.3-build3.
+- Production retrieval: SUCCESS in Run 37156477423.
+- Corrupted-cache recovery: SUCCESS in Run 37156477423.
+- Intentional download digest mismatch rejection: SUCCESS in Run 37156477423, exit code 2.
+- Rust CI: Run 37156477520 — SUCCESS.
+- Production runtime workflow is tag-driven only; temporary branch-only publication triggers are removed.
+- Runtime packaging uses clean runtime-dist/ output, excluding unrelated Action bundle assets.
+
+Product boundary: Android Release Doctor remains a GitHub Actions service. The prebuilt engine remains an internal runtime component.
+
+Audit result: PASS — production prebuilt-runtime gate closed. PR #76 is eligible for final integration, subject to post-merge main validation and current-state reconciliation.
