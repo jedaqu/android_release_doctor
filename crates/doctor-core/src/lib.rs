@@ -1497,7 +1497,6 @@ mod tests {
         assert!(report.render_text().contains("MANUAL REVIEW 1"));
     }
 
-
     #[test]
     fn misaligned_32_bit_native_elf_does_not_trigger_native_002() {
         let inventory = ArtifactInventory {
