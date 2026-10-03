@@ -693,6 +693,10 @@ fn inspect_archive<R: Read + io::Seek>(
     Ok(inventory)
 }
 
+fn is_16kb_64_bit_abi(abi: &str) -> bool {
+    matches!(abi, "arm64-v8a" | "x86_64")
+}
+
 fn native_abi_from_path(name: &str) -> Option<&str> {
     name.split('/')
         .collect::<Vec<_>>()
@@ -921,62 +925,80 @@ fn evaluate(
         ));
     }
 
-    if inventory
-        .native_libraries
-        .iter()
-        .any(|library| library.error.is_some())
-    {
-        let paths = inventory
-            .native_libraries
-            .iter()
-            .filter(|library| library.error.is_some())
-            .map(|library| library.path.as_str())
-            .collect::<Vec<_>>()
-            .join(", ");
-
-        findings.push(Finding::manual_review(
-            "NATIVE-002",
-            "16 KB ELF inspection incomplete",
-            format!("Could not parse the native ELF program headers for: {paths}."),
-            "Inspect those shared objects with an ELF-aware tool and verify 16 KB page-size compatibility before release.",
-        ));
-    } else if inventory.native_libraries.is_empty() {
+    if inventory.native_libraries.is_empty() {
         findings.push(Finding::pass(
             "NATIVE-002",
             "16 KB ELF inspection",
             "No native .so libraries are present, so ELF page alignment is not applicable.",
         ));
     } else {
-        let incompatible = inventory
+        let applicable = inventory
             .native_libraries
             .iter()
-            .filter(|library| !load_segments_are_16kb_aligned(&library.load_segment_alignments))
+            .filter(|library| is_16kb_64_bit_abi(&library.abi))
             .collect::<Vec<_>>();
 
-        if incompatible.is_empty() {
+        if applicable.is_empty() {
             findings.push(Finding::pass(
                 "NATIVE-002",
-                "16 KB ELF alignment",
-                "All inspected native ELF PT_LOAD segments meet the 16 KB alignment threshold.",
+                "16 KB ELF inspection",
+                "Native libraries are present only for 32-bit or non-target ABIs; this 16 KB ELF compatibility check applies to arm64-v8a and x86_64.",
             ));
         } else {
-            let details = incompatible
+            let parse_errors = applicable
                 .iter()
-                .map(|library| {
-                    format!(
-                        "{} [{}] alignments={:?}",
-                        library.path, library.abi, library.load_segment_alignments
-                    )
-                })
-                .collect::<Vec<_>>()
-                .join("; ");
+                .filter(|library| library.error.is_some())
+                .collect::<Vec<_>>();
 
-            findings.push(Finding::warning(
-                "NATIVE-002",
-                "16 KB ELF alignment",
-                format!("One or more native libraries contain PT_LOAD alignment below 16 KB: {details}."),
-                "Rebuild or replace the affected native libraries with 16 KB ELF load-segment alignment.",
-            ));
+            if !parse_errors.is_empty() {
+                let paths = parse_errors
+                    .iter()
+                    .map(|library| library.path.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+
+                findings.push(Finding::manual_review(
+                    "NATIVE-002",
+                    "16 KB ELF inspection incomplete",
+                    format!("Could not parse the native ELF program headers for: {paths}."),
+                    "Inspect those shared objects with an ELF-aware tool and verify 16 KB page-size compatibility before release.",
+                ));
+            } else {
+                let incompatible = applicable
+                    .iter()
+                    .filter(|library| {
+                        !load_segments_are_16kb_aligned(&library.load_segment_alignments)
+                    })
+                    .collect::<Vec<_>>();
+
+                if incompatible.is_empty() {
+                    findings.push(Finding::pass(
+                        "NATIVE-002",
+                        "16 KB ELF alignment",
+                        "All applicable 64-bit native ELF PT_LOAD segments meet the 16 KB alignment threshold.",
+                    ));
+                } else {
+                    let details = incompatible
+                        .iter()
+                        .map(|library| {
+                            format!(
+                                "{} [{}] alignments={:?}",
+                                library.path, library.abi, library.load_segment_alignments
+                            )
+                        })
+                        .collect::<Vec<_>>()
+                        .join("; ");
+
+                    findings.push(Finding::warning(
+                        "NATIVE-002",
+                        "16 KB ELF alignment",
+                        format!(
+                            "One or more applicable 64-bit native libraries contain PT_LOAD alignment below 16 KB: {details}."
+                        ),
+                        "Rebuild or replace the affected 64-bit native libraries with 16 KB ELF load-segment alignment.",
+                    ));
+                }
+            }
         }
     }
 
@@ -1473,6 +1495,38 @@ mod tests {
         assert_eq!(report.manual_review_count(), 1);
         assert!(report.render_text().contains("MANUAL-REVIEW"));
         assert!(report.render_text().contains("MANUAL REVIEW 1"));
+    }
+
+    #[test]
+    fn misaligned_32_bit_native_elf_does_not_trigger_native_002() {
+        let inventory = ArtifactInventory {
+            native_abis: vec!["armeabi-v7a".to_string(), "x86".to_string()],
+            native_libraries: vec![
+                NativeLibraryInfo {
+                    path: "lib/armeabi-v7a/libbad.so".to_string(),
+                    abi: "armeabi-v7a".to_string(),
+                    load_segment_alignments: vec![4096],
+                    error: None,
+                },
+                NativeLibraryInfo {
+                    path: "lib/x86/libbad.so".to_string(),
+                    abi: "x86".to_string(),
+                    load_segment_alignments: vec![4096],
+                    error: None,
+                },
+            ],
+            ..Default::default()
+        };
+
+        let findings = evaluate(ArtifactKind::Apk, &inventory, None, None);
+
+        assert_eq!(
+            findings
+                .iter()
+                .find(|finding| finding.rule_id == "NATIVE-002")
+                .map(|finding| finding.severity),
+            Some(Severity::Pass)
+        );
     }
 
     #[test]
