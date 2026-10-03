@@ -5,7 +5,7 @@
 - Repository: `jedaqu/android_release_doctor`
 - Visibility: public
 - Default branch: `main`
-- Current validated main HEAD: `d7baa081c3279daebea0e984fa8184576105c5f9`
+- Current validated main HEAD: `4dc8c27a3efbce45f5930d2b3b35baa33ffc39ea`
 - M0.16 readiness-gate baseline: `1298c73d3019799e76cf7ace9706c8f880a98d72`
 - M0.11-A implementation integration baseline: `8e9f639ce71ce06e211718187d3079a5d68458f5`
 
@@ -284,3 +284,23 @@ The Node 24 prebuilt-runtime migration is validated through the complete product
 - Real Action retrieval, cache digest revalidation, and intentional download digest mismatch rejection are validated.
 - Permanent Rust CI and Action Validation both pass on branch head 5096bc489f9046489b0fcf5acde82caad7745909.
 - The canonical main HEAD and post-merge CI results will be reconciled immediately after PR #76 integration.
+
+
+## Final main integration reconciliation — 2026-10-03
+
+PR #76 was merged into main at merge commit 4dc8c27a3efbce45f5930d2b3b35baa33ffc39ea.
+
+Post-merge validation:
+- Rust CI Run 37156909779 — SUCCESS.
+- Action Validation Run 37156909843 — SUCCESS.
+
+The Node 24 prebuilt-runtime architecture is now integrated into main. The production runtime manifest is published and points to engine-v0.1.3-build3. The six-platform runtime distribution and production Action retrieval integrity checks are closed.
+
+The main-state current truth is now:
+- Android Release Doctor remains a GitHub Actions service.
+- The reusable Action resolves and verifies a prebuilt engine matching the runner platform and architecture.
+- The runtime manifest is published with immutable SHA-256 values.
+- Production cache revalidation and digest mismatch rejection are validated.
+- The six-target multiplatform service runtime remains intentional and unchanged.
+
+This section closes the branch-to-main reconciliation for PR #76.
