@@ -1601,3 +1601,15 @@ Historical findings and their original chronological records remain unchanged; t
 - **Validation:** Pending replacement CI run.
 - **Classification:** TEST HARNESS / SOURCE GENERATION — not a product runtime contract defect.
 - **Status:** PENDING VALIDATION.
+
+## ERR-126 — Hyphenated Action input name was normalized incorrectly
+
+- **Milestone:** Service prebuilt CLI runtime / Action migration
+- **Type:** CI validation failure
+- **Observed:** Action Validation Run `37152013587`, PR #76, head `d469ed927074dca8c033f6623c2be84bec7317da`.
+- **Problem:** The custom input reader converted hyphens to underscores. GitHub exposes Action inputs through the `INPUT_{NAME}` environment convention; the `play-platform` input therefore was not read by the custom helper and fell back to `mobile`. The dedicated automotive validation then returned the mobile-path blocker result.
+- **Correction:** Preserve hyphens in the canonical environment-variable lookup while retaining an underscore fallback for compatibility.
+- **Correction commits:** `90b5477d39dc760bb72d4d73102c42eded52a6b3`, `35b2fb5ee06d90e75f474f203875e2681b3a9588`.
+- **Validation:** Pending replacement CI run.
+- **Classification:** ACTION INPUT HANDLING — product-facing Action behavior correction.
+- **Status:** PENDING VALIDATION.
