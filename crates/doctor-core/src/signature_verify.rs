@@ -2702,6 +2702,8 @@ mod tests {
             } else if current.is_some() {
                 buffer.push_str(line);
                 buffer.push('\n');
+            } else if let Some(message) = line.strip_prefix("MESSAGE=") {
+                sections.insert("MESSAGE".to_string(), message.to_string());
             }
         }
 
