@@ -46,7 +46,17 @@ jobs:
         shell: bash
         run: |
           if [ "$GITHUB_EVENT_NAME" = "push" ] && [[ "$GITHUB_REF" == refs/tags/engine-v* ]]; then
-            VERSION="${GITHUB_REF_NAME#engine-v}"
+            VERSION="$(awk '
+              /^\[workspace\.package\]$/ { in_workspace=1; next }
+              in_workspace && /^[[:space:]]*version[[:space:]]*=/ {
+                value=$3
+                gsub(/"/, "", value)
+                print value
+                exit
+              }
+            ' Cargo.toml)
+            TAG_SUFFIX="${GITHUB_REF_NAME#engine-v}"
+            printf '%s' "$TAG_SUFFIX" | grep -Eq "^$VERSION(-build[0-9]+)?$"
           elif [ "$GITHUB_EVENT_NAME" = "push" ]; then
             VERSION="$(awk '
               /^\[workspace\.package\]$/ { in_workspace=1; next }
@@ -56,13 +66,14 @@ jobs:
                 print value
                 exit
               }
-            ' Cargo.toml)"
+            ' Cargo.toml)
           else
-            VERSION="${{ inputs.engine-version }}"
+            VERSION="{{ inputs.engine-version }}"
           fi
           test -n "$VERSION"
           printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([-.+][0-9A-Za-z.-]+)?$'
           echo "ENGINE_VERSION=$VERSION" >> "$GITHUB_ENV"
+
       - name: Verify source version matches engine version
         shell: bash
         run: |
