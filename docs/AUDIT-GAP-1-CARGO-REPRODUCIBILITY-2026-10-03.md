@@ -131,3 +131,17 @@ The experiment closes the previous ambiguity about the breadth of PR #52's lockf
 **Conclusion:** the Cargo.lock correction in PR #52 is supported by independent local reproduction of the exact Cargo-generated result. Do not manually reduce the lockfile on the basis of the historical `+spin` proposal.
 
 PR #52 remains open and unmerged. CI `--locked` enforcement remains a separate future block.
+
+
+## Post-integration disposition — 2026-10-03
+
+The correction described in this audit was subsequently integrated.
+
+- PR #52 — `8663dcf` — Cargo.lock reproducibility correction.
+- Merge commit: `b6e11c58b510af390bd35a6d4dcad20736311762`.
+- PR #53 then enforced `--locked` for Build, Test, and Clippy in the normal Rust CI.
+- PR #53 merge commit: `4a41b80415b94ffe1748ec07a10a4cbe0224ee1a`.
+
+Therefore the earlier statement that integration remained separate is historical and superseded by this disposition. GAP-1 is currently **INTEGRATED AND CLOSED**.
+
+The original diagnostic evidence and local validation remain preserved above; this section records only the later disposition.

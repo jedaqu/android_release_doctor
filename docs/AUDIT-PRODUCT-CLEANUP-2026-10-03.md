@@ -70,3 +70,19 @@ The second validation campaign retained one unresolved product/specification can
 - 16 KiB native ABI scope: current PLAY-005 evaluation treats a misaligned 32-bit ABI as a blocker even when the 64-bit ABIs are correctly aligned.
 
 No code change for that finding is included in this cleanup.
+
+
+## Current-state reconciliation — 2026-10-03
+
+This document records the product cleanup at the time it was performed. Its earlier carried-forward 16 KiB finding is now historical.
+
+The related specification defects were subsequently resolved and validated in chronological order:
+
+- ERR-113 / PLAY-005 ABI scope — resolved.
+- ERR-114 / NATIVE-002 ABI scope — resolved.
+- ERR-115 / NATIVE-003 ABI scope — resolved.
+- NATIVE-003 full ABI oracle — validated by the matrix documented in `AUDIT-NATIVE-003-ABI-MATRIX-2026-10-02.md` and CI run `37085412571`.
+
+The current product is therefore not carrying the former 32-bit 16 KiB ABI defect as an open implementation issue. Any new 16 KiB policy or semantic question belongs to a new audit and must not be inferred from this historical cleanup finding.
+
+The active product boundary remains the reusable GitHub Action, CLI/audit engine, Report v1, Play readiness, static Gradle cross-check, signing/cryptographic verification, native inspection, fixtures, and engineering evidence.
