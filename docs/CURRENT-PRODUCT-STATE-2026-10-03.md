@@ -5,7 +5,7 @@
 - Repository: `jedaqu/android_release_doctor`
 - Visibility: public
 - Default branch: `main`
-- Current main HEAD: `937fe5059c4535a407c962893646a0d0b64de036`
+- Current validated main HEAD: `7d630bb001141fa7f2880d9777c88b7f678d3b21`
 - M0.11-A implementation integration baseline: `8e9f639ce71ce06e211718187d3079a5d68458f5`
 
 The exact moving `main` SHA is recorded by the latest validated checkpoint. This document records the current validated product state and is updated as validated work advances.
@@ -186,7 +186,9 @@ M0.15 introduced no production-code changes.
 Final M0.15 integration:
 - PR #65 merged at `937fe5059c4535a407c962893646a0d0b64de036`.
 - External consumer Run `37141021253`: SUCCESS.
-- Post-merge Action Validation Run `37141293283`: SUCCESS.
-- Post-merge Rust CI Run `37141293281`: SUCCESS.
+- Post-PR #65 Action Validation Run `37141293283`: SUCCESS.
+- Post-PR #65 Rust CI Run `37141293281`: SUCCESS.
+- Post-PR #66 Action Validation Run `37141546195`: SUCCESS.
+- Post-PR #66 Rust CI Run `37141546206`: SUCCESS.
 
 M0.15 is CLOSED. The next work should begin with a fresh checkpoint and pre-audit rather than modifying this closed milestone.
