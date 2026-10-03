@@ -95,3 +95,30 @@ Still required before main integration:
 
 **HOLD — production integration remains gated on the real prebuilt runtime distribution and manifest publication.**
 
+
+## Scope decision reconciliation — 2026-10-03
+
+After the second audit, the service boundary was clarified before production runtime integration.
+
+Dani explicitly confirmed that the prebuilt engine is an internal execution component of the GitHub Actions service. Therefore the declared six-platform runtime matrix is retained as an intentional multiplatform service requirement:
+
+1. linux-x64
+2. linux-arm64
+3. macos-x64
+4. macos-arm64
+5. windows-x64
+6. windows-arm64
+
+This does not mean consumers download six binaries. The Action resolves the current runner platform and retrieves only its matching engine asset.
+
+The production distribution workflow has also been hardened with:
+
+- source/engine-version consistency validation;
+- six-asset presence validation;
+- independent SHA-256 verification of every packaged runtime asset;
+- a six-entry checksum index;
+- duplicate technical-release rejection before publication.
+
+The manifest remains draft until an actual technical engine distribution has been produced and the six published SHA-256 values are populated and verified.
+
+This reconciliation is append-only; the earlier audit baseline and findings remain historical evidence.
