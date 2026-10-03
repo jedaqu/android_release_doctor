@@ -85,9 +85,11 @@ async function main() {
   if (!artifact) failBeforeExecution("artifact input is required");
   if (output.includes("\n") || output.includes("\r")) failBeforeExecution("invalid output path; CR/LF characters are not allowed");
   if (play !== "true" && play !== "false") failBeforeExecution("invalid play input; expected true or false");
-  const manifest = process.env[TEST_RUNTIME_ENV] ? null : readManifest();
+  const runtimeOverride = Boolean(process.env[TEST_RUNTIME_ENV]);
+  const manifest = runtimeOverride ? null : readManifest();
   if (!engineVersion) engineVersion = (manifest && manifest.default_engine_version) || "";
-  if (!engineVersion || !isSafeEngineVersion(engineVersion)) failBeforeExecution("invalid engine-version input");
+  if (!runtimeOverride && (!engineVersion || !isSafeEngineVersion(engineVersion))) failBeforeExecution("invalid engine-version input");
+  if (runtimeOverride && !engineVersion) engineVersion = "local-test";
   let key; try { key = platformKey(); } catch (error) { failBeforeExecution(error.message); }
   const args = []; if (project) args.push("--project", project); if (play === "true") args.push("--play", "--play-platform", playPlatform); if (format) args.push("--format", format); if (output) args.push("--output", output); args.push(artifact);
   let runtimePath;
