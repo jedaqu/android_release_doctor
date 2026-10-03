@@ -15,11 +15,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Verify repository-root Action metadata
-        run: test -f action.yml
-
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Verify repository-root Action metadata
+        run: test -f action.yml
 
       - name: Verify Rust toolchain
         run: |
