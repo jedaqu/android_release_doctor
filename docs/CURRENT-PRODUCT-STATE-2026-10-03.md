@@ -5,7 +5,9 @@
 - Repository: `jedaqu/android_release_doctor`
 - Visibility: public
 - Default branch: `main`
-- Current main HEAD: `4a41b80415b94ffe1748ec07a10a4cbe0224ee1a`
+- Main baseline audited for this document: `4a41b80415b94ffe1748ec07a10a4cbe0224ee1a`
+
+The exact moving `main` SHA must be taken from the latest checkpoint/validated audit. This document records the product state anchored to the baseline above and is updated as validated work advances.
 
 This document is the current-state companion to the historical milestone/audit records. It is not a replacement for them.
 
