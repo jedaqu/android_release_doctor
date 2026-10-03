@@ -68,6 +68,7 @@ runs:
 
         cmd=(
           cargo run
+          --locked
           --quiet
           --manifest-path "$GITHUB_ACTION_PATH/../../../Cargo.toml"
           -p doctor-cli
